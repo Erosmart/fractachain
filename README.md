@@ -251,12 +251,20 @@ El archivo actual del clone ya tiene un deploy de testnet (red SDF, actualizado 
 
 Dos servicios desde el mismo repo:
 
-| Servicio | Root | Build | Start |
+| Servicio | Root | Dockerfile | Start |
 |---|---|---|---|
-| Backend | `backend/` | `npm run build` | `npm start` (Express) |
-| Frontend | `frontend/` | `npm run build` | `npm start` (Next) |
+| Backend | raíz del repo | `backend/Dockerfile` | `node --use-system-ca dist/server.js` |
+| Frontend | raíz del repo | `frontend/Dockerfile` | `node server.js` (standalone) |
 
-Hay Dockerfiles multi-stage `node:20-alpine` en ambos.
+Hay Dockerfiles multi-stage `node:20-alpine` en ambos. Contexto de build = **raíz del repo**.
+
+Local, igual que Railway:
+
+```bash
+docker compose up --build
+```
+
+UI en http://localhost:3000, API en http://localhost:4000. Detalle en `RAILWAY_DEPLOY.md`.
 
 ---
 
