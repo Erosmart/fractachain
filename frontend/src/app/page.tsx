@@ -105,7 +105,12 @@ export default function HomePage() {
 
       <section className="space-y-6 sm:space-y-8">
         <div className="text-center max-w-2xl mx-auto space-y-2 px-1">
-          <h2 className="font-section text-2xl sm:text-3xl font-extrabold text-black">{t('home.capitalTitle')}</h2>
+          <h2 className="font-section text-2xl sm:text-3xl font-extrabold text-black">
+      <div className="mx-auto max-w-3xl rounded-2xl border border-neutral-200 bg-white/70 px-4 py-3 text-sm text-neutral-700 dark:bg-black/20 dark:text-neutral-200">
+        <p className="font-semibold text-black dark:text-white">{t('home.realMockTitle')}</p>
+        <p className="mt-1">{t('home.realMockBody')}</p>
+      </div>
+{t('home.capitalTitle')}</h2>
           <p className="text-neutral-600 text-sm">{t('home.capitalLead')}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">

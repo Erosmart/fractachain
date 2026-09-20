@@ -355,6 +355,17 @@ export function submitOnboardingKyc(
   account.kycStatus = process.env.HACKATHON_DEMO === 'true' ? 'APPROVED' : 'PENDING';
   account.kycId = account.kycId || `kyc-${account.id}`;
   save();
+  if (account.kycStatus === 'APPROVED' && account.publicKey) {
+    void import('../stellar/licitacion')
+      .then(async ({ verifyInvestorOnChain }) => {
+        const { listListings, isOnChainListing } = await import('../admin/listings');
+        for (const listing of listListings()) {
+          if (!isOnChainListing(listing)) continue;
+          await verifyInvestorOnChain(listing, account.publicKey);
+        }
+      })
+      .catch(() => {});
+  }
   return toPublic(account);
 }
 

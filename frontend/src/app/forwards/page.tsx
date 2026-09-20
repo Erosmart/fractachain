@@ -10,7 +10,9 @@ import {
   Zap,
 } from 'lucide-react';
 import MockDisclaimer from '../../components/MockDisclaimer';
+import LiveContractLink from '../../components/LiveContractLink';
 import { useI18n } from '../../context/I18nContext';
+import { formatInt } from '../../lib/format';
 
 interface ForwardContract {
   id: string;
@@ -82,6 +84,7 @@ export default function ForwardsPage() {
           Contratos de compraventa futura de granos con cláusulas resolutorias automatizadas en smart contracts de Soroban para resarcimiento directo o refinanciación en especie.
         </p>
         <MockDisclaimer product="Forwards" />
+        <LiveContractLink kind="forward" />
       </div>
 
       {/* Legal Banner */}
@@ -142,7 +145,7 @@ export default function ForwardsPage() {
                     </div>
                     <div>
                       <span className="text-neutral-500 text-[10px] block">Valor Nocional</span>
-                      <span className="font-bold font-mono text-[#2f6f28]">${fwdTotal.toLocaleString()} USDC</span>
+                      <span className="font-bold font-mono text-[#2f6f28]">${formatInt(fwdTotal)} USDC</span>
                     </div>
                     <div>
                       <span className="text-neutral-500 text-[10px] block">Fecha de Entrega</span>
@@ -162,7 +165,7 @@ export default function ForwardsPage() {
 
             <div className="p-4 rounded-xl bg-black/5 border border-black/8 space-y-2 text-xs">
               <div className="text-neutral-600">Contrato Seleccionado: <strong className="text-black font-mono">{selectedForward.id}</strong></div>
-              <div className="text-neutral-600">Valor Total de Entrega: <strong className="text-[#2f6f28] font-mono">${totalContractValue.toLocaleString()} USDC</strong></div>
+              <div className="text-neutral-600">Valor Total de Entrega: <strong className="text-[#2f6f28] font-mono">${formatInt(totalContractValue)} USDC</strong></div>
             </div>
 
             {/* Resolution Mode Selection */}
@@ -185,7 +188,7 @@ export default function ForwardsPage() {
                     <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> Cláusula de Rescisión (20%)
                   </span>
                   <span className="font-mono text-xs font-bold text-black">
-                    -${penaltyAmount.toLocaleString()} USDC
+                    -${formatInt(penaltyAmount)} USDC
                   </span>
                 </div>
                 <p className="text-[11px] text-neutral-600">
@@ -222,7 +225,7 @@ export default function ForwardsPage() {
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>
                   {resolutionAction === 'PENALTY'
-                    ? `Simulación: penalidad del 20% ($${penaltyAmount.toLocaleString()} USDC). No se envió transacción.`
+                    ? `Simulación: penalidad del 20% ($${formatInt(penaltyAmount)} USDC). No se envió transacción.`
                     : `Simulación: rollover +10% de grano (${rolloverTons} Tn). No se envió transacción.`}
                 </span>
               </div>

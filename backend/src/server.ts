@@ -42,6 +42,9 @@ import {
   setListingProceedsWallet,
   setListingSettle,
   validationPack,
+  isOnChainListing,
+  recordOnChainContribution,
+  markListingClosed,
 } from './admin/listings';
 import { cancelOrder, getBook, listMarkets, placeOrder } from './market/orderbook';
 import { depositDividends, listDividends } from './market/dividends';
@@ -59,7 +62,8 @@ import { configureIssuerForRegulatedAsset, submitSignedXdr } from './stellar/sde
 import { syncHolderAuthorization } from './stellar/compliance';
 import { getTestnetConfig, setTestnetConfig } from './admin/testnet';
 import { isOnChainDeployed, loadTestnetDeployment } from './stellar/deployment';
-import { getOnChainStatus, receiptAfterContribute } from './stellar/onchain';
+import { getOnChainStatus, listingChainMeta, receiptAfterContribute, explorerTx } from './stellar/onchain';
+import { contributeOnChain, finalizeOnChain } from './stellar/licitacion';
 import {
   authenticateWithGoogle,
   getUserByToken,
@@ -465,7 +469,11 @@ app.get('/api/listings', (req: Request, res: Response) => {
 app.get('/api/listings/:id', (req: Request, res: Response) => {
   const listing = getListing(req.params.id);
   if (!listing) return res.status(404).json({ success: false, message: 'Listing no encontrado' });
-  res.json({ success: true, data: listing, validation: validationPack(listing) });
+  res.json({
+    success: true,
+    data: { ...listing, onChain: listingChainMeta(listing) },
+    validation: validationPack(listing),
+  });
 });
 
 app.get('/api/listings/:id/validation', (req: Request, res: Response) => {
@@ -501,7 +509,21 @@ app.post('/api/listings/:id/settle', (req: Request, res: Response) => {
 
 app.post('/api/listings/:id/close', (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
-  wrap(() => closeListing(req.params.id), res);
+  wrapAsync(async () => {
+    const listing = getListing(req.params.id);
+    if (!listing) throw new Error('Listing no encontrado');
+    if (!isOnChainListing(listing)) return closeListing(listing.id);
+    const result = await finalizeOnChain(listing);
+    const success = Number(result.state) === 1;
+    return {
+      ...markListingClosed(listing.id, success ? 'CLOSED_SUCCESS' : 'CLOSED_FAILED', result.raised),
+      onChain: {
+        hash: result.hash,
+        explorer: explorerTx(result.hash),
+        state: result.state,
+      },
+    };
+  }, res);
 });
 
 app.post('/api/listings/:id/trustline', (req: Request, res: Response) => {
@@ -555,9 +577,24 @@ app.post('/api/listings/:id/contribute', (req: Request, res: Response) => {
   const account = getAccountByToken(req.headers.authorization);
   if (!account) return res.status(401).json({ success: false, message: 'Iniciá sesión para suscribir' });
   wrapAsync(async () => {
-    const listing = contributeListing(req.params.id, Number(req.body.usdcAmount), account.id);
-    const onChain = await receiptAfterContribute(req.params.id, account.id);
-    return { ...listing, onChain };
+    const listing = getListing(req.params.id);
+    if (!listing) throw new Error('Listing no encontrado');
+    const amount = Number(req.body.usdcAmount);
+    if (isOnChainListing(listing)) {
+      const chain = await contributeOnChain(listing, account.id, amount);
+      const updated = recordOnChainContribution(listing.id, account.id, {
+        amount,
+        tokens: chain.tokens,
+        raised: chain.raised,
+      });
+      const onChain = await receiptAfterContribute(listing.id, account.id, {
+        contributeHash: chain.hash,
+      });
+      return { ...updated, onChain };
+    }
+    const updated = contributeListing(listing.id, amount, account.id);
+    const onChain = await receiptAfterContribute(listing.id, account.id);
+    return { ...updated, onChain };
   }, res);
 });
 

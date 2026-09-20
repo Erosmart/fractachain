@@ -4,8 +4,10 @@ import crypto from 'crypto';
 import { PaymentKind } from './issuance';
 import { addHolding, creditCash, debitCash, findAccountByPublicKey, getAccount, requireApprovedTrader } from '../auth/accounts';
 import { getTestnetConfig } from './testnet';
+import { StrKey } from '@stellar/stellar-sdk';
 import { isStellarPublicKey } from '../auth/stellar_testnet';
 import { loadTestnetDeployment } from '../stellar/deployment';
+import { isLiveContractId } from '../stellar/soroban';
 
 export type ListingStatus =
   | 'DRAFT'
@@ -424,6 +426,7 @@ export function listedPools() {
         tokenTicker: d.tokenTicker,
         ticker: d.ticker,
         isin: d.isin,
+        paymentKind: d.paymentKind || 'USDC',
         validation: validationPack(l),
       };
     });
@@ -437,6 +440,8 @@ export function maybeCloseIfMinReached(id: string) {
 
 function applyDueClose(listing: Listing) {
   if (listing.status !== 'LISTED') return;
+  // The live Soroban contract only finalizes on hard cap or deadline.
+  if (isOnChainListing(listing)) return;
   const min = listing.dossier.offeringSoftCapUsdc || listing.dossier.minInvestmentUsdc || 0;
   const policy = listing.settlePolicy || 'ON_MIN';
   if (policy === 'ON_MIN' && min > 0 && listing.raisedUsdc >= min) {
@@ -477,10 +482,80 @@ function payListingProceeds(listing: Listing) {
   }
 }
 
+export function isOnChainListing(listing: Listing): boolean {
+  return isLiveContractId(listing.licitacionContract) && listing.dossier.paymentKind === 'XLM';
+}
+
+export function bindLicitacionForDemo(
+  id: string,
+  contractId: string,
+  opts?: { factoryProductId?: number | null },
+): Listing {
+  const listing = listings.find((l) => l.id === id);
+  if (!listing) throw new Error('Listing no encontrado');
+  if (!StrKey.isValidContract(contractId)) {
+    throw new Error(`Contract id inválido: ${contractId}`);
+  }
+  listing.licitacionContract = contractId;
+  listing.dossier.paymentKind = 'XLM';
+  listing.dossier.pricePerShareUsdc = 10;
+  listing.dossier.minInvestmentUsdc = 100;
+  listing.dossier.offeringSoftCapUsdc = 100;
+  listing.dossier.offeringHardCapUsdc = 100;
+  listing.raisedUsdc = 0;
+  listing.status = 'LISTED';
+  listing.closedAt = undefined;
+  listing.proceedsPaidAt = undefined;
+  listing.proceedsPaidTo = undefined;
+  if (opts?.factoryProductId != null) listing.factoryProductId = opts.factoryProductId;
+  save();
+  return listing;
+}
+
+export function recordOnChainContribution(
+  id: string,
+  accountId: string,
+  input: { amount: number; tokens: number; raised: number },
+): Listing {
+  const listing = getListing(id);
+  if (!listing) throw new Error('Listing no encontrado');
+  const units = listing.dossier.pricePerShareUsdc > 0
+    ? input.amount / listing.dossier.pricePerShareUsdc
+    : input.tokens;
+  addHolding(accountId, {
+    listingId: listing.id,
+    tokenTicker: listing.dossier.tokenTicker,
+    usdcAmount: input.amount,
+    tokens: 0,
+    tokensOwed: units,
+  });
+  listing.raisedUsdc = input.raised;
+  save();
+  return getListing(id)!;
+}
+
+export function markListingClosed(
+  id: string,
+  status: 'CLOSED_SUCCESS' | 'CLOSED_FAILED',
+  raised?: number,
+): Listing {
+  const listing = getListing(id);
+  if (!listing) throw new Error('Listing no encontrado');
+  listing.status = status;
+  listing.closedAt = new Date().toISOString();
+  if (typeof raised === 'number') listing.raisedUsdc = raised;
+  if (status === 'CLOSED_SUCCESS') payListingProceeds(listing);
+  save();
+  return getListing(id)!;
+}
+
 export function closeListing(id: string) {
   const listing = getListing(id);
   if (!listing) throw new Error('Listing no encontrado');
   if (listing.status !== 'LISTED') throw new Error('La licitación no está abierta');
+  if (isOnChainListing(listing)) {
+    throw new Error('Esta licitación cierra on-chain: usá el endpoint async de cierre');
+  }
   const min = listing.dossier.offeringSoftCapUsdc || 0;
   listing.status = min > 0 && listing.raisedUsdc >= min ? 'CLOSED_SUCCESS' : 'CLOSED_FAILED';
   listing.closedAt = new Date().toISOString();

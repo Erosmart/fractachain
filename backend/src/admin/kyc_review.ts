@@ -1,4 +1,6 @@
 import { grantHolderAuthorization, revokeHolderAuthorization } from '../stellar/compliance';
+import { isOnChainListing, listListings } from './listings';
+import { verifyInvestorOnChain } from '../stellar/licitacion';
 
 export type InvestorType = 'National' | 'Foreign' | 'Qualified' | 'Institutional';
 export type KycStatus = 'PENDIENTE' | 'APROBADO' | 'RECHAZADO' | 'REVOCADO';
@@ -156,6 +158,7 @@ export function approveKyc(id: string, bypassHoursCheck: boolean = false): { suc
   // purpose — the officer's decision is already recorded, and a Horizon
   // hiccup is recoverable through syncHolderAuthorization.
   void grantHolderAuthorization(record.stellarAddress).catch(() => {});
+  void whitelistLiveLicitacion(record.stellarAddress).catch(() => {});
 
   return { success: true, record };
 }
@@ -196,4 +199,12 @@ export function revokeKyc(id: string, reason: string): { success: boolean; recor
   void revokeHolderAuthorization(record.stellarAddress, { allowUnwind: false }).catch(() => {});
 
   return { success: true, record };
+}
+
+async function whitelistLiveLicitacion(publicKey?: string) {
+  if (!publicKey) return;
+  for (const listing of listListings()) {
+    if (!isOnChainListing(listing)) continue;
+    await verifyInvestorOnChain(listing, publicKey);
+  }
 }

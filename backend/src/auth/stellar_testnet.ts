@@ -1,4 +1,5 @@
 import { Horizon, Keypair, StrKey } from '@stellar/stellar-sdk';
+import { spawn } from 'child_process';
 
 const FRIENDBOT = process.env.STELLAR_FRIENDBOT_URL || 'https://friendbot.stellar.org';
 const HORIZON = process.env.STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org';
@@ -18,21 +19,49 @@ export function createStellarKeypair() {
 }
 
 export async function fundFriendbot(publicKey: string) {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 12000);
-  try {
-    const res = await fetch(`${FRIENDBOT}/?addr=${encodeURIComponent(publicKey)}`, { signal: ctrl.signal });
-    const body = await res.text();
-    const already =
-      /already/i.test(body) ||
-      /createAccountAlreadyExist/i.test(body) ||
-      /op_already_exists/i.test(body);
-    return { funded: res.ok || already, already };
-  } catch {
-    return { funded: false, already: false };
-  } finally {
-    clearTimeout(timer);
+  const urls = [
+    `${FRIENDBOT}/?addr=${encodeURIComponent(publicKey)}`,
+    `${HORIZON}/friendbot?addr=${encodeURIComponent(publicKey)}`,
+  ];
+  for (const url of urls) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 25000);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal });
+      const body = await res.text();
+      const already =
+        /already/i.test(body) ||
+        /createAccountAlreadyExist/i.test(body) ||
+        /op_already_exists/i.test(body);
+      if (res.ok || already) return { funded: true, already };
+    } catch {
+      // Node fetch on this Windows host often fails; fall through to curl.
+    } finally {
+      clearTimeout(timer);
+    }
+    const viaCurl = await fundFriendbotCurl(url);
+    if (viaCurl.funded) return viaCurl;
   }
+  return { funded: false, already: false };
+}
+
+function fundFriendbotCurl(url: string): Promise<{ funded: boolean; already: boolean }> {
+  return new Promise((resolve) => {
+    const bin = process.platform === 'win32' ? 'curl.exe' : 'curl';
+    const child = spawn(bin, ['-sS', url], { windowsHide: true });
+    let body = '';
+    child.stdout.on('data', (chunk) => {
+      body += chunk.toString();
+    });
+    child.on('error', () => resolve({ funded: false, already: false }));
+    child.on('close', (code) => {
+      const already =
+        /already/i.test(body) ||
+        /createAccountAlreadyExist/i.test(body) ||
+        /op_already_exists/i.test(body);
+      resolve({ funded: code === 0 && (/successful/i.test(body) || already || /hash/i.test(body)), already });
+    });
+  });
 }
 
 export async function loadNativeXlm(publicKey: string): Promise<number> {
