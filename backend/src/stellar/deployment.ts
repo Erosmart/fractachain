@@ -32,12 +32,22 @@ export interface TestnetDeployment {
   usdcClassic?: { code: string; issuer: string };
 }
 
-const FILE = path.join(__dirname, '..', '..', '..', 'deployments', 'testnet.json');
+function deploymentFile(): string {
+  const fromEnv = String(process.env.STELLAR_DEPLOYMENT_FILE || '').trim();
+  if (fromEnv) return fromEnv;
+  const candidates = [
+    path.join(process.cwd(), 'deployments', 'testnet.json'),
+    path.join(__dirname, '..', '..', '..', 'deployments', 'testnet.json'),
+    path.join(__dirname, '..', '..', 'deployments', 'testnet.json'),
+  ];
+  return candidates.find((file) => fs.existsSync(file)) || candidates[0];
+}
 
 export function loadTestnetDeployment(): TestnetDeployment | null {
   try {
-    if (!fs.existsSync(FILE)) return null;
-    return JSON.parse(fs.readFileSync(FILE, 'utf8')) as TestnetDeployment;
+    const file = deploymentFile();
+    if (!fs.existsSync(file)) return null;
+    return JSON.parse(fs.readFileSync(file, 'utf8')) as TestnetDeployment;
   } catch {
     return null;
   }
@@ -55,7 +65,8 @@ export function saveTestnetDeployment(partial: Partial<TestnetDeployment>): Test
     ...partial,
     updatedAt: new Date().toISOString(),
   };
-  fs.mkdirSync(path.dirname(FILE), { recursive: true });
-  fs.writeFileSync(FILE, JSON.stringify(next, null, 2) + '\n');
+  const file = deploymentFile();
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(next, null, 2) + '\n');
   return next;
 }
