@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Zap,
 } from 'lucide-react';
+import MockDisclaimer from '../../components/MockDisclaimer';
 
 interface WarrantRecord {
   id: string;
@@ -71,7 +72,7 @@ export default function WarrantsPage() {
   const liquidationThresholdUsd = collateralValue * 0.75;
 
   const handleCreateWarrant = () => {
-    setIssuedSuccess(`Warrant Ley 9643 emitido por $${loanCapacity.toLocaleString()} USDC con ${calcTons} Tn de ${calcCommodity} en garantía.`);
+    setIssuedSuccess(`Simulación: préstamo de $${loanCapacity.toLocaleString()} USDC contra ${calcTons} Tn de ${calcCommodity}. No se envió transacción a Stellar.`);
     setTimeout(() => setIssuedSuccess(null), 4000);
   };
 
@@ -89,6 +90,7 @@ export default function WarrantsPage() {
         <p className="text-neutral-600 text-xs sm:text-sm max-w-2xl">
           Monetiza granos almacenados en silobolsas y plantas de acopio autorizadas. Obtén liquidez inmediata en USDC con una relación préstamo-valor (LTV) del 50% al 60% bajo custodia de Empresas de Warrants registradas.
         </p>
+        <MockDisclaimer product="Warrants" />
       </div>
 
       {/* Regulatory Badge */}
@@ -245,7 +247,7 @@ export default function WarrantsPage() {
               className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 transition-all"
             >
               <Zap className="w-4 h-4" />
-              Solicitar Préstamo Contra Warrant
+              Simular préstamo (no on-chain)
             </button>
           </div>
         </div>

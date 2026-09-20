@@ -3,17 +3,13 @@
 import React, { useState } from 'react';
 import {
   Sprout,
-  ShieldCheck,
   AlertTriangle,
   RefreshCw,
   Scale,
-  FileText,
   CheckCircle2,
-  Calendar,
-  DollarSign,
-  ArrowRight,
   Zap,
 } from 'lucide-react';
+import MockDisclaimer from '../../components/MockDisclaimer';
 
 interface ForwardContract {
   id: string;
@@ -83,6 +79,7 @@ export default function ForwardsPage() {
         <p className="text-neutral-600 text-xs sm:text-sm max-w-2xl">
           Contratos de compraventa futura de granos con cláusulas resolutorias automatizadas en smart contracts de Soroban para resarcimiento directo o refinanciación en especie.
         </p>
+        <MockDisclaimer product="Forwards" />
       </div>
 
       {/* Legal Banner */}
@@ -225,8 +222,8 @@ export default function ForwardsPage() {
                 <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
                 <span>
                   {resolutionAction === 'PENALTY'
-                    ? `Penalidad del 20% ($${penaltyAmount.toLocaleString()} USDC) ejecutada con éxito en Soroban.`
-                    : `Rollover a siguiente campaña con +10% de grano (${rolloverTons} Tn) registrado en smart contract.`}
+                    ? `Simulación: penalidad del 20% ($${penaltyAmount.toLocaleString()} USDC). No se envió transacción.`
+                    : `Simulación: rollover +10% de grano (${rolloverTons} Tn). No se envió transacción.`}
                 </span>
               </div>
             )}
@@ -239,7 +236,7 @@ export default function ForwardsPage() {
               className="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all"
             >
               <Zap className="w-4 h-4" />
-              Ejecutar Resolución en Smart Contract
+              Simular resolución (no on-chain)
             </button>
           </div>
         </div>

@@ -18,6 +18,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { StockCustody, API_BASE_URL } from '../../lib/api';
+import MockDisclaimer from '../../components/MockDisclaimer';
 
 const DEFAULT_STOCKS: StockCustody[] = [
   {
@@ -94,7 +95,7 @@ export default function StocksPage() {
     setTradeSuccess(null);
     setTimeout(() => {
       setIsTrading(false);
-      setTradeSuccess(`Orden de ${orderType === 'BUY' ? 'compra' : 'venta'} ejecutada: ${sharesAmount} ${selectedStock.symbol} en Soroban (T+0).`);
+      setTradeSuccess(`Simulación: ${orderType === 'BUY' ? 'compra' : 'venta'} de ${sharesAmount} ${selectedStock.symbol}. No se envió transacción. El mercado vivo es Licitaciones / Orderbook.`);
     }, 1200);
   };
 
@@ -112,6 +113,7 @@ export default function StocksPage() {
         <p className="text-neutral-600 text-xs sm:text-sm max-w-2xl">
           Opera títulos líderes del panel principal de Bolsas y Mercados Argentinos (BYMA) con respaldo real e inmovilización en subcuenta comitente de Caja de Valores S.A.
         </p>
+        <MockDisclaimer product="Acciones Merval" />
       </div>
 
       {/* Proof of Reserve (PoR) Card */}
@@ -314,7 +316,7 @@ export default function StocksPage() {
               }`}
             >
               {isTrading ? (
-                'Firmando transacción en Soroban...'
+                'Simulando (no on-chain)…'
               ) : (
                 <>
                   <Zap className="w-4 h-4" />

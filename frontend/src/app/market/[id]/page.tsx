@@ -64,7 +64,13 @@ export default function PoolDetailPage() {
       }
       setListing(json.data);
       await refreshUser();
-      setNotice(`Suscripción registrada. Recaudado $${Number(json.data.raisedUsdc).toLocaleString('es-AR')} USDC.`);
+      const onChain = json.data?.onChain;
+      const hash = onChain?.trustlineHash;
+      setNotice(
+        hash
+          ? `Suscripción registrada. Recaudado $${Number(json.data.raisedUsdc).toLocaleString('es-AR')} USDC. Trustline testnet: ${hash}`
+          : `Suscripción registrada. Recaudado $${Number(json.data.raisedUsdc).toLocaleString('es-AR')} USDC.${onChain?.explorer ? ' Contrato: ' + onChain.explorer : ''}`,
+      );
     } catch (e: any) {
       const msg = e?.message || 'No se pudo aportar';
       setNotice(/failed to fetch/i.test(msg) ? 'No se pudo conectar al API (puerto 4000).' : msg);
@@ -102,7 +108,23 @@ export default function PoolDetailPage() {
                 <div><dt className="text-neutral-500">Respaldo</dt><dd>{validation.token.backing}</dd></div>
                 <div className="sm:col-span-2"><dt className="text-neutral-500">Hash estatuto</dt><dd className="font-mono text-xs break-all">{d.estatutoHash}</dd></div>
                 <div className="sm:col-span-2"><dt className="text-neutral-500">Stock vault</dt><dd className="font-mono text-xs break-all">{listing.stockContract}</dd></div>
-                <div className="sm:col-span-2"><dt className="text-neutral-500">Licitación</dt><dd className="font-mono text-xs break-all">{listing.licitacionContract}</dd></div>
+                <div className="sm:col-span-2">
+                  <dt className="text-neutral-500">Licitación</dt>
+                  <dd className="font-mono text-xs break-all">
+                    {String(listing.licitacionContract || '').startsWith('C') ? (
+                      <a
+                        href={`https://stellar.expert/explorer/testnet/contract/${listing.licitacionContract}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline"
+                      >
+                        {listing.licitacionContract}
+                      </a>
+                    ) : (
+                      listing.licitacionContract
+                    )}
+                  </dd>
+                </div>
                 <div className="sm:col-span-2"><dt className="text-neutral-500">Depósito CV</dt><dd className="font-mono text-xs break-all">{listing.cvDepositHash}</dd></div>
               </dl>
               <ul className="text-sm space-y-1 pt-2">
@@ -168,6 +190,26 @@ export default function PoolDetailPage() {
                 Aportar USDC
               </button>
               {notice && <p className="text-sm">{notice}</p>}
+              {listing.onChain?.explorer && (
+                <a
+                  href={listing.onChain.explorer}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block text-xs font-mono underline break-all"
+                >
+                  Ver contrato de licitación en Stellar Expert
+                </a>
+              )}
+              {listing.onChain?.trustlineExplorer && (
+                <a
+                  href={listing.onChain.trustlineExplorer}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block text-xs font-mono underline break-all"
+                >
+                  Hash trustline testnet
+                </a>
+              )}
             </div>
           </div>
         </div>

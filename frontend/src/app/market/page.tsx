@@ -28,6 +28,9 @@ export default function MarketPage() {
         <p className="text-neutral-600 max-w-xl mt-1">
           {pools.filter((p) => p.status === 'OPEN').length} licitacion{pools.filter((p) => p.status === 'OPEN').length === 1 ? '' : 'es'} abierta{pools.filter((p) => p.status === 'OPEN').length === 1 ? '' : 's'}. Expediente: CUIT, ISIN, CNV, Caja de Valores y contratos.
         </p>
+        <p className="text-xs text-neutral-500 mt-2">
+          Flujo vivo del demo: login → wallet → KYC → aportar USDC. Forwards, warrants y Merval son maqueta.
+        </p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {pools.map((pool) => {
