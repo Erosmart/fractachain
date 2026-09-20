@@ -32,7 +32,7 @@ const CONTRACTS: ContractData[] = [
       'revoke_investor(admin, investor)',
       'is_verified(investor) -> bool',
       'contribute(buyer, payment_amount) [solo KYC aprobado]',
-      'finalize() [paga la wallet de la empresa al alcanzar soft cap]',
+      'finalize() [hard cap o deadline; si raised≥soft cap paga fiduciaria, si no Failed+refund]',
       'withdraw_proceeds(admin) [reintento si el pago se interrumpió]',
       'refund(contributor) [Failed issuance burns RWA]',
       'launch_opa(acquirer, price_per_share)',

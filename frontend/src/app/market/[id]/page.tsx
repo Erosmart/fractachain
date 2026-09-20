@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
-import { API_BASE_URL, getApiBaseUrl } from '../../../lib/api';
+import { API_BASE_URL, bearerHeaders, getApiBaseUrl } from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
 import { useI18n } from '../../../context/I18nContext';
 import { formatInt } from '../../../lib/format';
@@ -12,7 +12,7 @@ import { formatInt } from '../../../lib/format';
 export default function PoolDetailPage() {
   const params = useParams();
   const poolId = params.id as string;
-    const { user, token, refreshUser, approveToken, claimTokens } = useAuth();
+  const { user, token, refreshUser, approveToken, claimTokens, finalizeOffering, refundContribution } = useAuth();
   const { t } = useI18n();
   const [listing, setListing] = useState<any>(null);
   const [validation, setValidation] = useState<any>(null);
@@ -20,21 +20,30 @@ export default function PoolDetailPage() {
   const [amount, setAmount] = useState(100);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  const [lastHash, setLastHash] = useState<{ kind: string; hash: string; explorer?: string | null } | null>(null);
 
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/api/listings/${poolId}`)
+  const load = useCallback(() => {
+    const auth = token || (typeof window !== 'undefined' ? localStorage.getItem('fc_auth_token') : null);
+    return fetch(`${API_BASE_URL}/api/listings/${poolId}`, {
+      headers: bearerHeaders(auth),
+    })
       .then((r) => r.json())
       .then((json) => {
         if (json?.success && json.data) {
           setListing(json.data);
           setValidation(json.validation);
           const min = json.data.dossier?.minInvestmentUsdc || json.data.dossier?.pricePerShareUsdc || 100;
-          setAmount(min);
+          setAmount((prev) => prev || min);
         }
-      })
+        return json;
+      });
+  }, [poolId, token]);
+
+  useEffect(() => {
+    load()
       .catch(() => {})
       .finally(() => setLoaded(true));
-  }, [poolId]);
+  }, [load]);
 
   const invest = async () => {
     setNotice('');
@@ -66,14 +75,17 @@ export default function PoolDetailPage() {
       }
       setListing(json.data);
       await refreshUser();
+      await load();
       const onChain = json.data?.onChain;
       const contributeHash = onChain?.contributeHash;
       const hash = contributeHash || onChain?.trustlineHash;
       const raised = Number(json.data.raisedUsdc).toLocaleString('es-AR');
       const unit = json.data?.dossier?.paymentKind === 'XLM' ? 'XLM' : 'USDC';
       if (contributeHash) {
+        setLastHash({ kind: 'contribute', hash: contributeHash, explorer: onChain?.contributeExplorer });
         setNotice(t('market.subscribedContributeHash', { n: raised, hash: contributeHash }));
       } else if (hash) {
+        setLastHash({ kind: 'trustline', hash, explorer: onChain?.trustlineExplorer });
         setNotice(t('market.subscribedHash', { n: raised, hash }));
       } else if (unit === 'XLM') {
         setNotice(t('market.subscribedRaisedXlm', { n: raised }));
@@ -88,10 +100,73 @@ export default function PoolDetailPage() {
     }
   };
 
+  const runFinalize = async () => {
+    setNotice('');
+    if (!token) {
+      setNotice(t('market.loginToFinalize'));
+      return;
+    }
+    setBusy(true);
+    try {
+      const data = await finalizeOffering(poolId);
+      const hash = data?.onChain?.hash;
+      if (hash) setLastHash({ kind: 'finalize', hash, explorer: data?.onChain?.explorer });
+      setNotice(hash ? t('market.finalizeNotice', { hash }) : data?.onChain?.note || 'finalize() OK');
+      await load();
+      await refreshUser();
+    } catch (e: any) {
+      setNotice(e?.message || t('market.finalizeNeedCap'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const runRefund = async () => {
+    setNotice('');
+    if (!token) {
+      setNotice(t('market.loginToRefund'));
+      return;
+    }
+    setBusy(true);
+    try {
+      const data = await refundContribution(poolId);
+      const hash = data?.onChain?.hash;
+      if (hash) setLastHash({ kind: 'refund', hash, explorer: data?.onChain?.explorer });
+      setNotice(hash ? t('market.refundNotice', { hash }) : data?.onChain?.note || 'refund() OK');
+      await load();
+      await refreshUser();
+    } catch (e: any) {
+      setNotice(e?.message || 'No se pudo reembolsar');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (listing && validation) {
     const d = listing.dossier;
     const xlm = d.paymentKind === 'XLM';
     const unit = xlm ? 'XLM' : 'USDC';
+    const live = listing.onChain || {};
+    const stateName = live.stateName;
+    const canFinalize = Boolean(live.canFinalize);
+    const failed = listing.status === 'CLOSED_FAILED' || stateName === 'Failed';
+    const success = listing.status === 'CLOSED_SUCCESS' || stateName === 'Successful' || stateName === 'Terminated';
+    const holding = user?.holdings?.find((h) => h.listingId === listing.id);
+    const canClaim =
+      success &&
+      Boolean(user?.trustlines?.includes(listing.id)) &&
+      (holding?.tokensOwed || 0) > 0 &&
+      !holding?.refundedAt;
+    const canRefund =
+      xlm && failed && Boolean(holding) && !holding?.refundedAt && user?.custodyMode === 'CUSTODIAL';
+    const statusLabel = failed
+      ? t('market.stateFailed')
+      : success
+        ? t('market.stateSuccess')
+        : canFinalize
+          ? t('market.stateReady')
+          : t('market.stateOpen');
+
     return (
       <div className="max-w-5xl mx-auto py-6 space-y-6">
       <div className="rounded-2xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950 mb-4">
@@ -106,6 +181,9 @@ export default function PoolDetailPage() {
               <p className="font-lcd text-[11px] uppercase tracking-[0.2em] text-neutral-500">{d.tokenTicker} · {d.ticker}</p>
               <h1 className="text-3xl font-extrabold font-display">{d.legalName}</h1>
               <p className="text-neutral-600">{d.useOfProceeds}</p>
+              {xlm && (
+                <p className="text-xs text-neutral-500">{t('market.finalizeRule')}</p>
+              )}
             </div>
             <div className="p-6 rounded-3xl crystal-card space-y-3">
               <h2 className="font-section text-xl font-extrabold flex items-center gap-2">
@@ -153,9 +231,13 @@ export default function PoolDetailPage() {
           <div className="lg:col-span-5">
             <div className="p-6 rounded-3xl crystal-card space-y-4 sticky top-24">
               <h3 className="font-display font-extrabold">{t('market.subscribe')}</h3>
+              <p className="text-sm font-bold">{statusLabel}</p>
               <p className="text-sm text-neutral-600">
-                {formatInt(listing.raisedUsdc)} / {formatInt(d.offeringHardCapUsdc)} {unit} · mínimo {formatInt(d.minInvestmentUsdc || d.pricePerShareUsdc)} {unit}
+                {formatInt(live.raised ?? listing.raisedUsdc)} / {formatInt(d.offeringHardCapUsdc)} {unit} · mínimo {formatInt(d.minInvestmentUsdc || d.pricePerShareUsdc)} {unit}
               </p>
+              {typeof live.investorRwa === 'number' && (
+                <p className="text-xs text-neutral-500 font-mono">RWA on-chain: {live.investorRwa}</p>
+              )}
               <input
                 type="number"
                 min={d.minInvestmentUsdc || d.pricePerShareUsdc}
@@ -164,7 +246,10 @@ export default function PoolDetailPage() {
                 className="w-full px-3 py-3 rounded-xl border border-black/10 font-mono"
               />
               {listing.status === 'CLOSED_SUCCESS' && (
-                <p className="text-sm text-[#2f6f28] font-bold">{t('market.closed')}</p>
+                <p className="text-sm text-[#2f6f28] font-bold">{xlm ? t('market.closedSuccess') : t('market.closed')}</p>
+              )}
+              {listing.status === 'CLOSED_FAILED' && (
+                <p className="text-sm text-red-800 font-bold">{t('market.closedFailed')}</p>
               )}
               {listing.status === 'LISTED' && (
                 <p className="text-sm text-neutral-600">
@@ -173,6 +258,7 @@ export default function PoolDetailPage() {
                     : t('market.closesAt', { n: formatInt(d.offeringSoftCapUsdc) })}
                 </p>
               )}
+              {xlm && <p className="text-xs text-neutral-500">{t('market.payoutHint')}</p>}
               {user?.kycStatus === 'APPROVED' && !user?.trustlines?.includes(listing.id) && (
                 <button
                   type="button"
@@ -182,14 +268,31 @@ export default function PoolDetailPage() {
                   {t('market.approve')}
                 </button>
               )}
-              {user?.trustlines?.includes(listing.id) && (user.holdings?.find((h) => h.listingId === listing.id)?.tokensOwed || 0) > 0 && listing.status === 'CLOSED_SUCCESS' && (
+              {canClaim && (
+                <div className="space-y-2">
+                  <p className="text-xs text-neutral-500">{t('market.claimHint')}</p>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => claimTokens(listing.id).then(() => setNotice(t('market.claimedNotice'))).catch((e) => setNotice(e.message))}
+                    className="w-full py-3 rounded-2xl border border-black/10 font-display font-bold"
+                  >
+                    {t('market.claim')}
+                  </button>
+                </div>
+              )}
+              {canRefund && (
                 <button
                   type="button"
-                  onClick={() => claimTokens(listing.id).then(() => setNotice(t('market.claimedNotice'))).catch((e) => setNotice(e.message))}
+                  disabled={busy}
+                  onClick={runRefund}
                   className="w-full py-3 rounded-2xl border border-black/10 font-display font-bold"
                 >
-                  {t('market.claim')}
+                  {busy ? t('market.refundBusy') : t('market.refund')}
                 </button>
+              )}
+              {holding?.refundedAt && (
+                <p className="text-sm text-[#2f6f28] font-bold">{t('dash.refunded')}</p>
               )}
               {user?.kycStatus !== 'APPROVED' && (
                 <p className="text-sm text-neutral-600">
@@ -205,6 +308,16 @@ export default function PoolDetailPage() {
               >
                 {busy ? '…' : xlm ? t('market.contributeXlm') : t('market.contribute')}
               </button>
+              {xlm && listing.status === 'LISTED' && (
+                <button
+                  type="button"
+                  onClick={runFinalize}
+                  disabled={busy || !canFinalize}
+                  className="w-full py-3 rounded-2xl border border-black/10 font-display font-bold disabled:opacity-40"
+                >
+                  {busy ? t('market.finalizeBusy') : t('market.finalize')}
+                </button>
+              )}
               {notice && <p className="text-sm">{notice}</p>}
               {listing.onChain?.explorer && (
                 <a
@@ -224,6 +337,34 @@ export default function PoolDetailPage() {
                   className="block text-xs font-mono underline break-all"
                 >
                   {t('market.contributeTx')}
+                </a>
+              )}
+              {listing.onChain?.finalizeExplorer && (
+                <a
+                  href={listing.onChain.finalizeExplorer}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block text-xs font-mono underline break-all"
+                >
+                  {t('market.finalizeTx')}
+                </a>
+              )}
+              {lastHash?.explorer && (
+                <a
+                  href={lastHash.explorer}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block text-xs font-mono underline break-all"
+                >
+                  {lastHash.kind === 'finalize'
+                    ? t('market.finalizeTx')
+                    : lastHash.kind === 'refund'
+                      ? t('market.refundTx')
+                      : lastHash.kind === 'contribute'
+                        ? t('market.contributeTx')
+                        : t('market.trustline')}
+                  {': '}
+                  {lastHash.hash}
                 </a>
               )}
               {listing.onChain?.trustlineExplorer && (

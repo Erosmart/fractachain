@@ -122,6 +122,18 @@ export function mapSorobanError(err: unknown): Error {
   if (/cannot finalize yet/.test(text)) {
     return new Error('Todavía no se puede cerrar: hace falta llegar al hard cap o que venza el deadline.');
   }
+  if (/not in open state/.test(text)) {
+    return new Error('La licitación on-chain ya no está abierta (finalize ya corrió o el estado no es Open).');
+  }
+  if (/refunds only available/.test(text)) {
+    return new Error('El reembolso on-chain solo existe si finalize() dejó la emisión en Failed (no se llegó al soft cap).');
+  }
+  if (/no balance to refund/.test(text)) {
+    return new Error('Esta wallet no tiene saldo para reembolsar en el contrato (ya se reembolsó o no aportó).');
+  }
+  if (/proceeds already withdrawn|only withdrawable after a successful/.test(text)) {
+    return new Error('Los fondos ya se pagaron a la wallet de la empresa, o la emisión no cerró en Successful.');
+  }
   if (/insufficient|balance/.test(text)) {
     return new Error('XLM insuficiente en la wallet para el aporte y las fees de Soroban.');
   }

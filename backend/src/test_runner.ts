@@ -5,6 +5,7 @@ import { registerKyc, getAllKycRecords, approveKyc, rejectKyc } from './admin/ky
 import { processArsOnRamp, processCctpBridge } from './mocks/payment_gateway';
 import { getAllCommodityPrices } from './mocks/fiat_oracle';
 import { getMervalStocks } from './custody/stocks';
+import { canFinalizeFromSnapshot, parseLicitacionState } from './stellar/licitacion_state';
 
 console.log('=== INICIANDO SUITE DE PRUEBAS DE FRACTACHAIN BACKEND ===');
 
@@ -127,6 +128,29 @@ assert(prices.length >= 4, 'Oráculo de granos provee cotizaciones activas (Soja
 
 const stocks = getMervalStocks();
 assert(stocks.some((s) => s.tokenTicker === 'tYPF'), 'Custodia de acciones Merval incluye tYPF 1:1');
+
+console.log('\n[7] Probando reglas de finalize (hard cap / deadline, no soft cap solo):');
+
+assert(parseLicitacionState({ tag: 'Successful' }) === 1, 'parseLicitacionState lee el tag Successful del SDK');
+assert(parseLicitacionState(0) === 0, 'parseLicitacionState acepta el entero Open');
+
+const hard = canFinalizeFromSnapshot({ state: 0, raised: 100, hardCap: 100, deadlineMs: Date.now() + 86_400_000 });
+assert(hard.canFinalize && hard.reason === 'hard_cap', 'Hard cap alcanzado habilita finalize');
+
+const waiting = canFinalizeFromSnapshot({ state: 0, raised: 50, hardCap: 100, deadlineMs: Date.now() + 86_400_000 });
+assert(!waiting.canFinalize && waiting.reason === 'waiting', 'Soft cap (50/100) NO cierra si el deadline no venció');
+
+const late = canFinalizeFromSnapshot({
+  state: 0,
+  raised: 10,
+  hardCap: 100,
+  deadlineMs: Date.now() - 1000,
+  nowMs: Date.now(),
+});
+assert(late.canFinalize && late.reason === 'deadline', 'Deadline vencido habilita finalize aunque falte hard cap');
+
+const closed = canFinalizeFromSnapshot({ state: 1, raised: 100, hardCap: 100, deadlineMs: null });
+assert(!closed.canFinalize && closed.reason === 'already_closed', 'Successful no se vuelve a finalizar');
 
 console.log(`\n=== RESUMEN: ${testsPassed} PASADOS, ${testsFailed} FALLIDOS ===\n`);
 if (testsFailed > 0) {

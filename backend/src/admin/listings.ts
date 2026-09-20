@@ -75,6 +75,9 @@ export interface Listing {
   /** Stellar address that actually received the raise when the offering closed. */
   proceedsPaidTo?: string;
   proceedsPaidAt?: string;
+  /** Hash of the on-chain `finalize()` (or refund recovery) transaction. */
+  finalizeHash?: string;
+  finalizeAt?: string;
 }
 
 const DATA = path.join(__dirname, '..', '..', 'data', 'listings.json');
@@ -394,10 +397,17 @@ export function validationPack(listing: Listing) {
   };
 }
 
+function poolStatus(listing: Listing): 'OPEN' | 'SUCCESSFUL' | 'SETTLED' | 'FAILED' {
+  if (listing.status === 'LISTED') return 'OPEN';
+  if (listing.status === 'CLOSED_SUCCESS') return 'SUCCESSFUL';
+  if (listing.status === 'CLOSED_FAILED') return 'FAILED';
+  return 'SETTLED';
+}
+
 export function listedPools() {
   listings.forEach(applyDueClose);
   return listings
-    .filter((l) => l.status === 'LISTED')
+    .filter((l) => l.status === 'LISTED' || (isOnChainListing(l) && (l.status === 'CLOSED_SUCCESS' || l.status === 'CLOSED_FAILED')))
     .map((l) => {
       const d = l.dossier;
       const deadline = l.settleAt
@@ -422,11 +432,12 @@ export function listedPools() {
         riskScore: 'AA+',
         isSoftCapReached: l.raisedUsdc >= d.offeringSoftCapUsdc,
         minInvestment: d.minInvestmentUsdc || d.pricePerShareUsdc,
-        status: 'OPEN' as const,
+        status: poolStatus(l),
         tokenTicker: d.tokenTicker,
         ticker: d.ticker,
         isin: d.isin,
         paymentKind: d.paymentKind || 'USDC',
+        finalizeHash: l.finalizeHash || null,
         validation: validationPack(l),
       };
     });
@@ -476,6 +487,9 @@ function payListingProceeds(listing: Listing) {
   }
   listing.proceedsPaidTo = wallet;
   listing.proceedsPaidAt = new Date().toISOString();
+  // On-chain XLM already moved to the fiduciary in `finalize()`. Crediting
+  // sandbox USDC here would invent a second, fake payout.
+  if (isOnChainListing(listing)) return;
   const company = findAccountByPublicKey(wallet);
   if (company && listing.raisedUsdc > 0) {
     creditCash(company.id, listing.raisedUsdc);
@@ -538,15 +552,32 @@ export function markListingClosed(
   id: string,
   status: 'CLOSED_SUCCESS' | 'CLOSED_FAILED',
   raised?: number,
+  extra?: { finalizeHash?: string | null; proceedsPaidTo?: string | null },
 ): Listing {
   const listing = getListing(id);
   if (!listing) throw new Error('Listing no encontrado');
   listing.status = status;
   listing.closedAt = new Date().toISOString();
   if (typeof raised === 'number') listing.raisedUsdc = raised;
+  if (extra?.finalizeHash) {
+    listing.finalizeHash = extra.finalizeHash;
+    listing.finalizeAt = new Date().toISOString();
+  }
   if (status === 'CLOSED_SUCCESS') payListingProceeds(listing);
+  if (extra?.proceedsPaidTo) listing.proceedsPaidTo = extra.proceedsPaidTo;
   save();
   return getListing(id)!;
+}
+
+export function recordFinalizeHash(id: string, hash: string | null | undefined): Listing {
+  const listing = getListing(id);
+  if (!listing) throw new Error('Listing no encontrado');
+  if (hash) {
+    listing.finalizeHash = hash;
+    listing.finalizeAt = new Date().toISOString();
+    save();
+  }
+  return listing;
 }
 
 export function closeListing(id: string) {

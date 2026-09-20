@@ -23,6 +23,13 @@ type Position = {
   pnlPct: number;
   priceSourceLabel: string;
   pendingDividendUsdc: number;
+  listingStatus?: string;
+  paymentKind?: string | null;
+  finalizeHash?: string | null;
+  refundedAt?: string | null;
+  refundHash?: string | null;
+  canClaim?: boolean;
+  canRefund?: boolean;
 };
 
 type Portfolio = {
@@ -42,7 +49,7 @@ function money(n: number, digits = 2) {
 }
 
 export default function DashboardPage() {
-  const { user, token, approveToken, claimTokens, claimDividends } = useAuth();
+  const { user, token, approveToken, claimTokens, claimDividends, refundContribution } = useAuth();
   const { t } = useI18n();
   const [book, setBook] = useState<Portfolio | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -169,6 +176,38 @@ export default function DashboardPage() {
                     <p className="text-xs text-neutral-500">
                       Precio actual ${money(h.marketPrice)} · {h.priceSourceLabel}
                     </p>
+                    {h.listingStatus === 'CLOSED_SUCCESS' && (
+                      <p className="text-xs text-[#2f6f28] font-bold mt-1">{t('dash.closedSuccess')}</p>
+                    )}
+                    {h.listingStatus === 'CLOSED_FAILED' && (
+                      <p className="text-xs text-red-800 font-bold mt-1">{t('dash.closedFailed')}</p>
+                    )}
+                    {h.listingStatus === 'LISTED' && (
+                      <p className="text-xs text-neutral-500 mt-1">{t('dash.listed')}</p>
+                    )}
+                    {h.refundedAt && (
+                      <p className="text-xs text-[#2f6f28] font-bold mt-1">{t('dash.refunded')}</p>
+                    )}
+                    {h.finalizeHash && (
+                      <a
+                        href={`https://stellar.expert/explorer/testnet/tx/${h.finalizeHash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block text-[11px] font-mono underline break-all mt-1"
+                      >
+                        {t('market.finalizeTx')}
+                      </a>
+                    )}
+                    {h.refundHash && (
+                      <a
+                        href={`https://stellar.expert/explorer/testnet/tx/${h.refundHash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block text-[11px] font-mono underline break-all mt-1"
+                      >
+                        {t('market.refundTx')}
+                      </a>
+                    )}
                   </div>
                   <div className="text-right">
                     <div className="font-lcd font-bold">${money(h.marketValue)}</div>
@@ -194,7 +233,7 @@ export default function DashboardPage() {
                       {t('dash.approve')}
                     </button>
                   )}
-                  {approved && h.tokensOwed > 0 && (
+                  {approved && (h.canClaim ?? h.tokensOwed > 0) && h.listingStatus !== 'CLOSED_FAILED' && !h.refundedAt && (
                     <button
                       type="button"
                       disabled={busy === h.listingId}
@@ -202,6 +241,16 @@ export default function DashboardPage() {
                       className="px-4 py-2 rounded-xl border border-black/10 text-xs font-display font-bold"
                     >
                       {t('dash.claim')}
+                    </button>
+                  )}
+                  {h.canRefund && (
+                    <button
+                      type="button"
+                      disabled={busy === `refund-${h.listingId}`}
+                      onClick={() => run(`refund-${h.listingId}`, async () => { await refundContribution(h.listingId); })}
+                      className="px-4 py-2 rounded-xl border border-black/10 text-xs font-display font-bold"
+                    >
+                      {t('dash.refund')}
                     </button>
                   )}
                   {h.pendingDividendUsdc > 0 && (
@@ -214,6 +263,9 @@ export default function DashboardPage() {
                       {t('dash.collect')}
                     </button>
                   )}
+                  <Link href={`/market/${h.listingId}`} className="px-4 py-2 rounded-xl border border-black/10 text-xs font-display font-bold inline-flex items-center gap-1">
+                    {t('market.viewDossier')}
+                  </Link>
                   <Link href={`/orderbook?listing=${h.listingId}`} className="px-4 py-2 rounded-xl border border-black/10 text-xs font-display font-bold inline-flex items-center gap-1">
                     {t('dash.trade')} <ArrowRight className="w-3.5 h-3.5" />
                   </Link>

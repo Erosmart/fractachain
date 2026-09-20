@@ -20,6 +20,9 @@ export interface Holding {
   tokensOwed: number;
   /** Accrued USDC from a dividend deposit, claimable by the holder. */
   pendingDividendUsdc?: number;
+  /** Set after an on-chain `refund()` on a failed licitacion. */
+  refundedAt?: string;
+  refundHash?: string;
 }
 
 export interface Account {
@@ -431,8 +434,31 @@ export function claimListingTokens(accountId: string, listingId: string, listing
   if (!holding || (holding.tokensOwed || 0) <= 0) {
     throw new Error('No hay tokens pendientes de reclamo');
   }
+  if (holding.refundedAt) {
+    throw new Error('Ese aporte ya se reembolsó on-chain; no hay unidades para anotar');
+  }
   holding.tokens += holding.tokensOwed;
   holding.tokensOwed = 0;
+  save();
+  return toPublic(account);
+}
+
+export function markHoldingRefunded(
+  accountId: string,
+  listingId: string,
+  extra?: { hash?: string | null },
+) {
+  const account = accounts.get(accountId);
+  if (!account) throw new Error('Cuenta no encontrada');
+  const holding = (account.holdings || []).find((h) => h.listingId === listingId);
+  if (!holding) throw new Error('No hay una posición en esta licitación');
+  if (holding.refundedAt) {
+    throw new Error('Este aporte ya está marcado como reembolsado');
+  }
+  holding.tokens = 0;
+  holding.tokensOwed = 0;
+  holding.refundedAt = new Date().toISOString();
+  if (extra?.hash) holding.refundHash = extra.hash;
   save();
   return toPublic(account);
 }

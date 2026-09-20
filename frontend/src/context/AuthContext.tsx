@@ -21,7 +21,7 @@ export interface User {
   selfieUrl?: string;
   custodialWallet?: string;
   authProvider?: string;
-  holdings?: { listingId: string; tokenTicker: string; usdcAmount: number; tokens: number; tokensOwed?: number; pendingDividendUsdc?: number }[];
+  holdings?: { listingId: string; tokenTicker: string; usdcAmount: number; tokens: number; tokensOwed?: number; pendingDividendUsdc?: number; refundedAt?: string; refundHash?: string }[];
   trustlines?: string[];
   cashUsdc?: number;
   xlmBalance?: number;
@@ -41,6 +41,8 @@ interface AuthContextType {
   approveToken: (listingId: string) => Promise<void>;
   claimTokens: (listingId: string) => Promise<void>;
   claimDividends: (listingId: string) => Promise<void>;
+  finalizeOffering: (listingId: string) => Promise<any>;
+  refundContribution: (listingId: string) => Promise<any>;
   refreshUser: () => Promise<void>;
   logout: () => void;
 }
@@ -61,6 +63,8 @@ const AuthContext = createContext<AuthContextType>({
   approveToken: async () => {},
   claimTokens: async () => {},
   claimDividends: async () => {},
+  finalizeOffering: async () => ({}),
+  refundContribution: async () => ({}),
   refreshUser: async () => {},
   logout: () => {},
 });
@@ -247,6 +251,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     applySession(token, data.data);
   };
 
+  const finalizeOffering = async (listingId: string) => {
+    if (!token) throw new Error('Iniciá sesión');
+    const res = await fetch(`${API_BASE_URL}/api/listings/${listingId}/finalize`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo finalizar la licitación');
+    return data.data;
+  };
+
+  const refundContribution = async (listingId: string) => {
+    if (!token) throw new Error('Iniciá sesión');
+    const res = await fetch(`${API_BASE_URL}/api/listings/${listingId}/refund`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo reembolsar');
+    if (data.data?.user) applySession(token, data.data.user);
+    return data.data;
+  };
+
   const claimDividends = async (listingId: string) => {
     if (!token) throw new Error('Iniciá sesión');
     const res = await fetch(`${API_BASE_URL}/api/listings/${listingId}/dividends/claim`, {
@@ -281,6 +308,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         approveToken,
         claimTokens,
         claimDividends,
+        finalizeOffering,
+        refundContribution,
         refreshUser,
         logout,
       }}
