@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth, afterAuthPath } from '../../context/AuthContext';
+import { useI18n } from '../../context/I18nContext';
 import GoogleLoginButton from '../../components/GoogleLoginButton';
 import WalletAddress from '../../components/WalletAddress';
 
@@ -10,6 +11,7 @@ export default function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
   const { user, loginWithEmail, isLoading, logout } = useAuth();
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -34,17 +36,17 @@ export default function LoginInner() {
   if (user) {
     return (
       <div className="max-w-md mx-auto py-16 space-y-6 text-center">
-        <h1 className="text-2xl font-extrabold font-display">Ya estás adentro</h1>
+        <h1 className="text-2xl font-extrabold font-display">{t('auth.alreadyIn')}</h1>
         <p className="text-neutral-600">{user.email}</p>
         <div className="p-4 rounded-2xl crystal-card text-left space-y-1">
-          <p className="text-[11px] uppercase tracking-wider text-neutral-500 font-display font-bold">Tu wallet</p>
+          <p className="text-[11px] uppercase tracking-wider text-neutral-500 font-display font-bold">{t('nav.yourWallet')}</p>
           <WalletAddress address={user.publicKey} />
         </div>
         <button type="button" onClick={goNext} className="px-6 py-3 rounded-2xl bg-black text-white font-display font-bold">
-          Continuar
+          {t('auth.continue')}
         </button>
         <button type="button" onClick={logout} className="block mx-auto text-sm text-neutral-500">
-          Cerrar sesión
+          {t('auth.logout')}
         </button>
       </div>
     );
@@ -53,23 +55,22 @@ export default function LoginInner() {
   return (
     <div className="max-w-md mx-auto py-12 space-y-8">
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-extrabold font-display">Ingresar o crear cuenta</h1>
+        <h1 className="text-3xl font-extrabold font-display">{t('auth.title')}</h1>
         <p className="text-neutral-600">
-          Es el mismo formulario. Si el email no existe, se crea la cuenta y después pedimos custodia y KYC.
+          {t('auth.subtitle')}
         </p>
       </div>
 
       <div className="p-6 rounded-3xl crystal-card space-y-5">
         <GoogleLoginButton
-          label="Continuar con Google"
           className="w-full py-3"
           onSuccess={(u) => router.push(afterAuthPath(u as any, params.get('next')))}
         />
-        <p className="text-center text-xs text-neutral-500">o con email</p>
+        <p className="text-center text-xs text-neutral-500">{t('auth.orEmail')}</p>
         <form onSubmit={handleEmail} className="space-y-3">
           <input
             type="text"
-            placeholder="Nombre (obligatorio la primera vez)"
+            placeholder={t('auth.name')}
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full px-3 py-2.5 rounded-xl border border-black/10 bg-white"
@@ -77,7 +78,7 @@ export default function LoginInner() {
           <input
             required
             type="email"
-            placeholder="Email"
+            placeholder={t('auth.email')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full px-3 py-2.5 rounded-xl border border-black/10 bg-white"
@@ -86,7 +87,7 @@ export default function LoginInner() {
             required
             minLength={6}
             type="password"
-            placeholder="Contraseña (mín. 6)"
+            placeholder={t('auth.password')}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-3 py-2.5 rounded-xl border border-black/10 bg-white"
@@ -97,7 +98,7 @@ export default function LoginInner() {
             disabled={isLoading}
             className="w-full py-3 rounded-2xl bg-black text-white font-display font-bold"
           >
-            {isLoading ? 'Entrando…' : 'Continuar'}
+            {isLoading ? t('auth.entering') : t('auth.continue')}
           </button>
         </form>
       </div>

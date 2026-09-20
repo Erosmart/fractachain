@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Clock } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+import { useI18n } from '../../../context/I18nContext';
 
 export default function PendingKycPage() {
   const { user, refreshUser, logout } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
 
   useEffect(() => {
@@ -24,18 +25,18 @@ export default function PendingKycPage() {
     <div className="max-w-lg mx-auto py-16 text-center space-y-5">
       <Clock className="w-10 h-10 mx-auto" />
       <h1 className="text-3xl font-extrabold font-display">
-        {user?.kycStatus === 'REJECTED' ? 'Validación rechazada' : 'Pendiente de aprobación'}
+        {user?.kycStatus === 'REJECTED' ? t('onboarding.rejectedTitle') : t('onboarding.pendingTitle')}
       </h1>
       <p className="text-neutral-600">
         {user?.kycStatus === 'REJECTED'
-          ? 'Un oficial rechazó la solicitud. No podés operar hasta una nueva revisión.'
-          : 'Tus datos y la foto de la cara ya están en el panel de cumplimiento. Sin esa aprobación no se puede seguir al portfolio ni al mercado.'}
+          ? t('onboarding.rejectedBody')
+          : t('onboarding.pendingBody')}
       </p>
       <p className="text-sm text-neutral-500">
-        Un admin entra a <Link className="underline" href="/admin/kyc">/admin/kyc</Link> y aprueba la solicitud.
+        {t('onboarding.pendingHint')}
       </p>
       <button type="button" onClick={logout} className="text-sm text-neutral-500">
-        Cerrar sesión
+        {t('auth.logout')}
       </button>
     </div>
   );

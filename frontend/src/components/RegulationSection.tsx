@@ -2,8 +2,10 @@
 
 import { Globe2, ShieldCheck, Scale } from 'lucide-react';
 import BrandLogo from './BrandLogo';
+import { useI18n } from '../context/I18nContext';
 
 function CnvMark() {
+  const { messages } = useI18n();
   return (
     <div className="flex items-center gap-3 min-w-0">
       <BrandLogo
@@ -24,14 +26,15 @@ function CnvMark() {
         }
       />
       <div className="leading-tight min-w-0">
-        <div className="font-section font-extrabold text-black text-xs sm:text-sm">Comisión Nacional de Valores</div>
-        <div className="text-[11px] text-neutral-500">Sandbox RG 1150 / 2026 · Ley 26.831</div>
+        <div className="font-section font-extrabold text-black text-xs sm:text-sm">{messages.regulation.cnv}</div>
+        <div className="text-[11px] text-neutral-500">{messages.regulation.cnvSub}</div>
       </div>
     </div>
   );
 }
 
 function CajaMark() {
+  const { messages } = useI18n();
   return (
     <div className="flex items-center gap-3 min-w-0">
       <BrandLogo
@@ -47,26 +50,27 @@ function CajaMark() {
         }
       />
       <div className="leading-tight min-w-0">
-        <div className="font-section font-extrabold text-black text-xs sm:text-sm">Caja de Valores S.A.</div>
-        <div className="text-[11px] text-neutral-500">Custodia comitente 1:1</div>
+        <div className="font-section font-extrabold text-black text-xs sm:text-sm">{messages.regulation.caja}</div>
+        <div className="text-[11px] text-neutral-500">{messages.regulation.cajaSub}</div>
       </div>
     </div>
   );
 }
 
 export default function RegulationSection() {
+  const { messages } = useI18n();
+  const copy = messages.regulation;
+  const icons = [ShieldCheck, Globe2, Scale] as const;
+
   return (
     <section className="rounded-2xl sm:rounded-3xl crystal-card p-5 sm:p-8 lg:p-12 space-y-6 sm:space-y-8">
       <div className="max-w-3xl space-y-3">
-        <p className="font-lcd text-[11px] uppercase tracking-[0.22em] text-neutral-500">Marco legal</p>
+        <p className="font-lcd text-[11px] uppercase tracking-[0.22em] text-neutral-500">{copy.kicker}</p>
         <h2 className="font-section text-2xl sm:text-3xl lg:text-4xl font-extrabold text-black">
-          Respaldo CNV. Inversión global. 100% regulado.
+          {copy.title}
         </h2>
         <p className="text-neutral-600 text-sm sm:text-base leading-relaxed">
-          Fractachain no es un atajo informal. Opera bajo el sandbox de la <strong className="text-black">CNV</strong>,
-          con valores y contratos alineados a la Ley de Mercado de Capitales, warrants Ley 9643 y forwards del Código
-          Civil. Un inversor en Madrid, Miami o São Paulo puede suscribir en USDC sobre Stellar con el mismo marco que
-          un comitente en Buenos Aires.
+          {copy.body}
         </p>
       </div>
 
@@ -76,19 +80,16 @@ export default function RegulationSection() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
-        {(
-          [
-            [ShieldCheck, '100% regulado', 'PSAV, AML/CFT, KYC on-chain y time-lock horario ART. No hay tokens sueltos al margen de la CNV.'],
-            [Globe2, 'Cualquier inversor del mundo', 'Liquidación T+0 en Stellar. El riel es global; el título sigue siendo argentino y custodiado.'],
-            [Scale, 'Tres productos, un expediente', 'Consumo, futuros licitables y lending contra stock. Misma custodia, mismo regulador.'],
-          ] as const
-        ).map(([Icon, t, d]) => (
-          <div key={t} className="space-y-2">
+        {copy.cards.map(([title, desc], i) => {
+          const Icon = icons[i];
+          return (
+          <div key={title} className="space-y-2">
             <Icon className="w-5 h-5" />
-            <h3 className="font-section font-extrabold text-black">{t}</h3>
-            <p className="text-sm text-neutral-600 leading-relaxed">{d}</p>
+            <h3 className="font-section font-extrabold text-black">{title}</h3>
+            <p className="text-sm text-neutral-600 leading-relaxed">{desc}</p>
           </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { API_BASE_URL } from '../../lib/api';
 import { MOCK_POOLS, Pool } from '../../lib/mock-data';
+import { useI18n } from '../../context/I18nContext';
 
 export default function MarketPage() {
   const [pools, setPools] = useState<(Pool & { validation?: any; tokenTicker?: string })[]>(MOCK_POOLS);
+  const { t } = useI18n();
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/market/pools`)
@@ -23,13 +25,15 @@ export default function MarketPage() {
   return (
     <div className="space-y-8 py-6">
       <div>
-        <p className="font-lcd text-[11px] uppercase tracking-[0.2em] text-neutral-500">Mercado primario</p>
-          <h1 className="text-2xl sm:text-3xl font-extrabold font-display">Licitaciones</h1>
+        <p className="font-lcd text-[11px] uppercase tracking-[0.2em] text-neutral-500">{t('market.kicker')}</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold font-display">{t('market.title')}</h1>
         <p className="text-neutral-600 max-w-xl mt-1">
-          {pools.filter((p) => p.status === 'OPEN').length} licitacion{pools.filter((p) => p.status === 'OPEN').length === 1 ? '' : 'es'} abierta{pools.filter((p) => p.status === 'OPEN').length === 1 ? '' : 's'}. Expediente: CUIT, ISIN, CNV, Caja de Valores y contratos.
+          {t(pools.filter((p) => p.status === 'OPEN').length === 1 ? 'market.openOne' : 'market.openMany', {
+            n: pools.filter((p) => p.status === 'OPEN').length,
+          })}
         </p>
         <p className="text-xs text-neutral-500 mt-2">
-          Flujo vivo del demo: login → wallet → KYC → aportar USDC. Forwards, warrants y Merval son maqueta.
+          {t('market.live')}
         </p>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -51,7 +55,7 @@ export default function MarketPage() {
               </div>
               <p className="text-xs text-neutral-500">
                 ${pool.raisedAmount.toLocaleString()} / ${pool.hardCap.toLocaleString()} USDC
-                {pool.minInvestment ? ` · mín. $${pool.minInvestment.toLocaleString()}` : ''}
+                {pool.minInvestment ? ` · ${t('market.min')} $${pool.minInvestment.toLocaleString()}` : ''}
               </p>
               {(pool as any).validation?.checks && (
                 <ul className="text-xs space-y-1">
@@ -63,7 +67,7 @@ export default function MarketPage() {
                 </ul>
               )}
               <Link href={`/market/${pool.id}`} className="inline-flex items-center gap-2 text-sm font-display font-bold pt-2">
-                Ver ficha de validación <ArrowRight className="w-4 h-4" />
+                {t('market.viewDossier')} <ArrowRight className="w-4 h-4" />
               </Link>
             </article>
           );

@@ -27,8 +27,10 @@ import ContractInspectorBanner from '../components/ContractInspectorBanner';
 import PartnersShowcase from '../components/PartnersShowcase';
 import IssuerCtaBanner from '../components/IssuerCtaBanner';
 import { formatAmount } from '../lib/format';
+import { useI18n } from '../context/I18nContext';
 
 export default function HomePage() {
+  const { messages, t } = useI18n();
   const [investmentAmount, setInvestmentAmount] = useState(5000);
   const [durationMonths, setDurationMonths] = useState(12);
   const [targetTna, setTargetTna] = useState(14.5);
@@ -39,18 +41,21 @@ export default function HomePage() {
     monthly: (investmentAmount * (targetTna / 100) * (durationMonths / 12)) / durationMonths,
   };
 
+  const soonIcons: LucideIcon[] = [Landmark, Layers, Globe2];
+  const badgeIcons: LucideIcon[] = [ShieldCheck, Lock, Zap, CheckCircle2];
+
   return (
     <div className="space-y-10 sm:space-y-16 lg:space-y-24">
       <section className="relative mx-auto flex min-h-0 sm:min-h-[calc(100svh-5.75rem)] max-w-5xl flex-col items-center justify-start sm:justify-center py-8 sm:py-10 pb-6 sm:pb-10 text-center">
         <div className="flex w-full flex-col items-center gap-4 sm:gap-5">
           <div className="inline-flex max-w-full flex-wrap items-center justify-center gap-2 px-3.5 py-1.5 rounded-full bg-white/70 border border-black/10 text-neutral-600 text-[11px] font-display font-bold uppercase tracking-[0.14em]">
             <Sparkles className="w-3.5 h-3.5 shrink-0" />
-            <span className="text-left">Argentina Builder Challenge · Stellar</span>
+            <span className="text-left">{t('home.badge')}</span>
           </div>
           <DynamicHeroText />
           <p className="hero-lead text-neutral-600 mx-auto px-1 text-sm sm:text-[1.05rem]">
-            Financiamos producción real argentina — <strong className="text-black font-bold">granos, vinos, tabaco</strong> —
-            y acciones del Merval con contratos en Stellar. Custodia 1:1 y marco CNV.
+            {t('home.leadBefore')} <strong className="text-black font-bold">{t('home.leadStrong')}</strong>{' '}
+            {t('home.leadAfter')}
           </p>
           <div className="flex w-full flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap items-stretch sm:items-center justify-center gap-2.5 pt-1 px-1">
             <Link
@@ -58,33 +63,28 @@ export default function HomePage() {
               className="w-full sm:w-auto justify-center px-6 py-3 rounded-2xl bg-black text-white font-display font-bold text-sm flex items-center gap-2"
             >
               <Layers className="w-4 h-4 shrink-0" />
-              Explorar licitaciones
+              {t('home.ctaMarket')}
             </Link>
             <Link
               href="/stocks"
               className="w-full sm:w-auto justify-center px-6 py-3 rounded-2xl bg-white/80 border border-black/10 text-black font-display font-bold text-sm flex items-center gap-2"
             >
               <TrendingUp className="w-4 h-4 shrink-0" />
-              Acciones Merval
+              {t('home.ctaStocks')}
             </Link>
             <Link
               href="/orderbook"
               className="w-full sm:w-auto justify-center px-6 py-3 rounded-2xl bg-white/60 border border-black/10 text-black font-display font-semibold text-sm flex items-center gap-2"
             >
               <Droplets className="w-4 h-4 shrink-0" />
-              Mercado secundario
+              {t('home.ctaOrderbook')}
             </Link>
           </div>
         </div>
       </section>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 p-4 sm:p-6 rounded-2xl sm:rounded-3xl crystal-card text-left">
-          {[
-            ['TVL en custodia', '$2.450.000', 'USDC · PoR'],
-            ['Grano respaldado', '12.400 Tn', 'Soja, maíz, vinos'],
-            ['Rendimiento medio', '14.2%', 'TNA USD'],
-            ['Liquidación', '< 4 s', 'Stellar T+0'],
-          ].map(([k, v, s]) => (
+          {messages.home.stats.map(({ k, v, s }) => (
             <div key={k} className="space-y-1 min-w-0">
               <span className="text-[10px] sm:text-xs text-neutral-500">{k}</span>
               <div className="text-lg sm:text-2xl font-display font-extrabold font-lcd text-black break-words">{v}</div>
@@ -105,34 +105,34 @@ export default function HomePage() {
 
       <section className="space-y-6 sm:space-y-8">
         <div className="text-center max-w-2xl mx-auto space-y-2 px-1">
-          <h2 className="font-section text-2xl sm:text-3xl font-extrabold text-black">Producción y capital</h2>
-          <p className="text-neutral-600 text-sm">Estructuras argentinas, liquidación global en Stellar.</p>
+          <h2 className="font-section text-2xl sm:text-3xl font-extrabold text-black">{t('home.capitalTitle')}</h2>
+          <p className="text-neutral-600 text-sm">{t('home.capitalLead')}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           <div className="p-5 sm:p-8 rounded-2xl sm:rounded-3xl crystal-card space-y-4 sm:space-y-5">
             <Sprout className="w-7 h-7" />
-            <h3 className="font-section text-xl font-extrabold">Para productores</h3>
-            <p className="text-sm text-neutral-600">Liquidez de campaña sin el banco de por medio.</p>
+            <h3 className="font-section text-xl font-extrabold">{t('home.producersTitle')}</h3>
+            <p className="text-sm text-neutral-600">{t('home.producersLead')}</p>
             <ul className="space-y-2 text-sm text-neutral-700">
-              <li><strong className="text-black">Licitaciones:</strong> deuda en USDC o ARS.</li>
-              <li><strong className="text-black">Forwards:</strong> 20% de resarcimiento o rollover +10% kg.</li>
-              <li><strong className="text-black">Burst loans:</strong> warrants Ley 9643, LTV 50–60%.</li>
+              {messages.home.producersItems.map(([label, rest]) => (
+                <li key={label}><strong className="text-black">{label}</strong> {rest}</li>
+              ))}
             </ul>
             <Link href="/market" className="inline-flex items-center gap-2 text-sm font-display font-bold">
-              Publicar licitación <ArrowRight className="w-3.5 h-3.5" />
+              {t('home.publish')} <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
           <div className="p-5 sm:p-8 rounded-2xl sm:rounded-3xl crystal-card space-y-4 sm:space-y-5">
             <TrendingUp className="w-7 h-7" />
-            <h3 className="font-section text-xl font-extrabold">Para inversores</h3>
-            <p className="text-sm text-neutral-600">Activos reales y Merval, 24/7.</p>
+            <h3 className="font-section text-xl font-extrabold">{t('home.investorsTitle')}</h3>
+            <p className="text-sm text-neutral-600">{t('home.investorsLead')}</p>
             <ul className="space-y-2 text-sm text-neutral-700">
-              <li><strong className="text-black">tYPF / tGGAL:</strong> 1 token = 1 acción en Caja de Valores.</li>
-              <li><strong className="text-black">Dividendos</strong> en el token de pago elegido.</li>
-              <li><strong className="text-black">OPA / squeeze-out</strong> al 50% y 95%.</li>
+              {messages.home.investorsItems.map(([label, rest]) => (
+                <li key={label}><strong className="text-black">{label}</strong> {rest}</li>
+              ))}
             </ul>
             <Link href="/stocks" className="inline-flex items-center gap-2 text-sm font-display font-bold">
-              Invertir <ArrowRight className="w-3.5 h-3.5" />
+              {t('home.invest')} <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
@@ -142,12 +142,12 @@ export default function HomePage() {
         <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
           <div className="lg:col-span-7 space-y-5 sm:space-y-6">
             <div className="flex items-center gap-2 text-neutral-500 text-xs font-display font-bold uppercase tracking-wider">
-              <Calculator className="w-4 h-4" /> Simulador
+              <Calculator className="w-4 h-4" /> {t('home.simulator')}
             </div>
-            <h3 className="font-section text-2xl sm:text-3xl font-extrabold">Calculá el retorno</h3>
+            <h3 className="font-section text-2xl sm:text-3xl font-extrabold">{t('home.calcTitle')}</h3>
             <div className="space-y-2">
               <div className="flex justify-between text-xs gap-2">
-                <span className="text-neutral-500">Monto</span>
+                <span className="text-neutral-500">{t('home.amount')}</span>
                 <span className="font-lcd font-bold shrink-0">${formatAmount(investmentAmount)} USDC</span>
               </div>
               <input
@@ -170,7 +170,7 @@ export default function HomePage() {
                     durationMonths === m ? 'btn-lcd-solid' : 'btn-lcd-ghost'
                   }`}
                 >
-                  {m} meses
+                  {t('home.months', { n: m })}
                 </button>
               ))}
             </div>
@@ -191,56 +191,49 @@ export default function HomePage() {
             </div>
           </div>
           <div className="lg:col-span-5 p-5 sm:p-6 rounded-2xl border border-black/10 bg-white/80 space-y-4 sm:space-y-5">
-            <span className="text-xs uppercase text-neutral-500 font-display font-bold">Estimado</span>
+            <span className="text-xs uppercase text-neutral-500 font-display font-bold">{t('home.estimated')}</span>
             <div className="font-lcd text-2xl sm:text-3xl font-bold text-black break-all">
               ${formatAmount(results.total, 2)}
             </div>
             <p className="text-xs text-neutral-500">
-              Ganancia <strong className="text-black">+${formatAmount(results.earnings, 2)}</strong>
+              {t('home.gain')} <strong className="text-black">+${formatAmount(results.earnings, 2)}</strong>
             </p>
             <Link href="/market" className="w-full py-3 btn-lcd btn-lcd-solid text-xs">
-              Participar <ArrowRight className="w-4 h-4" />
+              {t('home.join')} <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
       </section>
 
       <section className="space-y-5 sm:space-y-6">
-        <h2 className="font-section text-2xl sm:text-3xl font-extrabold">Próximamente</h2>
+        <h2 className="font-section text-2xl sm:text-3xl font-extrabold">{t('home.soon')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
-          {(
-            [
-              [Landmark, 'Bonos soberanos', 'Bopreal / AL30 con cupón on-chain.'],
-              [Layers, 'ETFs sectoriales', 'Agro, energía y bancos.'],
-              [Globe2, 'Carbono agro', 'Siembra directa verificada.'],
-            ] as [LucideIcon, string, string][]
-          ).map(([Icon, t, d]) => (
-            <div key={t} className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl crystal-card space-y-3">
+          {messages.home.soonItems.map(([title, desc], i) => {
+            const Icon = soonIcons[i];
+            return (
+            <div key={title} className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl crystal-card space-y-3">
               <Icon className="w-5 h-5" />
-              <h4 className="font-section font-extrabold">{t}</h4>
-              <p className="text-sm text-neutral-600">{d}</p>
+              <h4 className="font-section font-extrabold">{title}</h4>
+              <p className="text-sm text-neutral-600">{desc}</p>
             </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
       <section className="p-5 sm:p-8 rounded-2xl sm:rounded-3xl crystal-card grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-        {(
-          [
-            [ShieldCheck, 'Sandbox CNV', 'RG 1150'],
-            [Lock, 'Caja de Valores', 'Custodia 1:1'],
-            [Zap, 'Stellar', 'Protocolo 27'],
-            [CheckCircle2, 'GAFI', 'AML on-chain'],
-          ] as [LucideIcon, string, string][]
-        ).map(([Icon, t, s]) => (
-          <div key={String(t)} className="flex items-center gap-3 min-w-0">
+        {messages.home.badges.map(([title, sub], i) => {
+          const Icon = badgeIcons[i];
+          return (
+          <div key={title} className="flex items-center gap-3 min-w-0">
             <Icon className="w-6 h-6 shrink-0" />
             <div className="min-w-0">
-              <div className="text-sm font-display font-bold">{t}</div>
-              <div className="text-[11px] text-neutral-500">{s}</div>
+              <div className="text-sm font-display font-bold">{title}</div>
+              <div className="text-[11px] text-neutral-500">{sub}</div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </section>
       </div>
     </div>

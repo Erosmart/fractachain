@@ -4,9 +4,11 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Camera } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+import { useI18n } from '../../../context/I18nContext';
 
 export default function KycOnboardingPage() {
   const { user, submitKyc } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [legalName, setLegalName] = useState(user?.name || '');
@@ -43,12 +45,12 @@ export default function KycOnboardingPage() {
   return (
     <div className="max-w-lg mx-auto py-12 space-y-6">
       <div className="space-y-2 text-center">
-        <h1 className="text-3xl font-extrabold font-display">Validación de identidad</h1>
-        <p className="text-neutral-600">Nombre, CUIT y una foto de tu cara. Un oficial tiene que aprobarte para operar.</p>
+        <h1 className="text-3xl font-extrabold font-display">{t('onboarding.kycTitle')}</h1>
+        <p className="text-neutral-600">{t('onboarding.kycLead')}</p>
       </div>
       <form onSubmit={submit} className="p-6 rounded-3xl crystal-card space-y-4">
         <label className="block space-y-1 text-sm">
-          <span className="font-bold">Nombre completo</span>
+          <span className="font-bold">{t('onboarding.fullName')}</span>
           <input
             required
             value={legalName}
@@ -57,7 +59,7 @@ export default function KycOnboardingPage() {
           />
         </label>
         <label className="block space-y-1 text-sm">
-          <span className="font-bold">CUIT / CUIL</span>
+          <span className="font-bold">{t('onboarding.cuit')}</span>
           <input
             required
             value={cuit}
@@ -67,7 +69,7 @@ export default function KycOnboardingPage() {
           />
         </label>
         <div className="space-y-2">
-          <span className="text-sm font-bold">Foto de la cara</span>
+          <span className="text-sm font-bold">{t('onboarding.selfie')}</span>
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
@@ -79,7 +81,7 @@ export default function KycOnboardingPage() {
             ) : (
               <>
                 <Camera className="w-8 h-8" />
-                <span className="text-sm text-neutral-600">Sacá o subí una foto</span>
+                <span className="text-sm text-neutral-600">{t('onboarding.selfieCta')}</span>
               </>
             )}
           </button>
@@ -98,7 +100,7 @@ export default function KycOnboardingPage() {
           disabled={busy || !selfie}
           className="w-full py-3 rounded-2xl bg-black text-white font-display font-bold disabled:opacity-50"
         >
-          {busy ? 'Enviando…' : 'Enviar a validación'}
+          {busy ? t('onboarding.sending') : t('onboarding.send')}
         </button>
       </form>
     </div>
