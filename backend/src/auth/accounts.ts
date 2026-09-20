@@ -352,7 +352,7 @@ export function submitOnboardingKyc(
   account.name = account.legalName;
   account.cuit = data.cuit.trim();
   account.selfiePath = file;
-  account.kycStatus = 'PENDING';
+  account.kycStatus = process.env.HACKATHON_DEMO === 'true' ? 'APPROVED' : 'PENDING';
   account.kycId = account.kycId || `kyc-${account.id}`;
   save();
   return toPublic(account);

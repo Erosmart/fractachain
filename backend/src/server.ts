@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import {
@@ -55,8 +56,10 @@ import {
   sdexAvailable,
 } from './market/sdex_book';
 import { configureIssuerForRegulatedAsset, submitSignedXdr } from './stellar/sdex';
+import { syncHolderAuthorization } from './stellar/compliance';
 import { getTestnetConfig, setTestnetConfig } from './admin/testnet';
 import { isOnChainDeployed, loadTestnetDeployment } from './stellar/deployment';
+import { getOnChainStatus, receiptAfterContribute } from './stellar/onchain';
 import {
   authenticateWithGoogle,
   getUserByToken,
@@ -551,7 +554,15 @@ app.post('/api/admin/testnet/configure-issuer', (req: Request, res: Response) =>
 app.post('/api/listings/:id/contribute', (req: Request, res: Response) => {
   const account = getAccountByToken(req.headers.authorization);
   if (!account) return res.status(401).json({ success: false, message: 'Iniciá sesión para suscribir' });
-  wrap(() => contributeListing(req.params.id, Number(req.body.usdcAmount), account.id), res);
+  wrapAsync(async () => {
+    const listing = contributeListing(req.params.id, Number(req.body.usdcAmount), account.id);
+    const onChain = await receiptAfterContribute(req.params.id, account.id);
+    return { ...listing, onChain };
+  }, res);
+});
+
+app.get('/api/onchain/status', (_req: Request, res: Response) => {
+  wrapAsync(() => getOnChainStatus(), res);
 });
 
 app.get('/api/market/pools', (_req: Request, res: Response) => {
