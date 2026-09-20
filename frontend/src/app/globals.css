@@ -1,0 +1,207 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #111111;
+  --lcd-green: #b8f0a4;
+  --lcd-green-deep: #7ed86a;
+}
+
+html,
+body {
+  color: var(--foreground);
+  background: #ffffff;
+  min-height: 100%;
+}
+
+body {
+  font-family: "Source Serif 4", Georgia, serif;
+  font-optical-sizing: auto;
+  font-weight: 500;
+  overflow-x: hidden;
+}
+
+.font-display {
+  font-family: "Syne", "Avenir Next", "Segoe UI", sans-serif;
+}
+
+.font-section {
+  font-family: "Fraunces", "Iowan Old Style", Georgia, serif;
+  font-optical-sizing: auto;
+}
+
+.font-body {
+  font-family: "Source Serif 4", Georgia, serif;
+  font-optical-sizing: auto;
+}
+
+.font-lcd {
+  font-family: "Share Tech Mono", "SF Mono", ui-monospace, monospace;
+  letter-spacing: 0.06em;
+}
+
+p {
+  font-family: "Source Serif 4", Georgia, serif;
+  font-optical-sizing: auto;
+  font-weight: 500;
+  line-height: 1.65;
+}
+
+.hero-lead {
+  font-family: "Source Serif 4", Georgia, serif;
+  font-optical-sizing: auto;
+  font-weight: 500;
+  font-size: 1rem;
+  line-height: 1.5;
+  max-width: 36rem;
+}
+
+@media (min-width: 640px) {
+  .hero-lead {
+    font-size: 1.05rem;
+  }
+}
+
+.below-fold h2,
+.below-fold h3 {
+  font-family: "Fraunces", "Iowan Old Style", Georgia, serif;
+  font-optical-sizing: auto;
+  font-weight: 700;
+}
+
+.below-fold p {
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.75;
+  letter-spacing: 0.01em;
+}
+
+@media (min-width: 640px) {
+  .below-fold p {
+    font-size: 1.0625rem;
+  }
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(18px) saturate(1.35);
+  -webkit-backdrop-filter: blur(18px) saturate(1.35);
+  border: 1px solid rgba(150, 200, 130, 0.28);
+}
+
+.crystal-card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(232, 248, 224, 0.4));
+  backdrop-filter: blur(22px) saturate(1.35);
+  -webkit-backdrop-filter: blur(22px) saturate(1.35);
+  border: 1px solid rgba(140, 190, 120, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 18px 40px -28px rgba(70, 130, 50, 0.35);
+}
+
+.liquid-sheen {
+  background:
+    radial-gradient(ellipse at 20% 0%, rgba(255, 255, 255, 0.85), transparent 45%),
+    repeating-linear-gradient(
+      115deg,
+      transparent 0 13px,
+      rgba(184, 240, 164, 0.12) 13px 14px
+    );
+}
+
+.logo-lockup {
+  display: block;
+}
+
+.btn-lcd {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: "Share Tech Mono", ui-monospace, monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #163012;
+  background:
+    linear-gradient(180deg, rgba(232, 255, 220, 0.92) 0%, rgba(184, 240, 164, 0.55) 48%, rgba(255, 255, 255, 0.45) 100%);
+  border: 1px solid rgba(126, 196, 110, 0.55);
+  border-radius: 12px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -8px 16px rgba(126, 180, 100, 0.18),
+    0 10px 24px -16px rgba(80, 140, 50, 0.55);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+.btn-lcd::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.14) 0 2px,
+    transparent 2px 4px
+  );
+  opacity: 0.45;
+}
+
+.btn-lcd-solid {
+  background:
+    linear-gradient(180deg, #d8f7c8 0%, #9ee087 45%, #b8f0a4 100%);
+  color: #10240c;
+}
+
+.btn-lcd-ghost {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(230, 248, 222, 0.35));
+  color: #2a3d22;
+}
+
+.hero-lcd {
+  font-family: "Source Serif 4", Georgia, serif;
+  font-optical-sizing: auto;
+  font-weight: 800;
+  font-style: italic;
+  color: #4ea743;
+  text-shadow: 0 0 12px rgba(78, 167, 67, 0.28);
+  letter-spacing: -0.015em;
+}
+
+@keyframes merval-reel {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.merval-reel {
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+}
+
+.merval-reel-track {
+  display: flex;
+  width: max-content;
+  gap: 0.75rem;
+  animation: merval-reel 32s linear infinite;
+}
+
+.merval-reel:hover .merval-reel-track {
+  animation-play-state: paused;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f3f3f3;
+}
+::-webkit-scrollbar-thumb {
+  background: #c8c8c8;
+  border-radius: 3px;
+}

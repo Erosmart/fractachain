@@ -1,0 +1,30 @@
+# Secrets and local runtime
+.env
+.env.local
+backend/.env
+frontend/.env.local
+
+# Stellar CLI local identities are outside the repo; never commit raw secrets
+*.secret
+*.secret.json
+deployments/*.local.json
+
+# Build artifacts
+contracts/target/
+backend/dist/
+frontend/.next/
+node_modules/
+deployments/wasm/
+
+# Agent / graph cache
+graphify-out/cache/
+**/graphify-out/cache/
+*.tsbuildinfo
+
+# Documento que no se publica
+FRACTAL_CHAIN_ARCHITECTURE.md
+fractalchain.md
+
+# Runtime local: hashes, secretKey y fotos KYC
+backend/data/users.json
+backend/data/selfies/

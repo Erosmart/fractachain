@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -e
+
+mkdir -p "$HOME/.config/stellar" "$HOME/.local/share/stellar" 2>/dev/null || true
+
+DOCKER_ARGS=()
+if [ -t 0 ]; then
+  DOCKER_ARGS+=(-it)
+fi
+
+exec docker run --rm \
+  "${DOCKER_ARGS[@]}" \
+  -v "$HOME/.config/stellar:/config" \
+  -v "$HOME/.local/share/stellar:/data" \
+  -v "$(pwd):/workspace" \
+  -w /workspace \
+  stellar/stellar-cli "$@"

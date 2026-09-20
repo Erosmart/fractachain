@@ -1,0 +1,28 @@
+[workspace]
+resolver = "2"
+members = [
+    "fractachain-core",
+    "fractachain-licitacion",
+    "forward-contract",
+    "warrant-vault",
+    "stock-vault",
+    "issuance-factory",
+]
+
+[workspace.dependencies]
+# Kept in lockstep with the local `stellar` CLI (28.0.0); the wasm target for
+# this line is `wasm32v1-none`, not `wasm32-unknown-unknown`.
+soroban-sdk = "28.0.0"
+
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+debug = 0
+strip = "symbols"
+lto = true
+panic = "abort"
+codegen-units = 1
+
+[profile.release-with-logs]
+inherits = "release"
+debug-assertions = true

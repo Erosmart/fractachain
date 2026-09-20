@@ -1,0 +1,134 @@
+// Comprehensive Test Runner for Fractachain Backend
+import { authenticateWithGoogle, getUserByToken, revokeSession } from './auth/google_auth';
+import { authenticateWithFirebase, getFirebaseUserByToken } from './auth/firebase_auth';
+import { registerKyc, getAllKycRecords, approveKyc, rejectKyc } from './admin/kyc_review';
+import { processArsOnRamp, processCctpBridge } from './mocks/payment_gateway';
+import { getAllCommodityPrices } from './mocks/fiat_oracle';
+import { getMervalStocks } from './custody/stocks';
+
+console.log('=== INICIANDO SUITE DE PRUEBAS DE FRACTACHAIN BACKEND ===');
+
+let testsPassed = 0;
+let testsFailed = 0;
+
+function assert(condition: boolean, testName: string) {
+  if (condition) {
+    console.log(`  ✓ PASS: ${testName}`);
+    testsPassed++;
+  } else {
+    console.error(`  ✗ FAIL: ${testName}`);
+    testsFailed++;
+  }
+}
+
+// Test 1: Google Authentication
+console.log('\n[1] Probando Autenticación con Google:');
+const authResult = authenticateWithGoogle({
+  email: 'test.producer@gmail.com',
+  name: 'Juan Perez Agro',
+  avatar: 'https://example.com/avatar.jpg',
+});
+
+assert(authResult.success === true, 'Google Login retorna success = true');
+assert(authResult.user.email === 'test.producer@gmail.com', 'Email del usuario mapeado correctamente');
+assert(authResult.user.authProvider === 'google', 'Proveedor registrado como google');
+assert(Boolean(authResult.token), 'Token de sesión JWT emitido');
+
+// Test 2: Sesión y Perfil
+console.log('\n[2] Probando Consulta de Sesión con Token:');
+const userSession = getUserByToken(authResult.token);
+assert(userSession?.id === authResult.user.id, 'Token resuelve correctamente al usuario autenticado');
+assert(userSession?.custodialWallet === 'GD6CGAZZY4Z2HQAIBL4RHJJWHJULLCO5F5XW6VL3CECJWLDBCDKWB7KR', 'Wallet comitente de prueba asignada');
+
+// Test 3: Logout
+console.log('\n[3] Probando Cierre de Sesión (Logout):');
+const revoked = revokeSession(authResult.token);
+assert(revoked === true, 'Sesión revocada exitosamente');
+const userAfterRevoke = getUserByToken(authResult.token);
+assert(userAfterRevoke === undefined, 'Token revocado ya no devuelve usuario');
+
+// Test 3b: Firebase Authentication
+console.log('\n[3b] Probando Autenticación con Firebase Google:');
+const fbAuth = authenticateWithFirebase({
+  uid: 'firebase_uid_test_999',
+  email: 'investor.firebase@example.com',
+  displayName: 'Inversor Agropecuario Firebase',
+  photoURL: 'https://example.com/fb_avatar.jpg',
+  idToken: 'mock_jwt_firebase_token',
+});
+assert(fbAuth.success === true, 'Firebase Login retorna success = true');
+assert(fbAuth.user.uid === 'firebase_uid_test_999', 'Firebase UID mapeado correctamente');
+assert(fbAuth.user.authProvider === 'firebase-google', 'Proveedor registrado como firebase-google');
+assert(Boolean(fbAuth.token), 'Token de sesión de Fractachain emitido desde Firebase');
+
+const fbSession = getFirebaseUserByToken(fbAuth.token);
+assert(fbSession?.uid === fbAuth.user.uid, 'Token resuelve perfil de usuario de Firebase');
+assert(fbSession?.custodyMode === null, 'Cuenta Firebase arranca sin custodia hasta elegir wallet en el onboarding');
+
+// Test 4: KYC Registration & GAFI Block
+console.log('\n[4] Probando Motor KYC y Bloqueo GAFI:');
+// Normal user
+const kycNormal = registerKyc({
+  fullName: 'Agropecuaria Las Lilas',
+  documentNumber: '30-68192014-9',
+  countryCode: 32,
+  countryName: 'Argentina',
+  address: 'Pergamino, Buenos Aires',
+  investorType: 'National',
+  stellarAddress: 'GD6CGAZZY4Z2HQAIBL4RHJJWHJULLCO5F5XW6VL3CECJWLDBCDKWB7KR',
+  documentFrontUrl: 'https://mock.storage/dni_front.png',
+  selfieUrl: 'https://mock.storage/selfie.png',
+});
+assert(kycNormal.success === true, 'Registro de usuario argentino admitido');
+
+// High-Risk GAFI user (Irán = 364)
+const kycGafi = registerKyc({
+  fullName: 'Suspicious Entity',
+  documentNumber: 'IR9999',
+  countryCode: 364,
+  countryName: 'Irán',
+  address: 'Tehran',
+  investorType: 'Foreign',
+  stellarAddress: 'GDIRAN11111111111111111111111111111111111111111111111111',
+  documentFrontUrl: 'https://mock.storage/passport.png',
+  selfieUrl: 'https://mock.storage/selfie.png',
+});
+assert(kycGafi.success === false, 'Registro de país en lista negra GAFI bloqueado automáticamente');
+
+// Test 5: KYC Approval Flow & Business Hours Lock
+console.log('\n[5] Probando Aprobación Administrativa KYC y Restricción Horaria:');
+import { isArgentinaBusinessHours } from './admin/kyc_review';
+
+// Simular Miércoles 12:00 ART (Dentro de horario)
+const wednesdayNoonUtc = new Date('2026-09-16T15:00:00Z'); // 15:00 UTC = 12:00 ART
+assert(isArgentinaBusinessHours(wednesdayNoonUtc) === true, 'isArgentinaBusinessHours detecta Miércoles 12:00 ART como horario habilitado');
+
+// Simular Sábado 03:00 ART (Fuera de horario)
+const saturdayNightUtc = new Date('2026-09-19T06:00:00Z'); // 06:00 UTC = 03:00 ART
+assert(isArgentinaBusinessHours(saturdayNightUtc) === false, 'isArgentinaBusinessHours bloquea Sábado 03:00 ART como horario no permitido');
+
+if (kycNormal.record?.id) {
+  // Aprobación con bypass/override administrativo explícito
+  const approval = approveKyc(kycNormal.record.id, true);
+  assert(approval.success === true, 'Aprobación de KYC exitosa con validación de seguridad');
+  assert(approval.record?.status === 'APROBADO', 'Estado de KYC actualizado a APROBADO para Whitelist');
+}
+
+// Test 6: Mocks de Pagos y Oráculos
+console.log('\n[6] Probando Pasarelas Mock y Oráculos:');
+const arsOnramp = processArsOnRamp(145000, 'GD6CGAZZY4Z2HQAIBL4RHJJWHJULLCO5F5XW6VL3CECJWLDBCDKWB7KR');
+assert(arsOnramp.success === true && arsOnramp.usdcAmount === 100, 'On-ramp ARS a 1450 calcula exactamente $100 USDC');
+
+const cctpBridge = processCctpBridge('arbitrum', 500, 'GD6CGAZZY4Z2HQAIBL4RHJJWHJULLCO5F5XW6VL3CECJWLDBCDKWB7KR');
+assert(cctpBridge.success === true, 'Bridge CCTP ejecutado');
+
+const prices = getAllCommodityPrices();
+assert(prices.length >= 4, 'Oráculo de granos provee cotizaciones activas (Soja, Maíz, etc.)');
+
+const stocks = getMervalStocks();
+assert(stocks.some((s) => s.tokenTicker === 'tYPF'), 'Custodia de acciones Merval incluye tYPF 1:1');
+
+console.log(`\n=== RESUMEN: ${testsPassed} PASADOS, ${testsFailed} FALLIDOS ===\n`);
+if (testsFailed > 0) {
+  process.exit(1);
+}

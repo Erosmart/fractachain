@@ -1,0 +1,16 @@
+{
+  "0": "Env",
+  "1": "fractachain-licitacion/src/test.rs",
+  "2": "Env",
+  "3": "Env",
+  "4": "forward-contract/src/test.rs",
+  "5": "bump_persistent",
+  "6": "stock-vault/src/test.rs",
+  "7": "Env",
+  "8": "warrant-vault/src/test.rs",
+  "9": "issuance-factory/src/test.rs",
+  "10": "fractachain-core/src/test.rs",
+  "11": "kyc.rs",
+  "12": "orderbook.rs",
+  "13": "fractachain-core"
+}

@@ -1,0 +1,668 @@
+{
+  "forward-contract/Cargo.toml": {
+    "mtime": 1789690761.739238,
+    "seen": 1789764119.1399906,
+    "ast_hash": "f1add6a049d248b4029084ce480622ca",
+    "semantic_hash": ""
+  },
+  "forward-contract/src/lib.rs": {
+    "mtime": 1789751396.2443392,
+    "seen": 1789764119.1400115,
+    "ast_hash": "3c2f9b9bd357ae5b3d90d9e7bdc5ba64",
+    "semantic_hash": ""
+  },
+  "forward-contract/src/test.rs": {
+    "mtime": 1789751452.2248473,
+    "seen": 1789764119.1400204,
+    "ast_hash": "43c6a1bd6e6a186f46aceefd563d2ab1",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/a_deadline_in_the_past_is_rejected.1.json": {
+    "mtime": 1789760486.6441643,
+    "seen": 1789764119.1400256,
+    "ast_hash": "fb11bca8c1ff75325ad47e275281ecfd",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/a_falsely_marked_delivery_does_not_trap_the_buyer.1.json": {
+    "mtime": 1789760487.1801734,
+    "seen": 1789764119.1400292,
+    "ast_hash": "23a5ebbd8d0854e9c3a5f0fdd61ed6ed",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/a_position_pending_acceptance_cannot_be_sold.1.json": {
+    "mtime": 1789760487.8361847,
+    "seen": 1789764119.1400328,
+    "ast_hash": "89ff12d349e5b5bfeaa524b34583d5a3",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/a_tiny_escrow_still_owes_a_penalty.1.json": {
+    "mtime": 1789760488.028188,
+    "seen": 1789764119.1400375,
+    "ast_hash": "15842a6e5b062c3d9cf38fa1c4753a17",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/an_overflowing_deadline_is_rejected.1.json": {
+    "mtime": 1789760488.0521884,
+    "seen": 1789764119.1400409,
+    "ast_hash": "fb11bca8c1ff75325ad47e275281ecfd",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/arbiter_can_also_rule_for_the_producer.1.json": {
+    "mtime": 1789760488.508196,
+    "seen": 1789764119.140044,
+    "ast_hash": "f7a9e67d52b6e44746a81b7afb2f8a62",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/buyer_recovers_everything_when_the_producer_never_delivers.1.json": {
+    "mtime": 1789760488.2441916,
+    "seen": 1789764119.140048,
+    "ast_hash": "6dc3df7890683c1039655ee3f6b9510f",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/delivery_cannot_be_marked_twice.1.json": {
+    "mtime": 1789760488.4121945,
+    "seen": 1789764119.140052,
+    "ast_hash": "fa8fa97133c0d489c5d73ef6caa81c6d",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/disputing_after_the_window_is_rejected.1.json": {
+    "mtime": 1789760488.7682006,
+    "seen": 1789764119.1400583,
+    "ast_hash": "e8f54cc883894864448df24f99ad4249",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/double_initialization_is_rejected.1.json": {
+    "mtime": 1789760488.908203,
+    "seen": 1789764119.1400626,
+    "ast_hash": "5035cac5a95faa672b6fe34abfeaa455",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/escrow_is_funded_then_released_on_acceptance.1.json": {
+    "mtime": 1789760489.0122046,
+    "seen": 1789764119.140066,
+    "ast_hash": "1b88634641240b6bc8723e17075590b7",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/one_account_cannot_be_both_sides.1.json": {
+    "mtime": 1789760489.1122065,
+    "seen": 1789764119.1400695,
+    "ast_hash": "fb11bca8c1ff75325ad47e275281ecfd",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/only_the_arbiter_resolves_disputes.1.json": {
+    "mtime": 1789760489.32021,
+    "seen": 1789764119.1400728,
+    "ast_hash": "5a7db4b1378f96b2434b3dd7162fdd8f",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/pre_cancel_is_closed_once_delivery_is_marked.1.json": {
+    "mtime": 1789760489.4802127,
+    "seen": 1789764119.1400757,
+    "ast_hash": "fa8fa97133c0d489c5d73ef6caa81c6d",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/pre_cancel_splits_the_escrow_twenty_eighty.1.json": {
+    "mtime": 1789760489.6962163,
+    "seen": 1789764119.1400793,
+    "ast_hash": "a04b7a0218c57711001ca3edf940f469",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/refund_is_unavailable_before_grace_expires.1.json": {
+    "mtime": 1789760489.7842178,
+    "seen": 1789764119.1400821,
+    "ast_hash": "df0bcdd07bf7f4fae7dfcdb9a91fb8df",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/rollover_needs_both_counterparties_and_is_capped.1.json": {
+    "mtime": 1789760490.0122218,
+    "seen": 1789764119.1400864,
+    "ast_hash": "cae7d9063be0bf3a50fd80583d7da099",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/silence_past_the_acceptance_window_pays_the_producer.1.json": {
+    "mtime": 1789760490.196225,
+    "seen": 1789764119.1400895,
+    "ast_hash": "d2f8339bfbf7dfd686bba1673a0db5a5",
+    "semantic_hash": ""
+  },
+  "forward-contract/test_snapshots/test/the_arbiter_cannot_be_a_counterparty.1.json": {
+    "mtime": 1789760490.0922232,
+    "seen": 1789764119.1400928,
+    "ast_hash": "fb11bca8c1ff75325ad47e275281ecfd",
+    "semantic_hash": ""
+  },
+  "fractachain-core/Cargo.toml": {
+    "mtime": 1789750880.1916475,
+    "seen": 1789764119.140098,
+    "ast_hash": "97ab5f55a39a9a62adebad15eadb1096",
+    "semantic_hash": ""
+  },
+  "fractachain-core/src/lib.rs": {
+    "mtime": 1789750862.8154893,
+    "seen": 1789764119.1401014,
+    "ast_hash": "c99ed4980aff1292b78d36e407d4855b",
+    "semantic_hash": ""
+  },
+  "fractachain-core/src/test.rs": {
+    "mtime": 1789750894.6677794,
+    "seen": 1789764119.140105,
+    "ast_hash": "daf1b39bec1080d2bcbae38e0320529a",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/Cargo.toml": {
+    "mtime": 1789690606.2788904,
+    "seen": 1789764119.140109,
+    "ast_hash": "f2b1835f43f82c93f30977749e049333",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/src/kyc.rs": {
+    "mtime": 1789755801.744261,
+    "seen": 1789764119.1401124,
+    "ast_hash": "e506eba504d8891b4d1c558e1bf6096a",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/src/lib.rs": {
+    "mtime": 1789755804.5763147,
+    "seen": 1789764119.1401165,
+    "ast_hash": "2658c606dd7a16a2f4b0e16b0583045e",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/src/opa.rs": {
+    "mtime": 1789751531.9335706,
+    "seen": 1789764119.14012,
+    "ast_hash": "5cbfa549599c886895c4e6d0b81a56e6",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/src/orderbook.rs": {
+    "mtime": 1789751698.871085,
+    "seen": 1789764119.1401234,
+    "ast_hash": "c8c97eb93443c4842822b285a5dbc326",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/src/test.rs": {
+    "mtime": 1789755813.5324848,
+    "seen": 1789764119.1401267,
+    "ast_hash": "1744e22f7286583e6f775fee0543c1be",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/a_failed_issuance_keeps_the_money_for_refunds.1.json": {
+    "mtime": 1789760491.7642517,
+    "seen": 1789764119.1401298,
+    "ast_hash": "78f6c1c7d30785945b89b0567a92b77f",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/a_successful_issuance_pays_the_fiduciary.1.json": {
+    "mtime": 1789760491.67225,
+    "seen": 1789764119.140133,
+    "ast_hash": "8ca2dd09d5a451b9523936038318e88f",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/a_tender_offer_is_escrowed_and_acceptable_unilaterally.1.json": {
+    "mtime": 1789760492.5802655,
+    "seen": 1789764119.1401362,
+    "ast_hash": "622486f266ab209d828e114bbdb0e407",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/admin_can_set_price_and_token_before_funding.1.json": {
+    "mtime": 1789760491.9362545,
+    "seen": 1789764119.1401396,
+    "ast_hash": "0e05a8c74bb1d431188fa884109390d9",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/an_underpriced_tender_offer_is_rejected.1.json": {
+    "mtime": 1789760492.3962624,
+    "seen": 1789764119.140143,
+    "ast_hash": "75ae6420c56497de393d4a02cb6136ba",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/cancelling_an_order_restores_the_free_balance.1.json": {
+    "mtime": 1789760492.6242664,
+    "seen": 1789764119.1401463,
+    "ast_hash": "3a21eeb99b760698c03a7684382306a4",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/contribute_mints_rwa_and_secondary_market_settles.1.json": {
+    "mtime": 1789760492.9442718,
+    "seen": 1789764119.1401496,
+    "ast_hash": "13f4fa9a21300c3293b40324619d5db9",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/contributions_cannot_exceed_the_hard_cap.1.json": {
+    "mtime": 1789760492.7002676,
+    "seen": 1789764119.1401527,
+    "ast_hash": "062d1bf19c8a9092c4ca1c3e72448a5c",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/contributions_must_be_a_whole_number_of_units.1.json": {
+    "mtime": 1789760492.84427,
+    "seen": 1789764119.1401558,
+    "ast_hash": "062d1bf19c8a9092c4ca1c3e72448a5c",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/crossing_fifty_percent_suspends_votes_without_admin_signature.1.json": {
+    "mtime": 1789760493.5202816,
+    "seen": 1789764119.140159,
+    "ast_hash": "4c15e28daba55243b420c7a10e7d0d03",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/double_initialization_is_rejected.1.json": {
+    "mtime": 1789760493.0402734,
+    "seen": 1789764119.1401627,
+    "ast_hash": "191a5a95a137d17b15eed53395edb5b3",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/local_and_testnet_can_verify_an_investor_on_a_sunday.1.json": {
+    "mtime": 1789760493.2522771,
+    "seen": 1789764119.140166,
+    "ast_hash": "9235dd8111af50b45f3a437764a9c9c0",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/only_the_admin_withdraws_proceeds.1.json": {
+    "mtime": 1789760493.4482803,
+    "seen": 1789764119.140175,
+    "ast_hash": "365bcda5df443b60b5b1fc58aeafdf45",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/price_is_frozen_once_money_is_in.1.json": {
+    "mtime": 1789760493.604283,
+    "seen": 1789764119.1401787,
+    "ast_hash": "5d0fc271702c755d6a85fd348229e17d",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/proceeds_are_locked_while_the_issuance_is_open.1.json": {
+    "mtime": 1789760493.828287,
+    "seen": 1789764119.1401823,
+    "ast_hash": "e523faf59b086f1928d3d35ec9792b1d",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/proceeds_cannot_be_drained_twice.1.json": {
+    "mtime": 1789760493.7442853,
+    "seen": 1789764119.1401856,
+    "ast_hash": "ea06bb167f8c1406bb0ed8a42b825486",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/pubnet_rejects_kyc_outside_argentine_business_hours.1.json": {
+    "mtime": 1789760493.8162868,
+    "seen": 1789764119.140189,
+    "ast_hash": "88895c374d438ce1dc5277cc2d87f2d4",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/revoked_sellers_cannot_have_their_orders_filled.1.json": {
+    "mtime": 1789760494.2162936,
+    "seen": 1789764119.1401923,
+    "ast_hash": "a84d5519d2d648dd611c30633cd3e3de",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/squeeze_out_is_floored_at_the_equitable_price.1.json": {
+    "mtime": 1789760494.2242937,
+    "seen": 1789764119.1401956,
+    "ast_hash": "22d7b95794186aac7ae90b379a248d6d",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/squeeze_out_pays_for_units_locked_in_open_orders.1.json": {
+    "mtime": 1789760494.9363058,
+    "seen": 1789764119.140199,
+    "ast_hash": "00a25cb0405324b8efb2a6a79a24ab97",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/the_company_wallet_can_be_set_before_anyone_pays_in.1.json": {
+    "mtime": 1789760494.3762963,
+    "seen": 1789764119.1402023,
+    "ast_hash": "ec44d45d42c40bec5ccd355fdd073c41",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/the_company_wallet_freezes_once_money_is_in.1.json": {
+    "mtime": 1789760494.484298,
+    "seen": 1789764119.140206,
+    "ast_hash": "1a276852903525d0cd026c3d4c541ac3",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/the_primary_also_arms_the_tender_offer.1.json": {
+    "mtime": 1789760494.712302,
+    "seen": 1789764119.140209,
+    "ast_hash": "6fcccb0d7c6adb560437f18a28be2964",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/the_secondary_market_is_closed_until_the_issuance_succeeds.1.json": {
+    "mtime": 1789760494.9163055,
+    "seen": 1789764119.140212,
+    "ast_hash": "cbd4478bdd144a173691e22105a1459a",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/unspent_tender_offer_escrow_returns_to_the_acquirer.1.json": {
+    "mtime": 1789760495.3363125,
+    "seen": 1789764119.1402152,
+    "ast_hash": "4325b6d8c119b6e5060c7e98458c405a",
+    "semantic_hash": ""
+  },
+  "fractachain-licitacion/test_snapshots/test/unverified_investors_cannot_contribute_or_trade.1.json": {
+    "mtime": 1789760495.2243106,
+    "seen": 1789764119.140218,
+    "ast_hash": "de44ded650e2f4abf8f297a7b2e947a2",
+    "semantic_hash": ""
+  },
+  "issuance-factory/Cargo.toml": {
+    "mtime": 1789690842.2173142,
+    "seen": 1789764119.140221,
+    "ast_hash": "02ff877cdb7c66a6e1036150ce3aa0d3",
+    "semantic_hash": ""
+  },
+  "issuance-factory/src/lib.rs": {
+    "mtime": 1789750982.4565787,
+    "seen": 1789764119.1402242,
+    "ast_hash": "b3f9717e4ae305295937b15f27c20a36",
+    "semantic_hash": ""
+  },
+  "issuance-factory/src/test.rs": {
+    "mtime": 1789751846.6404247,
+    "seen": 1789764119.1402276,
+    "ast_hash": "41aa6822a7126eef3e95712521dad1c8",
+    "semantic_hash": ""
+  },
+  "issuance-factory/test_snapshots/test/a_non_admin_cannot_accredit_a_warrantera.1.json": {
+    "mtime": 1789760496.1923273,
+    "seen": 1789764119.1402304,
+    "ast_hash": "ede6b8fad76909e9731be6bbf82f7e8a",
+    "semantic_hash": ""
+  },
+  "issuance-factory/test_snapshots/test/a_non_admin_cannot_administer_the_registry.1.json": {
+    "mtime": 1789760496.188327,
+    "seen": 1789764119.1402345,
+    "ast_hash": "c32e2c18c8886cdb62a543387e009298",
+    "semantic_hash": ""
+  },
+  "issuance-factory/test_snapshots/test/admin_can_be_rotated.1.json": {
+    "mtime": 1789760496.2843287,
+    "seen": 1789764119.140238,
+    "ast_hash": "c7a409b7bba7fcb72a9bf1ee34049074",
+    "semantic_hash": ""
+  },
+  "issuance-factory/test_snapshots/test/admin_registers_product_with_usdc.1.json": {
+    "mtime": 1789760496.296329,
+    "seen": 1789764119.1402416,
+    "ast_hash": "fb9af692d3f0620e2e5f251b6a26673d",
+    "semantic_hash": ""
+  },
+  "issuance-factory/test_snapshots/test/double_initialization_is_rejected.1.json": {
+    "mtime": 1789760496.36433,
+    "seen": 1789764119.1402452,
+    "ast_hash": "9ba9d6660a12a26c242756cb2693052c",
+    "semantic_hash": ""
+  },
+  "issuance-factory/test_snapshots/test/negative_prices_are_rejected.1.json": {
+    "mtime": 1789760496.3683302,
+    "seen": 1789764119.1402483,
+    "ast_hash": "9af7f1d28cf5c60d6983abf3ff145831",
+    "semantic_hash": ""
+  },
+  "issuance-factory/test_snapshots/test/only_configured_sacs_count_as_payment_assets.1.json": {
+    "mtime": 1789760496.420331,
+    "seen": 1789764119.1402514,
+    "ast_hash": "2bc3edd530124d1dbf8a063edab19c36",
+    "semantic_hash": ""
+  },
+  "issuance-factory/test_snapshots/test/product_ids_increment.1.json": {
+    "mtime": 1789760496.5043325,
+    "seen": 1789764119.1402545,
+    "ast_hash": "c2526a9b7643ee858cde3a72d259e2cf",
+    "semantic_hash": ""
+  },
+  "issuance-factory/test_snapshots/test/products_can_be_deactivated.1.json": {
+    "mtime": 1789760496.4843323,
+    "seen": 1789764119.1402576,
+    "ast_hash": "8be41fffc08228a519248c3b546c89b1",
+    "semantic_hash": ""
+  },
+  "issuance-factory/test_snapshots/test/registering_against_an_unconfigured_asset_is_rejected.1.json": {
+    "mtime": 1789760496.5203328,
+    "seen": 1789764119.1402607,
+    "ast_hash": "4c8e99a95120702d05efcbd3de8326e8",
+    "semantic_hash": ""
+  },
+  "issuance-factory/test_snapshots/test/rotating_a_sac_flags_products_pinned_to_the_old_one.1.json": {
+    "mtime": 1789760496.6163344,
+    "seen": 1789764119.1402647,
+    "ast_hash": "e0292a735ed60f30ea947678f284c618",
+    "semantic_hash": ""
+  },
+  "issuance-factory/test_snapshots/test/unknown_products_and_assets_are_rejected.1.json": {
+    "mtime": 1789760496.588334,
+    "seen": 1789764119.1402678,
+    "ast_hash": "b06c865e0aa3aada695deaebb44884ba",
+    "semantic_hash": ""
+  },
+  "issuance-factory/test_snapshots/test/warranteras_must_be_accredited_and_can_be_revoked.1.json": {
+    "mtime": 1789760496.656335,
+    "seen": 1789764119.1402714,
+    "ast_hash": "4bd5801e672c64ecb1ba924e70657538",
+    "semantic_hash": ""
+  },
+  "stock-vault/Cargo.toml": {
+    "mtime": 1789690822.7568216,
+    "seen": 1789764119.1402745,
+    "ast_hash": "6beff83508c608354668fa57bef48b3d",
+    "semantic_hash": ""
+  },
+  "stock-vault/src/lib.rs": {
+    "mtime": 1789757936.4341774,
+    "seen": 1789764119.1402774,
+    "ast_hash": "07c62161c1a1eb073ba4078d6349075c",
+    "semantic_hash": ""
+  },
+  "stock-vault/src/test.rs": {
+    "mtime": 1789751314.0235927,
+    "seen": 1789764119.1402802,
+    "ast_hash": "a9b65b1d7a3ff13ef78e604b4eb7deb2",
+    "semantic_hash": ""
+  },
+  "stock-vault/test_snapshots/test/a_holder_minted_after_a_dividend_cannot_touch_it.1.json": {
+    "mtime": 1789760498.0523589,
+    "seen": 1789764119.1402833,
+    "ast_hash": "207ff8ebcaa6c383d4d4869cd14ee782",
+    "semantic_hash": ""
+  },
+  "stock-vault/test_snapshots/test/a_stale_proof_of_reserve_blocks_minting.1.json": {
+    "mtime": 1789760497.764354,
+    "seen": 1789764119.1402867,
+    "ast_hash": "529b01fdd6a9d5bf4c7a4836f88116e6",
+    "semantic_hash": ""
+  },
+  "stock-vault/test_snapshots/test/cannot_mint_before_any_attestation.1.json": {
+    "mtime": 1789760498.048359,
+    "seen": 1789764119.1402898,
+    "ast_hash": "1b799273f09e1419d3b26a4cffbea5ff",
+    "semantic_hash": ""
+  },
+  "stock-vault/test_snapshots/test/cannot_mint_beyond_attested_custody.1.json": {
+    "mtime": 1789760498.3203635,
+    "seen": 1789764119.1402943,
+    "ast_hash": "f7e713240e786908f1dd36db84123d89",
+    "semantic_hash": ""
+  },
+  "stock-vault/test_snapshots/test/claiming_twice_pays_only_once.1.json": {
+    "mtime": 1789760498.3043633,
+    "seen": 1789764119.1402977,
+    "ast_hash": "ac42157beed591bc2ab141a53e9c3e32",
+    "semantic_hash": ""
+  },
+  "stock-vault/test_snapshots/test/custodian_cannot_be_the_por_oracle.1.json": {
+    "mtime": 1789760498.4683661,
+    "seen": 1789764119.1403015,
+    "ast_hash": "587d21df341b43c65cbe2414503e62d6",
+    "semantic_hash": ""
+  },
+  "stock-vault/test_snapshots/test/dividends_split_pro_rata_between_existing_holders.1.json": {
+    "mtime": 1789760498.6243687,
+    "seen": 1789764119.1403048,
+    "ast_hash": "f3adfe8484ff4124f761cde9f531472d",
+    "semantic_hash": ""
+  },
+  "stock-vault/test_snapshots/test/double_initialization_is_rejected.1.json": {
+    "mtime": 1789760498.636369,
+    "seen": 1789764119.140308,
+    "ast_hash": "e7eddb5529c5bfac4ba9ff6e91d0c318",
+    "semantic_hash": ""
+  },
+  "stock-vault/test_snapshots/test/every_mint_records_its_custody_attestation.1.json": {
+    "mtime": 1789760498.992375,
+    "seen": 1789764119.140311,
+    "ast_hash": "eb3f9690bd17bf2c05e58d0de05aee82",
+    "semantic_hash": ""
+  },
+  "stock-vault/test_snapshots/test/minting_neither_creates_backing_nor_refreshes_the_audit.1.json": {
+    "mtime": 1789760498.8483725,
+    "seen": 1789764119.1403139,
+    "ast_hash": "95f467e8b35c5bafb965bd10fb206131",
+    "semantic_hash": ""
+  },
+  "stock-vault/test_snapshots/test/only_the_por_oracle_can_update_the_reserve.1.json": {
+    "mtime": 1789760499.1483777,
+    "seen": 1789764119.140322,
+    "ast_hash": "5c1f3dcf39ff9f13d41ec1b86c15d7ca",
+    "semantic_hash": ""
+  },
+  "stock-vault/test_snapshots/test/payment_token_must_be_allowlisted.1.json": {
+    "mtime": 1789760499.228379,
+    "seen": 1789764119.1403248,
+    "ast_hash": "aacfa952a1331c1cdb69f033eb332afc",
+    "semantic_hash": ""
+  },
+  "stock-vault/test_snapshots/test/redeeming_does_not_forfeit_already_earned_dividends.1.json": {
+    "mtime": 1789760499.756388,
+    "seen": 1789764119.140328,
+    "ast_hash": "6aed69215b5e94028e655b0f64be2d05",
+    "semantic_hash": ""
+  },
+  "stock-vault/test_snapshots/test/redemption_cannot_drive_custody_negative.1.json": {
+    "mtime": 1789760499.460383,
+    "seen": 1789764119.1403308,
+    "ast_hash": "e1c3f3478a8ec0923e7ca1e156c653f5",
+    "semantic_hash": ""
+  },
+  "stock-vault/test_snapshots/test/reserve_falling_below_supply_pauses_minting.1.json": {
+    "mtime": 1789760499.87239,
+    "seen": 1789764119.1403337,
+    "ast_hash": "fb85ce02ebf12148700b2b1c2e7c013b",
+    "semantic_hash": ""
+  },
+  "stock-vault/test_snapshots/test/sweep_cannot_touch_dividends_owed_to_holders.1.json": {
+    "mtime": 1789760500.212396,
+    "seen": 1789764119.140337,
+    "ast_hash": "b62eeac7e22c032125f060a11c6287f1",
+    "semantic_hash": ""
+  },
+  "stock-vault/test_snapshots/test/sweep_releases_genuine_excess.1.json": {
+    "mtime": 1789760500.508401,
+    "seen": 1789764119.1403396,
+    "ast_hash": "e704188bfeb78e044cf0b4ddb0a85a37",
+    "semantic_hash": ""
+  },
+  "stock-vault/test_snapshots/test/unauthorized_caller_cannot_mint.1.json": {
+    "mtime": 1789760500.400399,
+    "seen": 1789764119.1403427,
+    "ast_hash": "ff88246d96fa84150ed6c26fe696e8c8",
+    "semantic_hash": ""
+  },
+  "warrant-vault/Cargo.toml": {
+    "mtime": 1789690789.803974,
+    "seen": 1789764119.1403458,
+    "ast_hash": "1e7398302ff6e084a03c68a1c2f7b2aa",
+    "semantic_hash": ""
+  },
+  "warrant-vault/src/lib.rs": {
+    "mtime": 1789751934.3052197,
+    "seen": 1789764119.1403487,
+    "ast_hash": "3bc7c96116615cb4980d6fb695fc97e5",
+    "semantic_hash": ""
+  },
+  "warrant-vault/src/test.rs": {
+    "mtime": 1789751124.4458704,
+    "seen": 1789764119.1403518,
+    "ast_hash": "281c016b6196fa231981db8dbc18222b",
+    "semantic_hash": ""
+  },
+  "warrant-vault/test_snapshots/test/a_funded_loan_cannot_be_funded_twice.1.json": {
+    "mtime": 1789760501.6404202,
+    "seen": 1789764119.1403556,
+    "ast_hash": "571e33b0612a430e2cead8ea47fc9429",
+    "semantic_hash": ""
+  },
+  "warrant-vault/test_snapshots/test/a_non_allowlisted_payment_token_is_rejected.1.json": {
+    "mtime": 1789760501.6084197,
+    "seen": 1789764119.140359,
+    "ast_hash": "5b773e7b0ed2508af588e8b67516439f",
+    "semantic_hash": ""
+  },
+  "warrant-vault/test_snapshots/test/a_stale_collateral_attestation_cannot_be_funded.1.json": {
+    "mtime": 1789760501.744422,
+    "seen": 1789764119.140362,
+    "ast_hash": "59668edb4bbb3dc5635e12551047451d",
+    "semantic_hash": ""
+  },
+  "warrant-vault/test_snapshots/test/an_unaccredited_warrantera_is_rejected.1.json": {
+    "mtime": 1789760501.8404236,
+    "seen": 1789764119.1403651,
+    "ast_hash": "66f6d1da2e5412aed76fa04020339eba",
+    "semantic_hash": ""
+  },
+  "warrant-vault/test_snapshots/test/an_unbounded_interest_rate_is_rejected.1.json": {
+    "mtime": 1789760501.8164232,
+    "seen": 1789764119.1403685,
+    "ast_hash": "bb7b11559d190a9f3c5e83649806383b",
+    "semantic_hash": ""
+  },
+  "warrant-vault/test_snapshots/test/an_unfunded_vault_cannot_be_liquidated.1.json": {
+    "mtime": 1789760502.0204268,
+    "seen": 1789764119.1403718,
+    "ast_hash": "c482e865490c927df2d1e344d72487e3",
+    "semantic_hash": ""
+  },
+  "warrant-vault/test_snapshots/test/double_initialization_is_rejected.1.json": {
+    "mtime": 1789760502.0444272,
+    "seen": 1789764119.1403744,
+    "ast_hash": "189f84e6db38183b4888c59aca256e09",
+    "semantic_hash": ""
+  },
+  "warrant-vault/test_snapshots/test/fund_repay_happy_path_charges_the_exact_prorated_interest.1.json": {
+    "mtime": 1789760502.3484323,
+    "seen": 1789764119.1403775,
+    "ast_hash": "b039cbcde02f944dad6b1e2d59ffb4a5",
+    "semantic_hash": ""
+  },
+  "warrant-vault/test_snapshots/test/funding_late_in_the_window_still_grants_the_producer_a_full_term.1.json": {
+    "mtime": 1789760502.332432,
+    "seen": 1789764119.1403809,
+    "ast_hash": "93bd02109390ff571b157d0d0c9f5f44",
+    "semantic_hash": ""
+  },
+  "warrant-vault/test_snapshots/test/liquidation_after_grace_records_the_surplus_owed_to_the_producer.1.json": {
+    "mtime": 1789760502.5564358,
+    "seen": 1789764119.140384,
+    "ast_hash": "1d8a6dc5a2a4e53f5f8070aa9b769f18",
+    "semantic_hash": ""
+  },
+  "warrant-vault/test_snapshots/test/liquidation_requires_the_callers_signature.1.json": {
+    "mtime": 1789760502.6324372,
+    "seen": 1789764119.140387,
+    "ast_hash": "a7b0d92d0c49edc4564285b5493c8756",
+    "semantic_hash": ""
+  },
+  "warrant-vault/test_snapshots/test/only_the_lender_or_warrantera_may_liquidate.1.json": {
+    "mtime": 1789760502.7444391,
+    "seen": 1789764119.14039,
+    "ast_hash": "721edca1810dfc307beb9ba5763bd6ec",
+    "semantic_hash": ""
+  },
+  "warrant-vault/test_snapshots/test/producer_cannot_be_its_own_warrantera.1.json": {
+    "mtime": 1789760502.8204403,
+    "seen": 1789764119.140393,
+    "ast_hash": "bb7b11559d190a9f3c5e83649806383b",
+    "semantic_hash": ""
+  },
+  "warrant-vault/test_snapshots/test/repaying_after_grace_is_rejected_so_the_state_is_unambiguous.1.json": {
+    "mtime": 1789760502.8884416,
+    "seen": 1789764119.1403959,
+    "ast_hash": "aff2c178aa35edd11f248db368143df5",
+    "semantic_hash": ""
+  }
+}

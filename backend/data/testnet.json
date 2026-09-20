@@ -1,0 +1,9 @@
+{
+  "mode": "deploy",
+  "friendbot": true,
+  "horizonUrl": "https://horizon-testnet.stellar.org",
+  "rpcUrl": "https://soroban-testnet.stellar.org",
+  "networkPassphrase": "Test SDF Network ; September 2015",
+  "notes": "Modo elegido: testnet completo. Friendbot fondea XLM. El deploy de contratos WASM se hace en un paso siguiente.",
+  "updatedAt": "2026-09-18T04:39:40.748Z"
+}
