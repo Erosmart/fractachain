@@ -81,7 +81,7 @@ export default function AdminOpaPage() {
     <div className="space-y-8 py-4">
       {/* Header */}
       <div className="space-y-2">
-        <div className="inline-flex max-w-full flex-wrap items-center gap-1.5 px-3 py-1 rounded-full bg-red-950/60 border border-red-800/40 text-red-400 text-xs font-semibold uppercase tracking-wider">
+        <div className="inline-flex max-w-full flex-wrap items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-xs font-semibold uppercase tracking-wider">
           <Activity className="w-3.5 h-3.5 shrink-0" />
           Control de Concentración Ley 26.831
         </div>
@@ -94,25 +94,25 @@ export default function AdminOpaPage() {
       </div>
 
       {/* Threshold Status Banner */}
-      <div className="p-6 rounded-2xl bg-[#0c101a] border border-white/5 space-y-4">
+      <div className="p-6 rounded-3xl crystal-card space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-bold text-white">Estado de Gobernanza: Emisión Campaña Pergamino (500,000 Tokens)</h3>
-            <p className="text-xs text-gray-400">Tenedor mayoritario actual posee el <strong className="text-white font-mono">{dominantPercent}%</strong> de la emisión.</p>
+            <h3 className="text-sm font-bold text-black">Estado de Gobernanza: Emisión Campaña Pergamino (500,000 Tokens)</h3>
+            <p className="text-xs text-neutral-600">Tenedor mayoritario actual posee el <strong className="text-black font-mono">{dominantPercent}%</strong> de la emisión.</p>
           </div>
 
           <div className="flex items-center gap-2">
             {dominantPercent >= 95 ? (
-              <span className="px-3 py-1 rounded-full bg-purple-950 text-purple-300 border border-purple-800 text-xs font-bold font-mono">
-                🚨 SQUEEZE-OUT HABILITADO (&gt;95%)
+              <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200 text-xs font-bold font-mono">
+                SQUEEZE-OUT HABILITADO (&gt;95%)
               </span>
             ) : dominantPercent >= 50 ? (
-              <span className="px-3 py-1 rounded-full bg-red-950 text-red-400 border border-red-800 text-xs font-bold font-mono">
-                ⚠️ OPA OBLIGATORIA ACTIVA (&gt;50%)
+              <span className="px-3 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 text-xs font-bold font-mono">
+                OPA OBLIGATORIA ACTIVA (&gt;50%)
               </span>
             ) : (
-              <span className="px-3 py-1 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 text-xs font-bold font-mono">
-                ✓ DISTRIBUCIÓN NORMAL (&lt;50%)
+              <span className="px-3 py-1 rounded-full bg-leaf-100 text-[#2f6f28] border border-[#8fcb7a]/50 text-xs font-bold font-mono">
+                DISTRIBUCIÓN NORMAL (&lt;50%)
               </span>
             )}
           </div>
@@ -120,43 +120,43 @@ export default function AdminOpaPage() {
 
         {/* Progress Bar of Dominance */}
         <div className="space-y-1.5">
-          <div className="relative w-full h-4 bg-gray-800 rounded-full overflow-hidden">
+          <div className="relative w-full h-4 bg-black/10 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
                 dominantPercent >= 95
                   ? 'bg-purple-500'
                   : dominantPercent >= 50
                   ? 'bg-gradient-to-r from-yellow-500 to-red-500'
-                  : 'bg-emerald-500'
+                  : 'bg-[#7ed86a]'
               }`}
               style={{ width: `${dominantPercent}%` }}
             />
             {/* 50% OPA line marker */}
             <div
-              className="absolute top-0 bottom-0 w-0.5 bg-red-400"
+              className="absolute top-0 bottom-0 w-0.5 bg-red-500"
               style={{ left: '50%' }}
               title="Umbral OPA 50%"
             />
             {/* 95% Squeeze-out line marker */}
             <div
-              className="absolute top-0 bottom-0 w-0.5 bg-purple-400"
+              className="absolute top-0 bottom-0 w-0.5 bg-purple-500"
               style={{ left: '95%' }}
               title="Umbral Squeeze-Out 95%"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-1 sm:flex sm:justify-between text-[10px] sm:text-[11px] text-gray-500 font-mono">
+          <div className="grid grid-cols-2 gap-1 sm:flex sm:justify-between text-[10px] sm:text-[11px] text-neutral-500 font-mono">
             <span>0%</span>
-            <span className="text-red-400 font-bold">50% OPA</span>
-            <span className="text-purple-400 font-bold">95% Squeeze</span>
+            <span className="text-red-700 font-bold">50% OPA</span>
+            <span className="text-purple-700 font-bold">95% Squeeze</span>
             <span>100%</span>
           </div>
         </div>
       </div>
 
       {actionMessage && (
-        <div className="p-3 rounded-xl bg-emerald-950/60 border border-emerald-500 text-emerald-300 text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+        <div className="p-3 rounded-xl bg-leaf-100 border border-[#8fcb7a]/50 text-[#2f6f28] text-xs flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{actionMessage}</span>
         </div>
       )}
@@ -164,29 +164,29 @@ export default function AdminOpaPage() {
       {/* Holders Table & Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left: Table (8 Cols) */}
-        <div className="lg:col-span-8 rounded-2xl bg-[#0c101a] border border-white/5 overflow-hidden">
-          <div className="p-4 bg-[#121826] border-b border-white/5 flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center">
-            <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <Users className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="lg:col-span-8 rounded-3xl crystal-card overflow-hidden">
+          <div className="p-4 bg-black/5 border-b border-black/8 flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center">
+            <span className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-2">
+              <Users className="w-4 h-4 text-[#2f6f28] shrink-0" />
               Distribución de Tenencias
             </span>
-            <span className="text-[11px] text-gray-400 font-mono">Total: 500,000 Tokens</span>
+            <span className="text-[11px] text-neutral-500 font-mono">Total: 500,000 Tokens</span>
           </div>
 
           {/* Mobile cards */}
-          <div className="md:hidden divide-y divide-white/5">
+          <div className="md:hidden divide-y divide-black/8">
             {holders.map((holder, idx) => (
-              <div key={idx} className={`p-4 space-y-2 ${holder.isDominant ? 'bg-red-950/10' : ''}`}>
-                <div className="font-bold text-white text-xs break-words">{holder.name}</div>
+              <div key={idx} className={`p-4 space-y-2 ${holder.isDominant ? 'bg-red-50' : ''}`}>
+                <div className="font-bold text-black text-xs break-words">{holder.name}</div>
                 {holder.isDominant && (
-                  <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-950 text-red-400 border border-red-800">
+                  <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-50 text-red-700 border border-red-200">
                     SUJETO OBLIGADO OPA
                   </span>
                 )}
-                <div className="font-mono text-[11px] text-gray-400 break-all">{holder.address}</div>
+                <div className="font-mono text-[11px] text-neutral-500 break-all">{holder.address}</div>
                 <div className="flex justify-between text-xs font-mono">
-                  <span className="text-white">{holder.tokensHeld.toLocaleString()} tokens</span>
-                  <span className={holder.percentage >= 50 ? 'text-red-400 font-bold' : 'text-gray-300'}>
+                  <span className="text-black">{holder.tokensHeld.toLocaleString()} tokens</span>
+                  <span className={holder.percentage >= 50 ? 'text-red-700 font-bold' : 'text-neutral-700'}>
                     {holder.percentage.toFixed(1)}%
                   </span>
                 </div>
@@ -196,7 +196,7 @@ export default function AdminOpaPage() {
 
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs min-w-[36rem]">
-              <thead className="text-gray-400 font-mono text-[11px] uppercase border-b border-white/5 bg-[#0e1320]">
+              <thead className="text-neutral-500 font-mono text-[11px] uppercase border-b border-black/8 bg-black/5">
                 <tr>
                   <th className="px-4 py-3">Tenedor / Institución</th>
                   <th className="px-4 py-3">Dirección Stellar</th>
@@ -204,25 +204,25 @@ export default function AdminOpaPage() {
                   <th className="px-4 py-3 text-right">Porcentaje</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-black/8">
                 {holders.map((holder, idx) => (
-                  <tr key={idx} className={holder.isDominant ? 'bg-red-950/10' : ''}>
+                  <tr key={idx} className={holder.isDominant ? 'bg-red-50' : ''}>
                     <td className="px-4 py-3">
-                      <div className="font-bold text-white text-xs">{holder.name}</div>
+                      <div className="font-bold text-black text-xs">{holder.name}</div>
                       {holder.isDominant && (
-                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-red-950 text-red-400 border border-red-800">
+                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-red-50 text-red-700 border border-red-200">
                           SUJETO OBLIGADO OPA
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 font-mono text-[11px] text-gray-400">
+                    <td className="px-4 py-3 font-mono text-[11px] text-neutral-500">
                       <span className="truncate block max-w-[140px]">{holder.address}</span>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-white">
+                    <td className="px-4 py-3 text-right font-mono text-black">
                       {holder.tokensHeld.toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-right font-mono font-bold">
-                      <span className={holder.percentage >= 50 ? 'text-red-400' : 'text-gray-300'}>
+                      <span className={holder.percentage >= 50 ? 'text-red-700' : 'text-neutral-700'}>
                         {holder.percentage.toFixed(1)}%
                       </span>
                     </td>
@@ -234,14 +234,14 @@ export default function AdminOpaPage() {
         </div>
 
         {/* Right: Simulation Controls (4 Cols) */}
-        <div className="lg:col-span-4 p-6 rounded-2xl bg-[#0c101a] border border-white/10 space-y-5">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider">Acciones del Contrato Soroban</h3>
+        <div className="lg:col-span-4 p-6 rounded-3xl crystal-card space-y-5">
+          <h3 className="text-sm font-bold text-black uppercase tracking-wider">Acciones del Contrato Soroban</h3>
 
           <div className="space-y-3">
             <button
               type="button"
               onClick={handleTriggerOpa}
-              className="w-full py-2.5 rounded-xl bg-red-500 hover:bg-red-400 text-black font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-red-500/20"
+              className="w-full py-2.5 rounded-xl bg-red-500 hover:bg-red-400 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
             >
               <Zap className="w-3.5 h-3.5" />
               Notificar OPA Obligatoria (50%)
@@ -250,16 +250,16 @@ export default function AdminOpaPage() {
             <button
               type="button"
               onClick={handleSimulateSqueezeOut}
-              className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-purple-600/20"
+              className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
             >
               <Scale className="w-3.5 h-3.5" />
               Simular Squeeze-Out (95%)
             </button>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-[#121826] border border-white/5 space-y-2 text-xs text-gray-400">
-            <div className="flex items-center gap-1.5 text-white font-semibold text-xs">
-              <Scale className="w-4 h-4 text-emerald-400" /> Marco Legal CNV Ley 26.831
+          <div className="p-3.5 rounded-xl bg-black/5 border border-black/8 space-y-2 text-xs text-neutral-600">
+            <div className="flex items-center gap-1.5 text-black font-semibold text-xs">
+              <Scale className="w-4 h-4 text-[#2f6f28]" /> Marco Legal CNV Ley 26.831
             </div>
             <p className="text-[11px] leading-relaxed">
               <strong>Art. 86 (OPA Obligatoria):</strong> Quien pretenda alcanzar una participación de control o supere el 50% de los votos debe formular una oferta pública dirigida a todos los tenedores con precio equitativo fijado por la CNV.

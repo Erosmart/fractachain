@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../context/I18nContext';
 
 interface GoogleLoginButtonProps {
   label?: string;
@@ -11,12 +12,13 @@ interface GoogleLoginButtonProps {
 }
 
 export default function GoogleLoginButton({
-  label = 'Continuar con Google',
+  label,
   onSuccess,
   className = '',
   variant = 'light',
 }: GoogleLoginButtonProps) {
   const { loginWithGoogle, isLoading } = useAuth();
+  const { t } = useI18n();
   const [error, setError] = useState('');
 
   const handleLogin = async () => {
@@ -60,7 +62,7 @@ export default function GoogleLoginButton({
           d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
         />
       </svg>
-      <span>{isLoading ? 'Iniciando sesión...' : label}</span>
+      <span>{isLoading ? t('auth.googleLoading') : (label || t('auth.google'))}</span>
     </button>
     {error ? <p className="text-xs text-red-700 text-center mt-2">{error}</p> : null}
     </>

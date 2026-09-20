@@ -4,6 +4,7 @@ import React from 'react';
 import { Landmark, ShieldCheck, Zap, Globe, Coins, Building2, ExternalLink } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import { partnerSlug } from '../lib/brands';
+import { useI18n } from '../context/I18nContext';
 
 interface Partner {
   name: string;
@@ -74,6 +75,7 @@ const PARTNERS: Partner[] = [
 ];
 
 export default function PartnersShowcase() {
+  const { t } = useI18n();
   return (
     <section className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -83,11 +85,11 @@ export default function PartnersShowcase() {
             Building blocks
           </div>
           <h2 className="font-section text-3xl font-extrabold text-black">
-            Infraestructura
+            {t('partners.title')}
           </h2>
         </div>
         <p className="text-sm text-neutral-600 max-w-md">
-          Caja de Valores y BYMA, liquidados en Stellar.
+          {t('partners.lead')}
         </p>
       </div>
 
@@ -141,7 +143,7 @@ export default function PartnersShowcase() {
               Stellar Community Fund
             </div>
             <p className="text-xs text-neutral-600 leading-relaxed">
-              Diseñado bajo el <strong className="text-black">Argentina Builder Challenge</strong>.
+              {t('partners.scf')}
             </p>
           </div>
           <div className="pt-2 border-t border-black/10 flex items-center justify-between text-[11px] font-lcd text-neutral-600">

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Terminal, Shield, Code, CheckCircle2, Copy, ExternalLink, Cpu } from 'lucide-react';
+import { useI18n } from '../context/I18nContext';
 
 interface ContractData {
   id: string;
@@ -112,6 +113,7 @@ const CONTRACTS: ContractData[] = [
 ];
 
 export default function ContractInspectorBanner() {
+  const { t } = useI18n();
   const [selectedId, setSelectedId] = useState<string>('licitacion');
   const [copied, setCopied] = useState<boolean>(false);
 
@@ -131,13 +133,13 @@ export default function ContractInspectorBanner() {
         <div className="space-y-1 min-w-0">
           <div className="inline-flex items-center gap-2 text-xs font-lcd text-neutral-500 font-bold uppercase tracking-wider">
             <Cpu className="w-4 h-4" />
-            WASM · Protocolo 27
+            WASM · Protocol 27
           </div>
           <h2 className="font-section text-xl sm:text-2xl font-extrabold text-black">
-            Contratos on-chain
+            {t('contracts.title')}
           </h2>
           <p className="text-sm text-neutral-600 max-w-xl">
-            Interfaz pública de cada wasm. Hashes reproducibles.
+            {t('contracts.lead')}
           </p>
         </div>
 

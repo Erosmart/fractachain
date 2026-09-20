@@ -9,10 +9,11 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        display: ['Syne', 'Avenir Next', 'sans-serif'],
-        section: ['Fraunces', 'Georgia', 'serif'],
-        body: ['"Source Serif 4"', 'Georgia', 'serif'],
-        serif: ['"Source Serif 4"', 'Georgia', 'serif'],
+        sans: ['Lato', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        display: ['Lato', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        section: ['Lato', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        body: ['Lato', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        serif: ['Lato', 'Helvetica Neue', 'Arial', 'sans-serif'],
         lcd: ['Share Tech Mono', 'ui-monospace', 'monospace'],
       },
       colors: {

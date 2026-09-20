@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { KeyRound, Landmark } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
+import { useI18n } from '../../../context/I18nContext';
 
 export default function WalletOnboardingPage() {
   const { user, chooseCustody, revealedSecret, isLoading } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -37,8 +39,8 @@ export default function WalletOnboardingPage() {
   return (
     <div className="max-w-3xl mx-auto py-12 space-y-8">
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-extrabold font-display">¿Quién guarda las claves?</h1>
-        <p className="text-neutral-600">Elegí una sola vez. Después seguís al KYC.</p>
+        <h1 className="text-3xl font-extrabold font-display">{t('onboarding.walletTitle')}</h1>
+        <p className="text-neutral-600">{t('onboarding.walletLead')}</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
@@ -49,9 +51,9 @@ export default function WalletOnboardingPage() {
           className="p-6 rounded-3xl crystal-card text-left space-y-3 hover:border-black/20"
         >
           <Landmark className="w-7 h-7" />
-          <h2 className="font-section text-xl font-extrabold">Las guardamos nosotros</h2>
+          <h2 className="font-section text-xl font-extrabold">{t('onboarding.custodialTitle')}</h2>
           <p className="text-neutral-600 text-sm">
-            Custodia en Fractachain. No tenés que anotar la clave. Recuperás la cuenta con tu email.
+            {t('onboarding.custodialBody')}
           </p>
         </button>
         <button
@@ -61,23 +63,23 @@ export default function WalletOnboardingPage() {
           className="p-6 rounded-3xl crystal-card text-left space-y-3 hover:border-black/20"
         >
           <KeyRound className="w-7 h-7" />
-          <h2 className="font-section text-xl font-extrabold">Las guardo yo</h2>
+          <h2 className="font-section text-xl font-extrabold">{t('onboarding.selfTitle')}</h2>
           <p className="text-neutral-600 text-sm">
-            Auto-custodia. Te mostramos la clave una sola vez. Si la perdés, no hay recupero.
+            {t('onboarding.selfBody')}
           </p>
         </button>
       </div>
 
       {revealedSecret && (
         <div className="p-6 rounded-3xl border border-black/10 bg-white space-y-3">
-          <p className="font-bold">Guardá esta clave ahora. No la volvemos a mostrar.</p>
+          <p className="font-bold">{t('onboarding.secretWarn')}</p>
           <code className="block p-3 rounded-xl bg-neutral-100 text-xs break-all">{revealedSecret}</code>
           <button
             type="button"
             onClick={() => router.push('/onboarding/kyc')}
             className="px-5 py-3 rounded-2xl bg-black text-white font-display font-bold"
           >
-            Ya la anoté, seguir
+            {t('onboarding.secretCta')}
           </button>
         </div>
       )}
