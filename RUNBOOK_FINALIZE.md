@@ -18,6 +18,8 @@ Después:
 
 En el pitch Las Lilas: **soft = hard = 100 XLM**. Un ticket de 100 alcanza el hard cap y se puede cerrar en el acto.
 
+Lectura live (2026-09-20, testnet, `CDHKGEJNNFYKXW4XOEDXXE5LOF5HCYVORR2JT7AOK2FAN5B6I65X7JLM`): estado **Open**, raised **100 XLM**, `canFinalize=true` (`hard_cap`), proceeds todavía no pagados. El operador puede pulsar finalize en el próximo ensayo — **no lo dispares antes del pitch** o cerrás la oferta de verdad.
+
 `withdraw_proceeds(admin)` es solo reintento si ese pago se interrumpió. No es el camino feliz.
 
 ## Qué hay y qué no hay para el inversor
