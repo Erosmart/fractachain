@@ -1,11 +1,13 @@
-/** Locale-stable grouping so SSR and the browser never disagree. */
-export function formatAmount(value: number, maxFractionDigits = 0) {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return '0';
-  const factor = 10 ** Math.max(0, maxFractionDigits);
-  const rounded = maxFractionDigits > 0 ? Math.round(n * factor) / factor : Math.round(n);
-  const [intPart, frac] = String(Math.abs(rounded)).split('.');
-  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  const signed = rounded < 0 ? `-${grouped}` : grouped;
-  return frac ? `${signed},${frac}` : signed;
+/** Pin thousands separators so SSR (Node locale) and the browser don't disagree. */
+export function formatAmount(n: number, digits = 0) {
+  return Number(n).toLocaleString('es-AR', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
 }
+
+export function formatInt(n: number) {
+  return formatAmount(n, 0);
+}
+
+export const format = formatAmount;

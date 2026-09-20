@@ -14,7 +14,9 @@ import {
   Zap,
 } from 'lucide-react';
 import MockDisclaimer from '../../components/MockDisclaimer';
+import LiveContractLink from '../../components/LiveContractLink';
 import { useI18n } from '../../context/I18nContext';
+import { formatInt } from '../../lib/format';
 
 interface WarrantRecord {
   id: string;
@@ -74,7 +76,7 @@ export default function WarrantsPage() {
   const liquidationThresholdUsd = collateralValue * 0.75;
 
   const handleCreateWarrant = () => {
-    setIssuedSuccess(`Simulación: préstamo de $${loanCapacity.toLocaleString()} USDC contra ${calcTons} Tn de ${calcCommodity}. No se envió transacción a Stellar.`);
+    setIssuedSuccess(`Simulación: préstamo de $${formatInt(loanCapacity)} USDC contra ${calcTons} Tn de ${calcCommodity}. No se envió transacción a Stellar.`);
     setTimeout(() => setIssuedSuccess(null), 4000);
   };
 
@@ -93,6 +95,7 @@ export default function WarrantsPage() {
           Monetiza granos almacenados en silobolsas y plantas de acopio autorizadas. Obtén liquidez inmediata en USDC con una relación préstamo-valor (LTV) del 50% al 60% bajo custodia de Empresas de Warrants registradas.
         </p>
         <MockDisclaimer product="Warrants" />
+        <LiveContractLink kind="warrant" />
       </div>
 
       {/* Regulatory Badge */}
@@ -141,11 +144,11 @@ export default function WarrantsPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-black/8 text-xs">
                   <div>
                     <span className="text-neutral-500 text-[10px] block">Colateral ({war.commodity})</span>
-                    <span className="font-bold font-mono text-black break-words">{war.tons} Tn (${war.collateralValueUsd.toLocaleString()})</span>
+                    <span className="font-bold font-mono text-black break-words">{war.tons} Tn (${formatInt(war.collateralValueUsd)})</span>
                   </div>
                   <div>
                     <span className="text-neutral-500 text-[10px] block">Préstamo USDC Otorgado</span>
-                    <span className="font-bold font-mono text-[#2f6f28]">${war.loanAmountUsd.toLocaleString()}</span>
+                    <span className="font-bold font-mono text-[#2f6f28]">${formatInt(war.loanAmountUsd)}</span>
                   </div>
                   <div>
                     <span className="text-neutral-500 text-[10px] block">Salud de Colateral</span>
@@ -223,11 +226,11 @@ export default function WarrantsPage() {
             <div className="p-4 rounded-xl bg-black/5 border border-black/8 space-y-2 text-xs font-mono">
               <div className="flex justify-between text-neutral-500">
                 <span>Valor del Grano:</span>
-                <span className="text-black">${collateralValue.toLocaleString()} USD</span>
+                <span className="text-black">${formatInt(collateralValue)} USD</span>
               </div>
               <div className="flex justify-between text-neutral-500">
                 <span>Préstamo a Recibir (USDC):</span>
-                <span className="text-[#2f6f28] font-bold">${loanCapacity.toLocaleString()} USDC</span>
+                <span className="text-[#2f6f28] font-bold">${formatInt(loanCapacity)} USDC</span>
               </div>
               <div className="flex justify-between text-neutral-500 text-[10px] pt-1 border-t border-black/8">
                 <span>Precio de Liquidación (75% LTV):</span>

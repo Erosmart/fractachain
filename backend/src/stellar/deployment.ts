@@ -22,6 +22,11 @@ export interface TestnetDeployment {
   licitacion?: string;
   usdcSac?: string;
   xlmSac?: string;
+  licitacionLegacy?: string;
+  licitacionWasmHash?: string;
+  forward?: string;
+  warrant?: string;
+  warrantFactory?: string;
   forwardWasmHash?: string;
   warrantWasmHash?: string;
   usdcClassic?: { code: string; issuer: string };
@@ -41,4 +46,16 @@ export function loadTestnetDeployment(): TestnetDeployment | null {
 export function isOnChainDeployed(): boolean {
   const d = loadTestnetDeployment();
   return Boolean(d?.factory && d.factory.startsWith('C'));
+}
+
+export function saveTestnetDeployment(partial: Partial<TestnetDeployment>): TestnetDeployment {
+  const current = loadTestnetDeployment() || { network: 'testnet' };
+  const next: TestnetDeployment = {
+    ...current,
+    ...partial,
+    updatedAt: new Date().toISOString(),
+  };
+  fs.mkdirSync(path.dirname(FILE), { recursive: true });
+  fs.writeFileSync(FILE, JSON.stringify(next, null, 2) + '\n');
+  return next;
 }

@@ -4,16 +4,15 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
-import { MOCK_POOLS } from '../../../lib/mock-data';
 import { API_BASE_URL, getApiBaseUrl } from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
 import { useI18n } from '../../../context/I18nContext';
+import { formatInt } from '../../../lib/format';
 
 export default function PoolDetailPage() {
   const params = useParams();
   const poolId = params.id as string;
-  const mock = MOCK_POOLS.find((p) => p.id === poolId);
-  const { user, token, refreshUser, approveToken, claimTokens } = useAuth();
+    const { user, token, refreshUser, approveToken, claimTokens } = useAuth();
   const { t } = useI18n();
   const [listing, setListing] = useState<any>(null);
   const [validation, setValidation] = useState<any>(null);
@@ -40,8 +39,9 @@ export default function PoolDetailPage() {
   const invest = async () => {
     setNotice('');
     const auth = token || (typeof window !== 'undefined' ? localStorage.getItem('fc_auth_token') : null);
+    const xlm = listing?.dossier?.paymentKind === 'XLM';
     if (!auth) {
-      setNotice(t('market.loginToContribute'));
+      setNotice(t(xlm ? 'market.loginToContributeXlm' : 'market.loginToContribute'));
       return;
     }
     setBusy(true);
@@ -67,13 +67,19 @@ export default function PoolDetailPage() {
       setListing(json.data);
       await refreshUser();
       const onChain = json.data?.onChain;
-      const hash = onChain?.trustlineHash;
+      const contributeHash = onChain?.contributeHash;
+      const hash = contributeHash || onChain?.trustlineHash;
       const raised = Number(json.data.raisedUsdc).toLocaleString('es-AR');
-      setNotice(
-        hash
-          ? t('market.subscribedHash', { n: raised, hash })
-          : t('market.subscribedRaised', { n: raised }),
-      );
+      const unit = json.data?.dossier?.paymentKind === 'XLM' ? 'XLM' : 'USDC';
+      if (contributeHash) {
+        setNotice(t('market.subscribedContributeHash', { n: raised, hash: contributeHash }));
+      } else if (hash) {
+        setNotice(t('market.subscribedHash', { n: raised, hash }));
+      } else if (unit === 'XLM') {
+        setNotice(t('market.subscribedRaisedXlm', { n: raised }));
+      } else {
+        setNotice(t('market.subscribedRaised', { n: raised }));
+      }
     } catch (e: any) {
       const msg = e?.message || 'No se pudo aportar';
       setNotice(/failed to fetch/i.test(msg) ? t('market.apiDown') : msg);
@@ -84,8 +90,13 @@ export default function PoolDetailPage() {
 
   if (listing && validation) {
     const d = listing.dossier;
+    const xlm = d.paymentKind === 'XLM';
+    const unit = xlm ? 'XLM' : 'USDC';
     return (
       <div className="max-w-5xl mx-auto py-6 space-y-6">
+      <div className="rounded-2xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950 mb-4">
+        {t('market.honestyBanner')}
+      </div>
         <Link href="/market" className="inline-flex items-center gap-1.5 text-sm text-neutral-500">
           <ArrowLeft className="w-4 h-4" /> {t('market.back')}
         </Link>
@@ -143,7 +154,7 @@ export default function PoolDetailPage() {
             <div className="p-6 rounded-3xl crystal-card space-y-4 sticky top-24">
               <h3 className="font-display font-extrabold">{t('market.subscribe')}</h3>
               <p className="text-sm text-neutral-600">
-                ${listing.raisedUsdc.toLocaleString()} / ${d.offeringHardCapUsdc.toLocaleString()} USDC · mínimo ${(d.minInvestmentUsdc || d.pricePerShareUsdc).toLocaleString()} USDC
+                {formatInt(listing.raisedUsdc)} / {formatInt(d.offeringHardCapUsdc)} {unit} · mínimo {formatInt(d.minInvestmentUsdc || d.pricePerShareUsdc)} {unit}
               </p>
               <input
                 type="number"
@@ -157,7 +168,9 @@ export default function PoolDetailPage() {
               )}
               {listing.status === 'LISTED' && (
                 <p className="text-sm text-neutral-600">
-                  {t('market.closesAt', { n: d.offeringSoftCapUsdc.toLocaleString() })}
+                  {xlm
+                    ? t('market.closesAtXlm', { n: formatInt(d.offeringHardCapUsdc) })
+                    : t('market.closesAt', { n: formatInt(d.offeringSoftCapUsdc) })}
                 </p>
               )}
               {user?.kycStatus === 'APPROVED' && !user?.trustlines?.includes(listing.id) && (
@@ -187,10 +200,10 @@ export default function PoolDetailPage() {
               <button
                 type="button"
                 onClick={invest}
-                disabled={user?.kycStatus !== 'APPROVED' || listing.status !== 'LISTED'}
+                disabled={busy || user?.kycStatus !== 'APPROVED' || listing.status !== 'LISTED'}
                 className="w-full py-3 rounded-2xl bg-black text-white font-display font-bold disabled:opacity-40"
               >
-                {t('market.contribute')}
+                {busy ? '…' : xlm ? t('market.contributeXlm') : t('market.contribute')}
               </button>
               {notice && <p className="text-sm">{notice}</p>}
               {listing.onChain?.explorer && (
@@ -201,6 +214,16 @@ export default function PoolDetailPage() {
                   className="block text-xs font-mono underline break-all"
                 >
                   {t('market.contract')}
+                </a>
+              )}
+              {listing.onChain?.contributeExplorer && (
+                <a
+                  href={listing.onChain.contributeExplorer}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block text-xs font-mono underline break-all"
+                >
+                  {t('market.contributeTx')}
                 </a>
               )}
               {listing.onChain?.trustlineExplorer && (
@@ -220,23 +243,8 @@ export default function PoolDetailPage() {
     );
   }
 
-  const pool = mock;
-  if (!loaded && !pool) {
+  if (!loaded) {
     return <p className="py-16 text-center text-neutral-500">{t('market.loading')}</p>;
   }
-  if (!pool) {
-    return <p className="py-16 text-center text-neutral-500">{t('market.missing')}</p>;
-  }
-
-  return (
-    <div className="max-w-3xl mx-auto py-8 space-y-4">
-      <Link href="/market" className="text-sm text-neutral-500 inline-flex items-center gap-1">
-        <ArrowLeft className="w-4 h-4" /> {t('market.back')}
-      </Link>
-      <h1 className="text-3xl font-extrabold font-display">{pool.title}</h1>
-      <p className="text-neutral-600">{pool.producerName}</p>
-      <p className="text-sm">{pool.tna}% TNA USD · {pool.location}</p>
-      <p className="text-sm text-neutral-500">{t('market.noChain')}</p>
-    </div>
-  );
+  return <p className="py-16 text-center text-neutral-500">{t('market.missing')}</p>;
 }

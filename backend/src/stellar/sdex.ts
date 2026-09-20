@@ -301,8 +301,8 @@ export async function getOrderBook(
     asks,
     spread: bestBid !== null && bestAsk !== null ? bestAsk - bestBid : null,
     midPrice: bestBid !== null && bestAsk !== null ? (bestAsk + bestBid) / 2 : null,
-    base: { code: security.getCode(), issuer: security.getIssuer() },
-    counter: { code: counter.getCode(), issuer: counter.getIssuer() },
+    base: { code: security.getCode(), issuer: security.getIssuer() || 'native' },
+    counter: { code: counter.getCode(), issuer: counter.getIssuer() || 'native' },
     source: 'sdex',
   };
 }
