@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { API_BASE_URL } from '../../../lib/api';
+import { API_BASE_URL, bearerHeaders } from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
 
 const empty = {
@@ -53,7 +53,7 @@ export default function AdminIssuancePage() {
 
   const load = async () => {
     const res = await fetch(`${API_BASE_URL}/api/listings`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: bearerHeaders(token),
     }).then((r) => r.json()).catch(() => null);
     if (Array.isArray(res?.data)) setListings(res.data);
   };

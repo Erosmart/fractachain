@@ -76,6 +76,12 @@ export interface IssuanceProduct {
   notes?: string;
 }
 
+/** Optional Bearer header that stays assignable to fetch's HeadersInit. */
+export function bearerHeaders(token?: string | null): HeadersInit {
+  if (!token) return {};
+  return { Authorization: `Bearer ${token}` };
+}
+
 export async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   try {
     const res = await fetch(`${API_BASE_URL}${endpoint}`, {

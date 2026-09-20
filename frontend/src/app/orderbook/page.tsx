@@ -4,7 +4,7 @@ import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowUpRight, CheckCircle2, MousePointerClick, ShieldCheck, Zap } from 'lucide-react';
-import { API_BASE_URL } from '../../lib/api';
+import { API_BASE_URL, bearerHeaders } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 
 type Market = {
@@ -160,7 +160,7 @@ function OrderbookInner() {
    */
   const loadBook = async (id: string) => {
     if (!id) return;
-    const auth = token ? { Authorization: `Bearer ${token}` } : {};
+    const auth = bearerHeaders(token);
 
     const sdex = await fetch(`${API_BASE_URL}/api/sdex/${id}`, { headers: auth })
       .then((r) => r.json())
@@ -302,7 +302,7 @@ function OrderbookInner() {
 
     const res = await fetch(`${API_BASE_URL}/api/orderbook/orders/${id}/cancel`, {
       method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: bearerHeaders(token),
     });
     const json = await res.json();
     if (json.success) {
