@@ -84,6 +84,13 @@ export default function DashboardPage() {
         pnlPct: 0,
         priceSourceLabel: 'Cargando cotización…',
         pendingDividendUsdc: h.pendingDividendUsdc || 0,
+        listingStatus: undefined,
+        paymentKind: null,
+        finalizeHash: null,
+        refundedAt: h.refundedAt || null,
+        refundHash: h.refundHash || null,
+        canClaim: (h.tokensOwed || 0) > 0 && !h.refundedAt,
+        canRefund: false,
       }));
 
   const totals = book?.totals || {
