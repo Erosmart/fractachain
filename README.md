@@ -253,7 +253,7 @@ Dos servicios desde el mismo repo:
 
 | Servicio | Root | Dockerfile | Start |
 |---|---|---|---|
-| Backend | raíz del repo | `backend/Dockerfile` | `node --use-system-ca dist/server.js` |
+| Backend | raíz del repo | `backend/Dockerfile` | `node dist/server.js` |
 | Frontend | raíz del repo | `frontend/Dockerfile` | `node server.js` (standalone) |
 
 Hay Dockerfiles multi-stage `node:20-alpine` en ambos. Contexto de build = **raíz del repo**.
