@@ -40,6 +40,7 @@ const USDC_ISSUER =
 const N_AGENTS = Number(process.env.AGENTS || 6);
 const ROUNDS = Number(process.env.ROUNDS || 16);
 const START_PRICE = Number(process.env.PRICE || 10);
+const VOL = Number(process.env.VOL || 0.06); // drift máximo por ronda
 const TUWU_PER_AGENT = 8;
 const USDC_AMMO_XLM = 60; // XLM que cada agente swapea a USDC para comprar
 
@@ -176,7 +177,7 @@ async function trade(agents, TUWU, USDC) {
   let fills = 0;
   for (let r = 0; r < ROUNDS; r++) {
     // caminata: precio de la ronda alrededor del anterior
-    mid = Math.max(0.5, mid * (1 + rnd(-0.06, 0.06)));
+    mid = Math.max(0.5, mid * (1 + rnd(-VOL, VOL)));
     const price = mid.toFixed(4);
     const seller = agents[Math.floor(Math.random() * agents.length)];
     let buyer = seller;
