@@ -389,6 +389,12 @@ export interface OfferRequest {
   /** Price of one security token, denominated in the counter asset. */
   price: number;
   /**
+   * When the investor has no trustline for the counter asset yet, prepend a
+   * `changeTrust` so a single signature opens the line and places the offer.
+   * Without it the ledger rejects sells with `op_buy_no_trust`.
+   */
+  openCounterTrustline?: boolean;
+  /**
    * Passing an existing offer id edits it; `0` creates a new one. Setting
    * quantity to 0 on an existing id cancels it.
    */
@@ -406,8 +412,11 @@ export async function buildSellOfferXdr(req: OfferRequest): Promise<string> {
   const tx = new TransactionBuilder(account, {
     fee: FEE,
     networkPassphrase: networkPassphrase(),
-  })
-    .addOperation(
+  });
+  if (req.openCounterTrustline) {
+    tx.addOperation(Operation.changeTrust({ asset: req.counter }));
+  }
+  tx.addOperation(
       Operation.manageSellOffer({
         selling: req.security,
         buying: req.counter,
@@ -415,10 +424,8 @@ export async function buildSellOfferXdr(req: OfferRequest): Promise<string> {
         price: String(req.price),
         offerId: req.offerId ?? '0',
       }),
-    )
-    .setTimeout(TX_TIMEOUT_SECONDS)
-    .build();
-  return tx.toXDR();
+    );
+  return tx.setTimeout(TX_TIMEOUT_SECONDS).build().toXDR();
 }
 
 /**
@@ -434,8 +441,11 @@ export async function buildBuyOfferXdr(req: OfferRequest): Promise<string> {
   const tx = new TransactionBuilder(account, {
     fee: FEE,
     networkPassphrase: networkPassphrase(),
-  })
-    .addOperation(
+  });
+  if (req.openCounterTrustline) {
+    tx.addOperation(Operation.changeTrust({ asset: req.counter }));
+  }
+  tx.addOperation(
       Operation.manageBuyOffer({
         selling: req.counter,
         buying: req.security,
@@ -443,10 +453,8 @@ export async function buildBuyOfferXdr(req: OfferRequest): Promise<string> {
         price: String(req.price),
         offerId: req.offerId ?? '0',
       }),
-    )
-    .setTimeout(TX_TIMEOUT_SECONDS)
-    .build();
-  return tx.toXDR();
+    );
+  return tx.setTimeout(TX_TIMEOUT_SECONDS).build().toXDR();
 }
 
 /** Builds the trustline the investor needs before they can be authorized. */

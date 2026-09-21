@@ -178,6 +178,11 @@ export async function prepareOrder(params: {
     );
   }
 
+  // Selling also needs a trustline on the counter asset to receive it; buying
+  // needs one to spend it. Open it inside the offer tx so a single signature
+  // covers both ops — otherwise Horizon rejects with op_buy_no_trust.
+  const counterLine = await getTrustlineState(account.publicKey, counter);
+
   const req = {
     accountId: account.publicKey,
     security,
@@ -185,6 +190,7 @@ export async function prepareOrder(params: {
     quantity: params.quantity,
     price: params.price,
     offerId: params.offerId,
+    openCounterTrustline: !counterLine.exists,
   };
 
   const xdr =
@@ -237,13 +243,16 @@ export async function prepareCancel(params: {
   const account = getAccount(params.accountId);
   if (!account?.publicKey) throw new Error('La cuenta no tiene wallet de Stellar asociada');
 
+  const counter = counterAsset();
+  const counterLine = await getTrustlineState(account.publicKey, counter);
   const req = {
     accountId: account.publicKey,
     security: listingAsset(listing),
-    counter: counterAsset(),
+    counter,
     quantity: 0,
     price: params.price,
     offerId: params.offerId,
+    openCounterTrustline: !counterLine.exists,
   };
   const xdr =
     params.side === 'BUY' ? await buildBuyOfferXdr(req) : await buildSellOfferXdr(req);
