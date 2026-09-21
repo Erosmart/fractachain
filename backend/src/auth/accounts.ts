@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { createStellarKeypair, fundFriendbot, isStellarPublicKey, loadNativeXlm } from './stellar_testnet';
+import { persistToPg } from '../data/pgstore';
 
 export type CustodyMode = 'CUSTODIAL' | 'SELF' | null;
 /**
@@ -160,8 +161,10 @@ function load() {
 }
 
 function save() {
+  const rows = [...accounts.values()];
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(USERS_FILE, JSON.stringify([...accounts.values()], null, 2));
+  fs.writeFileSync(USERS_FILE, JSON.stringify(rows, null, 2));
+  persistToPg('users.json', rows);
 }
 
 load();

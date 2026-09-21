@@ -17,6 +17,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { getListing } from '../admin/listings';
+import { persistToPg } from '../data/pgstore';
 import {
   accrueDividend,
   economicShares,
@@ -50,6 +51,7 @@ function load() {
 function save() {
   fs.mkdirSync(path.dirname(DATA), { recursive: true });
   fs.writeFileSync(DATA, JSON.stringify(distributions, null, 2));
+  persistToPg('dividends.json', distributions);
 }
 
 load();

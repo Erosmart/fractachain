@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { PaymentKind } from './issuance';
+import { persistToPg } from '../data/pgstore';
 import { addHolding, creditCash, debitCash, findAccountByPublicKey, getAccount, requireApprovedTrader } from '../auth/accounts';
 import { getTestnetConfig } from './testnet';
 import { StrKey } from '@stellar/stellar-sdk';
@@ -96,6 +97,7 @@ function load() {
 function save() {
   fs.mkdirSync(path.dirname(DATA), { recursive: true });
   fs.writeFileSync(DATA, JSON.stringify(listings, null, 2));
+  persistToPg('listings.json', listings);
 }
 
 load();
