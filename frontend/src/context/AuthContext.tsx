@@ -38,7 +38,7 @@ interface AuthContextType {
   loginWithWallet: () => Promise<User>;
   loginWithEmail: (email: string, password: string, name?: string) => Promise<User>;
   chooseCustody: (mode: 'CUSTODIAL' | 'SELF') => Promise<void>;
-  submitKyc: (payload: { legalName: string; cuit: string; selfieDataUrl: string }) => Promise<void>;
+  submitKyc: (payload: { legalName: string; cuit: string; selfieDataUrl?: string; email?: string }) => Promise<void>;
   approveToken: (listingId: string) => Promise<void>;
   claimTokens: (listingId: string) => Promise<void>;
   claimDividends: (listingId: string) => Promise<void>;
@@ -246,7 +246,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     applySession(token, data.user);
   };
 
-  const submitKyc = async (payload: { legalName: string; cuit: string; selfieDataUrl: string }) => {
+  const submitKyc = async (payload: { legalName: string; cuit: string; selfieDataUrl?: string; email?: string }) => {
     if (!token) throw new Error('Iniciá sesión');
     const res = await fetch(`${API_BASE_URL}/api/kyc/onboard`, {
       method: 'POST',
