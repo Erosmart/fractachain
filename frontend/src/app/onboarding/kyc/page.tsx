@@ -11,7 +11,9 @@ export default function KycOnboardingPage() {
   const { t } = useI18n();
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const isWalletAccount = user?.authProvider === 'wallet';
   const [legalName, setLegalName] = useState(user?.name || '');
+  const [kycEmail, setKycEmail] = useState('');
   const [cuit, setCuit] = useState('');
   const [selfie, setSelfie] = useState('');
   const [error, setError] = useState('');
@@ -33,7 +35,12 @@ export default function KycOnboardingPage() {
     setError('');
     setBusy(true);
     try {
-      await submitKyc({ legalName, cuit, selfieDataUrl: selfie });
+      await submitKyc({
+        legalName,
+        cuit,
+        selfieDataUrl: selfie || undefined,
+        email: isWalletAccount ? kycEmail : undefined,
+      });
       router.push('/onboarding/pending');
     } catch (err: any) {
       setError(err.message);
@@ -58,6 +65,19 @@ export default function KycOnboardingPage() {
             className="w-full px-3 py-2.5 rounded-xl border border-black/10"
           />
         </label>
+        {isWalletAccount && (
+          <label className="block space-y-1 text-sm">
+            <span className="font-bold">{t('onboarding.kycEmail')}</span>
+            <input
+              required
+              type="email"
+              value={kycEmail}
+              onChange={(e) => setKycEmail(e.target.value)}
+              placeholder="tu@mail.com"
+              className="w-full px-3 py-2.5 rounded-xl border border-black/10"
+            />
+          </label>
+        )}
         <label className="block space-y-1 text-sm">
           <span className="font-bold">{t('onboarding.cuit')}</span>
           <input
@@ -69,7 +89,14 @@ export default function KycOnboardingPage() {
           />
         </label>
         <div className="space-y-2">
-          <span className="text-sm font-bold">{t('onboarding.selfie')}</span>
+          <span className="text-sm font-bold">
+            {t('onboarding.selfie')}
+            {isWalletAccount && (
+              <span className="ml-2 text-xs font-normal text-neutral-500">
+                ({t('onboarding.selfieOptional')})
+              </span>
+            )}
+          </span>
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
@@ -97,7 +124,7 @@ export default function KycOnboardingPage() {
         {error && <p className="text-sm text-red-700">{error}</p>}
         <button
           type="submit"
-          disabled={busy || !selfie}
+          disabled={busy || (!isWalletAccount && !selfie)}
           className="w-full py-3 rounded-2xl bg-black text-white font-display font-bold disabled:opacity-50"
         >
           {busy ? t('onboarding.sending') : t('onboarding.send')}

@@ -291,6 +291,39 @@ export function upsertLogin(payload: {
   };
 }
 
+export function upsertWalletLogin(publicKey: string) {
+  const email = `wallet-${publicKey.toLowerCase()}@fractachain`;
+  let account = [...accounts.values()].find((a) => a.email === email);
+  const now = new Date().toISOString();
+
+  if (!account) {
+    account = {
+      id: `usr_${crypto.randomBytes(6).toString('hex')}`,
+      email,
+      name: `Wallet ${publicKey.slice(0, 6)}…${publicKey.slice(-4)}`,
+      avatar: '',
+      custodyMode: 'SELF',
+      publicKey,
+      kycStatus: 'UNREGISTERED',
+      holdings: [],
+      trustlines: [],
+      cashUsdc: 50000,
+      authProvider: 'wallet',
+      createdAt: now,
+      lastLoginAt: now,
+    };
+    accounts.set(account.id, account);
+  } else {
+    account.lastLoginAt = now;
+    if (!account.publicKey) account.publicKey = publicKey;
+    if (!account.custodyMode) account.custodyMode = 'SELF';
+  }
+
+  ensureAdminAccount(account);
+  save();
+  return { token: issueToken(account.id), user: toPublic(account) };
+}
+
 function randomKeypair() {
   return createStellarKeypair();
 }
@@ -339,27 +372,38 @@ export function setCustody(accountId: string, mode: 'CUSTODIAL' | 'SELF') {
 
 export function submitOnboardingKyc(
   accountId: string,
-  data: { legalName: string; cuit: string; selfieDataUrl: string }
+  data: { legalName: string; cuit: string; selfieDataUrl?: string; email?: string }
 ) {
   const account = accounts.get(accountId);
   if (!account) throw new Error('Cuenta no encontrada');
   if (!account.custodyMode) throw new Error('Elegí primero el tipo de custodia');
+  const isWalletAccount = account.authProvider === 'wallet';
   const cuit = data.cuit.replace(/[^\d]/g, '');
   if (cuit.length < 10) throw new Error('CUIT inválido');
   if (!data.legalName.trim()) throw new Error('Falta el nombre');
-  if (!data.selfieDataUrl.startsWith('data:image')) throw new Error('Falta la foto de la cara');
+  if (isWalletAccount) {
+    const email = String(data.email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Email inválido');
+    const clash = [...accounts.values()].find((a) => a.id !== account.id && a.email === email);
+    if (clash) throw new Error('Ese email ya tiene una cuenta');
+    account.email = email;
+  } else if (!data.selfieDataUrl || !data.selfieDataUrl.startsWith('data:image')) {
+    throw new Error('Falta la foto de la cara');
+  }
 
-  fs.mkdirSync(SELFIE_DIR, { recursive: true });
-  const match = data.selfieDataUrl.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
-  if (!match) throw new Error('Imagen inválida');
-  const ext = match[1].includes('png') ? 'png' : 'jpg';
-  const file = path.join(SELFIE_DIR, `${account.id}.${ext}`);
-  fs.writeFileSync(file, Buffer.from(match[2], 'base64'));
+  if (data.selfieDataUrl && data.selfieDataUrl.startsWith('data:image')) {
+    fs.mkdirSync(SELFIE_DIR, { recursive: true });
+    const match = data.selfieDataUrl.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
+    if (!match) throw new Error('Imagen inválida');
+    const ext = match[1].includes('png') ? 'png' : 'jpg';
+    const file = path.join(SELFIE_DIR, `${account.id}.${ext}`);
+    fs.writeFileSync(file, Buffer.from(match[2], 'base64'));
+    account.selfiePath = file;
+  }
 
   account.legalName = data.legalName.trim();
   account.name = account.legalName;
   account.cuit = data.cuit.trim();
-  account.selfiePath = file;
   account.kycStatus = process.env.HACKATHON_DEMO === 'true' ? 'APPROVED' : 'PENDING';
   account.kycId = account.kycId || `kyc-${account.id}`;
   save();
