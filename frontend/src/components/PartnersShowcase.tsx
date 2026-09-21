@@ -95,6 +95,7 @@ export default function PartnersShowcase() {
     <span key="wallet" className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-black/10 bg-white/80">
       <Wallet className="h-4 w-4 text-[#4ea743]" />
     </span>,
+    <span key="cosmos" className="text-xs font-display font-bold text-black">Cosmos Pay</span>,
   ];
   return (
     <section className="space-y-6">
@@ -102,7 +103,7 @@ export default function PartnersShowcase() {
         <div className="space-y-1">
           <h2 className="font-section text-3xl font-extrabold text-black">{funding.title}</h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {funding.items.map((item, i) => (
             <div key={item.title} className="p-5 rounded-2xl crystal-card space-y-3">
               <div className="flex items-start justify-between gap-2">
