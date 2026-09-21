@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { API_BASE_URL } from '../../lib/api';
+import { isVisibleListing } from '../../lib/listings';
 import { Pool } from '../../lib/mock-data';
 import { useI18n } from '../../context/I18nContext';
 import { formatInt } from '../../lib/format';
@@ -18,7 +19,7 @@ export default function MarketPage() {
       .then((r) => r.json())
       .then((json) => {
         if (Array.isArray(json?.data) && json.data.length) {
-          setPools(json.data);
+          setPools(json.data.filter((p: any) => isVisibleListing(p.id)));
         } else {
           setPools([]);
         }
