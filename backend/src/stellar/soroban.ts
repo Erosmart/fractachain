@@ -44,8 +44,16 @@ export function fromStroops(stroops: bigint | number | string): number {
   return Number(n) / Number(STROOPS_PER_UNIT);
 }
 
+let rpcClient: rpc.Server | null = null;
+let rpcUrl = '';
+
 export function rpcServer() {
-  return new rpc.Server(getTestnetConfig().rpcUrl);
+  const url = getTestnetConfig().rpcUrl;
+  if (!rpcClient || rpcUrl !== url) {
+    rpcClient = new rpc.Server(url);
+    rpcUrl = url;
+  }
+  return rpcClient;
 }
 
 export function networkPassphrase() {

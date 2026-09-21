@@ -7,6 +7,7 @@ import { ArrowUpRight, CheckCircle2, MousePointerClick, ShieldCheck, Zap } from 
 import { API_BASE_URL, bearerHeaders } from '../../lib/api';
 import { isVisibleListing } from '../../lib/listings';
 import { useAuth } from '../../context/AuthContext';
+import { useVisibleInterval } from '../../lib/useVisibleInterval';
 
 type Market = {
   listingId: string;
@@ -185,12 +186,12 @@ function OrderbookInner() {
     if (!listingId && markets[0]) setListingId(markets[0].listingId);
   }, [markets, listingId]);
 
-  useEffect(() => {
-    if (!listingId) return;
-    loadBook(listingId);
-    const t = setInterval(() => loadBook(listingId), 4000);
-    return () => clearInterval(t);
-  }, [listingId, token]);
+  useVisibleInterval(
+    () => loadBook(listingId),
+    4000,
+    Boolean(listingId),
+    `${listingId}:${token || ''}`,
+  );
 
   useEffect(() => {
     if (book?.lastPrice) setPrice(book.lastPrice);

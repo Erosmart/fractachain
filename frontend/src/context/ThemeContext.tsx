@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useLayoutEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useLayoutEffect, useMemo, useState } from 'react';
 import { flushSync } from 'react-dom';
 
 export type Theme = 'light' | 'dark';
@@ -82,5 +82,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     void run();
   }, []);
 
-  return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;
+  const value = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme]);
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
