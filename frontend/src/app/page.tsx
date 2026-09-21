@@ -15,6 +15,7 @@ import {
   Droplets,
   DollarSign,
   KeyRound,
+  CreditCard,
 } from 'lucide-react';
 import DynamicHeroText from '../components/DynamicHeroText';
 import ProductsSection from '../components/ProductsSection';
@@ -35,7 +36,7 @@ const HERO_ORBIT = 'M 75.5 274.1 A 270 60 -25 1 0 564.7 45.9 A 270 60 -25 1 0 75
 export default function HomePage() {
   const { messages, t } = useI18n();
 
-  const soonIcons: LucideIcon[] = [Landmark, Layers, Globe2];
+  const soonIcons: LucideIcon[] = [Landmark, Layers, Globe2, CreditCard];
   const badgeIcons: LucideIcon[] = [ShieldCheck, Lock, Zap, CheckCircle2];
   const stellarIcons: LucideIcon[] = [Zap, DollarSign, Globe2, ShieldCheck, KeyRound];
 
@@ -69,16 +70,16 @@ export default function HomePage() {
             </defs>
             {/* órbita diagonal detrás (estilo logo) */}
             <g className="globe-float">
-              <path d={HERO_ORBIT} stroke="url(#heroBand)" strokeWidth="12" opacity="0.1" />
-              <path d={HERO_ORBIT} stroke="url(#heroBand)" strokeWidth="12" strokeLinecap="round" strokeDasharray="46 18" opacity="0.14" className="infinity-drift-rev" />
+              <path d={HERO_ORBIT} stroke="url(#heroBand)" strokeWidth="12" opacity="0.07" />
+              <path d={HERO_ORBIT} stroke="url(#heroBand)" strokeWidth="12" strokeLinecap="round" strokeDasharray="46 18" opacity="0.09" className="infinity-drift-rev" />
             </g>
             {/* infinito: cinta lemniscata con gradiente azul→teal→verde */}
             <g className="globe-float">
-              <path d={INFINITY_PATH} stroke="#2fa8a0" strokeWidth="46" strokeLinecap="round" opacity="0.07" filter="url(#heroGlow)" />
-              <path d={INFINITY_PATH} stroke="url(#heroInf)" strokeWidth="30" strokeLinecap="round" opacity="0.16" />
-              <path d={INFINITY_PATH} stroke="url(#heroInf)" strokeWidth="30" strokeLinecap="round" strokeDasharray="46 18" opacity="0.24" className="infinity-drift" />
-              <path d={INFINITY_PATH} stroke="#f0b429" strokeWidth="4" strokeLinecap="round" strokeDasharray="110 18 110 18" opacity="0.4" className="infinity-drift-rev" />
-              <path d={INFINITY_PATH} stroke="#ffffff" strokeWidth="7" strokeLinecap="round" strokeDasharray="60 196" opacity="0.3" className="infinity-drift" />
+              <path d={INFINITY_PATH} stroke="#2fa8a0" strokeWidth="46" strokeLinecap="round" opacity="0.045" filter="url(#heroGlow)" />
+              <path d={INFINITY_PATH} stroke="url(#heroInf)" strokeWidth="30" strokeLinecap="round" opacity="0.1" />
+              <path d={INFINITY_PATH} stroke="url(#heroInf)" strokeWidth="30" strokeLinecap="round" strokeDasharray="46 18" opacity="0.15" className="infinity-drift" />
+              <path d={INFINITY_PATH} stroke="#f0b429" strokeWidth="4" strokeLinecap="round" strokeDasharray="110 18 110 18" opacity="0.26" className="infinity-drift-rev" />
+              <path d={INFINITY_PATH} stroke="#ffffff" strokeWidth="7" strokeLinecap="round" strokeDasharray="60 196" opacity="0.18" className="infinity-drift" />
             </g>
             {/* nodos en las puntas de los lóbulos, como el logo */}
             <circle cx="60" cy="160" r="7" fill="#1a6fb8" opacity="0.4" />
@@ -91,22 +92,22 @@ export default function HomePage() {
             <circle cx="452" cy="120" r="6" fill="#f0b429" opacity="0.4" />
             {/* partículas viajando por el infinito y la órbita */}
             {[-6, -3, 0].map((begin) => (
-              <circle key={`g${begin}`} r="4" fill="#4ea743" opacity="0.55">
+              <circle key={`g${begin}`} r="4" fill="#4ea743" opacity="0.4">
                 <animateMotion dur="9s" begin={`${begin}s`} repeatCount="indefinite" path={INFINITY_PATH} />
               </circle>
             ))}
             {[-4, -9].map((begin) => (
-              <circle key={`t${begin}`} r="3" fill="#2fa8a0" opacity="0.5">
+              <circle key={`t${begin}`} r="3" fill="#2fa8a0" opacity="0.36">
                 <animateMotion dur="12s" begin={`${begin}s`} repeatCount="indefinite" path={INFINITY_PATH} />
               </circle>
             ))}
-            <circle r="3" fill="#f0b429" opacity="0.55">
+            <circle r="3" fill="#f0b429" opacity="0.4">
               <animateMotion dur="14s" begin="-7s" repeatCount="indefinite" path={INFINITY_PATH} />
             </circle>
-            <circle r="3.5" fill="#1d7fc4" opacity="0.5">
+            <circle r="3.5" fill="#1d7fc4" opacity="0.36">
               <animateMotion dur="13s" begin="-4s" repeatCount="indefinite" path={HERO_ORBIT} />
             </circle>
-            <circle r="3" fill="#4ea743" opacity="0.5">
+            <circle r="3" fill="#4ea743" opacity="0.36">
               <animateMotion dur="16s" begin="-10s" repeatCount="indefinite" path={HERO_ORBIT} />
             </circle>
             {/* ambient */}
@@ -221,7 +222,7 @@ export default function HomePage() {
 
       <section className="space-y-5 sm:space-y-6">
         <h2 className="font-section text-2xl sm:text-3xl font-extrabold">{t('home.soon')}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {messages.home.soonItems.map(([title, desc], i) => {
             const Icon = soonIcons[i];
             return (
@@ -250,15 +251,6 @@ export default function HomePage() {
         })}
       </section>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 p-4 sm:p-6 rounded-2xl sm:rounded-3xl crystal-card text-left">
-          {messages.home.stats.map(({ k, v, s }) => (
-            <div key={k} className="space-y-1 min-w-0">
-              <span className="text-[10px] sm:text-xs text-neutral-500">{k}</span>
-              <div className="text-lg sm:text-2xl font-display font-extrabold font-lcd text-black break-words">{v}</div>
-              <span className="text-[10px] sm:text-[11px] text-neutral-500">{s}</span>
-            </div>
-          ))}
-      </div>
       </div>
     </div>
   );

@@ -26,12 +26,22 @@ export default function DynamicHeroText() {
     <div className="flex flex-col items-center justify-center gap-3 w-full px-1">
       <h1 className="flex flex-wrap items-baseline justify-center gap-x-[0.28em] gap-y-0 text-[2.15rem] sm:text-[3.45rem] xl:text-[3.9rem] font-extrabold tracking-tight text-black leading-[1.15] text-center max-w-full">
         <span className="font-display">{messages.hero.invert}</span>
-        <span
-          className={`hero-lcd text-[1.02em] sm:text-[1.04em] text-left transition-all duration-500 ease-out ${
-            isAnimating ? 'opacity-0 translate-y-5' : 'opacity-100 translate-y-0'
-          }`}
-        >
-          {current.text}
+        <span className="hero-lcd text-[1.02em] sm:text-[1.04em] inline-grid max-w-full items-center justify-items-center text-center">
+          {sectors.map((s, i) => (
+            <span
+              key={i}
+              aria-hidden={i !== index}
+              className={`col-start-1 row-start-1 max-w-full transition-all duration-500 ease-out ${
+                i === index
+                  ? isAnimating
+                    ? 'opacity-0 translate-y-5'
+                    : 'opacity-100 translate-y-0'
+                  : 'pointer-events-none opacity-0'
+              }`}
+            >
+              {s.text}
+            </span>
+          ))}
         </span>
       </h1>
       <div className="flex flex-wrap items-center justify-center gap-2">
