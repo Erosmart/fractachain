@@ -152,6 +152,21 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      <div className="p-5 rounded-3xl crystal-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <p className="font-display font-extrabold">{t('dash.marketCta')}</p>
+          <p className="text-sm text-neutral-600 mt-0.5">{t('dash.marketCtaLead')}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/orderbook" className="px-5 py-3 rounded-2xl bg-black text-white font-display font-bold text-sm inline-flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" /> {t('nav.orderbook')} <ArrowRight className="w-4 h-4" />
+          </Link>
+          <Link href="/market" className="px-5 py-3 rounded-2xl border border-black/10 font-display font-bold text-sm inline-flex items-center gap-2">
+            <Layers className="w-4 h-4" /> {t('nav.market')}
+          </Link>
+        </div>
+      </div>
+
       {holdings.length === 0 ? (
         <div className="p-8 rounded-3xl crystal-card text-center space-y-3">
           <p className="text-neutral-600">{t('dash.empty')}</p>
