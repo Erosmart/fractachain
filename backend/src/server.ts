@@ -52,6 +52,7 @@ import { buildPortfolio } from './market/prices';
 import {
   getSdexBook,
   openCustodialTrustline,
+  distributeClaimedTokens,
   placeCustodialOrder,
   prepareCancel,
   prepareOrder,
@@ -716,8 +717,18 @@ app.post('/api/listings/:id/claim', (req: Request, res: Response) => {
     const listing = getListing(req.params.id);
     const user = claimListingTokens(account.id, req.params.id, listing?.status === 'CLOSED_SUCCESS');
     const live = listing ? await snapshotLicitacion(listing, account.publicKey) : null;
+    // For SDEX-traded tokens, try to pay the units on-ledger right away. A
+    // self-custody wallet without a trustline simply reports the error — the
+    // holder can retry via /distribute once the line exists.
+    const distribution =
+      listing && sdexAvailable(listing)
+        ? await distributeClaimedTokens({ listingId: listing.id, accountId: account.id }).catch(
+            (e: any) => ({ error: e?.message || 'error' }),
+          )
+        : null;
     return {
       ...user,
+      distribution,
       onChain: listing
         ? {
             ...listingChainMeta(listing),
@@ -730,6 +741,22 @@ app.post('/api/listings/:id/claim', (req: Request, res: Response) => {
         : undefined,
     };
   }, res);
+});
+
+/**
+ * Retries the on-chain payout for already-claimed tokens.
+ *
+ * Self-custody holders need their trustline on the ledger first (they sign it
+ * themselves), so the initial claim may not reach the wallet. This endpoint
+ * pays whatever `tokens - tokensOnChain` remains — idempotent.
+ */
+app.post('/api/listings/:id/distribute', (req: Request, res: Response) => {
+  const account = getAccountByToken(req.headers.authorization);
+  if (!account) return res.status(401).json({ success: false, message: 'Iniciá sesión' });
+  wrapAsync(
+    () => distributeClaimedTokens({ listingId: req.params.id, accountId: account.id }),
+    res,
+  );
 });
 
 app.get('/api/admin/testnet', (req: Request, res: Response) => {

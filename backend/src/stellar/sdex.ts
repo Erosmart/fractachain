@@ -229,6 +229,30 @@ export async function deauthorizeHolder(
   );
 }
 
+/**
+ * Issuer pays `amount` of `asset` into `destination`'s trustline.
+ *
+ * This is the on-chain half of a token claim: the platform ledger records the
+ * claim first, then the issuer moves the real units so the holder can sell on
+ * SDEX. Requires the destination trustline to exist and be authorized — with
+ * `AUTH_REQUIRED` the ledger rejects payments into inert lines.
+ */
+export async function distributeTokens(destination: string, asset: Asset, amount: number) {
+  const issuer = issuerKeypair();
+  return buildAndSubmit(
+    issuer.publicKey(),
+    (b) =>
+      b.addOperation(
+        Operation.payment({
+          destination,
+          asset,
+          amount: toStellarAmount(amount),
+        }),
+      ),
+    [issuer],
+  );
+}
+
 /** Reads whether a holder is cleared to trade, straight from the ledger. */
 export async function getTrustlineState(
   accountId: string,

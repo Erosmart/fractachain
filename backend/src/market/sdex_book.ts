@@ -7,13 +7,14 @@
  */
 import { Asset } from '@stellar/stellar-sdk';
 import { getListing, Listing } from '../admin/listings';
-import { custodialSigningKey, getAccount } from '../auth/accounts';
+import { custodialSigningKey, getAccount, markTokensOnChain } from '../auth/accounts';
 import { isStellarPublicKey } from '../auth/stellar_testnet';
 import { syncHolderAuthorization } from '../stellar/compliance';
 import {
   buildBuyOfferXdr,
   buildSellOfferXdr,
   buildTrustlineXdr,
+  distributeTokens,
   getAccountOffers,
   getOrderBook,
   getRecentTrades,
@@ -307,5 +308,48 @@ export async function openCustodialTrustline(params: {
     hash,
     compliance,
     listingId: listing.id,
+  };
+}
+
+/**
+ * Pays the holder's claimed platform-ledger tokens into their real trustline.
+ *
+ * The sandbox claim only moves `tokensOwed → tokens` in our database; SDEX
+ * sells need the units on-ledger. We track `tokensOnChain` per holding so a
+ * retry after a failed submission never double-pays.
+ */
+export async function distributeClaimedTokens(params: { listingId: string; accountId: string }) {
+  const listing = requireSdexListing(params.listingId);
+  const account = getAccount(params.accountId);
+  if (!account?.publicKey) throw new Error('La cuenta no tiene wallet de Stellar asociada');
+  const holding = (account.holdings || []).find((h) => h.listingId === params.listingId);
+  const pending = Math.max(0, (holding?.tokens || 0) - (holding?.tokensOnChain || 0));
+  if (!holding || pending <= 0) {
+    throw new Error('No hay tokens reclamados pendientes de envío on-chain');
+  }
+
+  const security = listingAsset(listing);
+  if (account.custodyMode === 'CUSTODIAL') {
+    // Creates the line when missing and asks the issuer to authorize it.
+    await openCustodialTrustline({ listingId: listing.id, accountId: account.id });
+  } else {
+    const line = await getTrustlineState(account.publicKey, security);
+    if (!line.exists) {
+      throw new Error(
+        `Primero aprobá el token ${listing.dossier.tokenTicker}: firmá la trustline desde el orderbook`,
+      );
+    }
+    if (!line.authorized) {
+      await syncHolderAuthorization(account.publicKey, true);
+    }
+  }
+
+  const result = await distributeTokens(account.publicKey, security, pending);
+  markTokensOnChain(account.id, listing.id, pending);
+  return {
+    hash: (result as any).hash as string,
+    amount: pending,
+    destination: account.publicKey,
+    tokenTicker: listing.dossier.tokenTicker,
   };
 }

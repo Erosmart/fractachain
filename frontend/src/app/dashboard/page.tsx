@@ -16,6 +16,8 @@ type Position = {
   shares: number;
   tokens: number;
   tokensOwed: number;
+  tokensOnChain?: number;
+  sdex?: boolean;
   costBasis: number;
   marketPrice: number;
   marketValue: number;
@@ -49,7 +51,7 @@ function money(n: number, digits = 2) {
 }
 
 export default function DashboardPage() {
-  const { user, token, approveToken, claimTokens, claimDividends, refundContribution } = useAuth();
+  const { user, token, approveToken, claimTokens, distributeTokens, claimDividends, refundContribution } = useAuth();
   const { t } = useI18n();
   const [book, setBook] = useState<Portfolio | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -77,6 +79,8 @@ export default function DashboardPage() {
         shares: h.tokens + (h.tokensOwed || 0),
         tokens: h.tokens,
         tokensOwed: h.tokensOwed || 0,
+        tokensOnChain: h.tokensOnChain || 0,
+        sdex: false,
         costBasis: h.usdcAmount,
         marketPrice: 0,
         marketValue: h.usdcAmount,
@@ -263,6 +267,16 @@ export default function DashboardPage() {
                       className="px-4 py-2 rounded-xl border border-black/10 text-xs font-display font-bold"
                     >
                       {t('dash.claim')}
+                    </button>
+                  )}
+                  {approved && h.sdex && h.tokens > 0 && (h.tokensOnChain || 0) + 1e-9 < h.tokens && (
+                    <button
+                      type="button"
+                      disabled={busy === `dist-${h.listingId}`}
+                      onClick={() => run(`dist-${h.listingId}`, async () => { await distributeTokens(h.listingId); })}
+                      className="px-4 py-2 rounded-xl bg-black text-white text-xs font-display font-bold"
+                    >
+                      {t('dash.receiveOnChain')}
                     </button>
                   )}
                   {h.canRefund && (
