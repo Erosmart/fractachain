@@ -37,7 +37,7 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<User>;
   loginWithWallet: () => Promise<User>;
   loginWithEmail: (email: string, password: string, name?: string) => Promise<User>;
-  chooseCustody: (mode: 'CUSTODIAL' | 'SELF') => Promise<void>;
+  chooseCustody: (mode: 'CUSTODIAL' | 'SELF', publicKey?: string) => Promise<void>;
   submitKyc: (payload: { legalName: string; cuit: string; selfieDataUrl?: string; email?: string }) => Promise<void>;
   approveToken: (listingId: string) => Promise<void>;
   claimTokens: (listingId: string) => Promise<void>;
@@ -233,12 +233,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const chooseCustody = async (mode: 'CUSTODIAL' | 'SELF') => {
+  const chooseCustody = async (mode: 'CUSTODIAL' | 'SELF', publicKey?: string) => {
     if (!token) throw new Error('Iniciá sesión');
     const res = await fetch(`${API_BASE_URL}/api/auth/wallet`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ mode }),
+      body: JSON.stringify({ mode, publicKey }),
     });
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo guardar la custodia');
