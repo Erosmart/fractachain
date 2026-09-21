@@ -35,7 +35,7 @@ type Book = {
   spread: number | null;
   asks: Level[];
   bids: Level[];
-  trades: { id: string; price: number; amount: number; createdAt: string }[];
+  trades: { id: string; price: number; amount: number; buyer?: string; seller?: string; createdAt: string }[];
   myOrders: MyOrder[];
   reservedCash?: number;
   reservedTokens?: number;
@@ -393,33 +393,6 @@ function OrderbookInner() {
               Tocá una punta para tomar su precio. Después elegís la cantidad.
             </p>
 
-            <div className="grid grid-cols-3 text-[11px] font-mono text-neutral-500 uppercase">
-              <span>Precio</span>
-              <span className="text-right">Cantidad</span>
-              <span className="text-right">Total</span>
-            </div>
-
-            {/* Puntas vendedoras (asks): tocarlas arma una compra a ese precio. */}
-            <div className="space-y-1 font-mono text-xs">
-              {asksDisplay.length === 0 && <p className="text-neutral-400">Sin ventas abiertas</p>}
-              {asksDisplay.map((ask) => (
-                <button
-                  key={`a-${ask.price}`}
-                  type="button"
-                  onClick={() => takeLevel('ask', ask)}
-                  title={`Comprar a $${ask.price.toFixed(2)} · ${fmtQty(ask.amount)} disponibles`}
-                  className={`w-full grid grid-cols-3 p-1.5 rounded relative overflow-hidden text-red-700 text-left cursor-pointer transition hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 ${
-                    taken?.from === 'ask' && taken.price === ask.price ? 'ring-2 ring-red-500 bg-red-50' : ''
-                  }`}
-                >
-                  <div className="absolute right-0 top-0 bottom-0 bg-red-100 pointer-events-none" style={{ width: `${ask.depthPercent}%` }} />
-                  <span className="font-bold relative z-10">${ask.price.toFixed(2)}</span>
-                  <span className="text-right relative z-10">{fmtQty(ask.amount)}</span>
-                  <span className="text-right relative z-10 text-neutral-500">${ask.total.toLocaleString()}</span>
-                </button>
-              ))}
-            </div>
-
             <div className="py-2.5 px-4 rounded-xl bg-black/[0.04] flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center font-mono">
               <span className="text-base font-bold">${book.lastPrice.toFixed(2)}</span>
               <span className="text-[11px] text-neutral-500 inline-flex items-center gap-1">
@@ -427,34 +400,81 @@ function OrderbookInner() {
               </span>
             </div>
 
-            {/* Puntas compradoras (bids): tocarlas arma una venta a ese precio. */}
-            <div className="space-y-1 font-mono text-xs">
-              {book.bids.length === 0 && <p className="text-neutral-400">Sin compras abiertas</p>}
-              {book.bids.map((bid) => (
-                <button
-                  key={`b-${bid.price}`}
-                  type="button"
-                  onClick={() => takeLevel('bid', bid)}
-                  title={`Vender a $${bid.price.toFixed(2)} · ${fmtQty(bid.amount)} demandados`}
-                  className={`w-full grid grid-cols-3 p-1.5 rounded relative overflow-hidden text-[#2f6f28] text-left cursor-pointer transition hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-                    taken?.from === 'bid' && taken.price === bid.price ? 'ring-2 ring-emerald-600 bg-emerald-50' : ''
-                  }`}
-                >
-                  <div className="absolute right-0 top-0 bottom-0 bg-emerald-100 pointer-events-none" style={{ width: `${bid.depthPercent}%` }} />
-                  <span className="font-bold relative z-10">${bid.price.toFixed(2)}</span>
-                  <span className="text-right relative z-10">{fmtQty(bid.amount)}</span>
-                  <span className="text-right relative z-10 text-neutral-500">${bid.total.toLocaleString()}</span>
-                </button>
-              ))}
+            {/* Compradores a la izquierda, vendedores a la derecha. */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[#2f6f28] mb-1">Compras</p>
+                <div className="grid grid-cols-3 text-[11px] font-mono text-neutral-500 uppercase">
+                  <span>Precio</span>
+                  <span className="text-right">Cant.</span>
+                  <span className="text-right">Total</span>
+                </div>
+                <div className="space-y-1 font-mono text-xs mt-1">
+                  {book.bids.length === 0 && <p className="text-neutral-400">Sin compras abiertas</p>}
+                  {book.bids.map((bid) => (
+                    <button
+                      key={`b-${bid.price}`}
+                      type="button"
+                      onClick={() => takeLevel('bid', bid)}
+                      title={`Vender a $${bid.price.toFixed(2)} · ${fmtQty(bid.amount)} demandados`}
+                      className={`w-full grid grid-cols-3 p-1.5 rounded relative overflow-hidden text-[#2f6f28] text-left cursor-pointer transition hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
+                        taken?.from === 'bid' && taken.price === bid.price ? 'ring-2 ring-emerald-600 bg-emerald-50' : ''
+                      }`}
+                    >
+                      <div className="absolute right-0 top-0 bottom-0 bg-emerald-100 pointer-events-none" style={{ width: `${bid.depthPercent}%` }} />
+                      <span className="font-bold relative z-10">${bid.price.toFixed(2)}</span>
+                      <span className="text-right relative z-10">{fmtQty(bid.amount)}</span>
+                      <span className="text-right relative z-10 text-neutral-500">${bid.total.toLocaleString()}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-red-700 mb-1">Ventas</p>
+                <div className="grid grid-cols-3 text-[11px] font-mono text-neutral-500 uppercase">
+                  <span>Precio</span>
+                  <span className="text-right">Cant.</span>
+                  <span className="text-right">Total</span>
+                </div>
+                <div className="space-y-1 font-mono text-xs mt-1">
+                  {asksDisplay.length === 0 && <p className="text-neutral-400">Sin ventas abiertas</p>}
+                  {asksDisplay.map((ask) => (
+                    <button
+                      key={`a-${ask.price}`}
+                      type="button"
+                      onClick={() => takeLevel('ask', ask)}
+                      title={`Comprar a $${ask.price.toFixed(2)} · ${fmtQty(ask.amount)} disponibles`}
+                      className={`w-full grid grid-cols-3 p-1.5 rounded relative overflow-hidden text-red-700 text-left cursor-pointer transition hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 ${
+                        taken?.from === 'ask' && taken.price === ask.price ? 'ring-2 ring-red-500 bg-red-50' : ''
+                      }`}
+                    >
+                      <div className="absolute right-0 top-0 bottom-0 bg-red-100 pointer-events-none" style={{ width: `${ask.depthPercent}%` }} />
+                      <span className="font-bold relative z-10">${ask.price.toFixed(2)}</span>
+                      <span className="text-right relative z-10">{fmtQty(ask.amount)}</span>
+                      <span className="text-right relative z-10 text-neutral-500">${ask.total.toLocaleString()}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {book.trades.length > 0 && (
               <div className="pt-2 border-t border-black/10 space-y-1">
-                <p className="text-xs font-bold">Últimos negocios</p>
-                {book.trades.slice(0, 6).map((t) => (
-                  <p key={t.id} className="text-xs font-mono text-neutral-600">
-                    {fmtQty(t.amount)} @ ${t.price.toFixed(2)}
-                  </p>
+                <p className="text-xs font-bold">Últimas operaciones</p>
+                <div className="grid grid-cols-4 text-[10px] font-mono text-neutral-500 uppercase">
+                  <span>Precio</span>
+                  <span className="text-right">Cant.</span>
+                  <span className="text-right">Comprador</span>
+                  <span className="text-right">Vendedor</span>
+                </div>
+                {book.trades.slice(0, 12).map((t) => (
+                  <div key={t.id} className="grid grid-cols-4 text-[11px] font-mono text-neutral-700 py-0.5 border-b border-black/5 last:border-0">
+                    <span className="font-bold">${t.price.toFixed(2)}</span>
+                    <span className="text-right">{fmtQty(t.amount)}</span>
+                    <span className="text-right text-[#2f6f28]" title={t.buyer}>{t.buyer ? `${t.buyer.slice(0, 4)}…${t.buyer.slice(-4)}` : '—'}</span>
+                    <span className="text-right text-red-700" title={t.seller}>{t.seller ? `${t.seller.slice(0, 4)}…${t.seller.slice(-4)}` : '—'}</span>
+                  </div>
                 ))}
               </div>
             )}
