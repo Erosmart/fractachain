@@ -42,6 +42,7 @@ interface AuthContextType {
   approveToken: (listingId: string) => Promise<void>;
   claimTokens: (listingId: string) => Promise<void>;
   distributeTokens: (listingId: string) => Promise<any>;
+  fetchWalletSecret: () => Promise<string>;
   claimDividends: (listingId: string) => Promise<void>;
   finalizeOffering: (listingId: string) => Promise<any>;
   refundContribution: (listingId: string) => Promise<any>;
@@ -68,6 +69,7 @@ const AuthContext = createContext<AuthContextType>({
   approveToken: async () => {},
   claimTokens: async () => {},
   distributeTokens: async () => {},
+  fetchWalletSecret: async () => '',
   claimDividends: async () => {},
   finalizeOffering: async () => ({}),
   refundContribution: async () => ({}),
@@ -294,6 +296,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return data.data;
   };
 
+  const fetchWalletSecret = async () => {
+    if (!token) throw new Error('Iniciá sesión');
+    const res = await fetch(`${API_BASE_URL}/api/auth/wallet/secret`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo obtener la clave');
+    return String(data.secret || '');
+  };
+
   const finalizeOffering = async (listingId: string) => {
     if (!token) throw new Error('Iniciá sesión');
     const res = await fetch(`${API_BASE_URL}/api/listings/${listingId}/finalize`, {
@@ -352,6 +364,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         approveToken,
         claimTokens,
         distributeTokens,
+        fetchWalletSecret,
         claimDividends,
         finalizeOffering,
         refundContribution,

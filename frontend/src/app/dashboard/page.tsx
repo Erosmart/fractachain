@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Layers, TrendingUp, ArrowRight } from 'lucide-react';
+import { Layers, TrendingUp, ArrowRight, KeyRound, Copy, Check } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useI18n } from '../../context/I18nContext';
 import WalletAddress from '../../components/WalletAddress';
@@ -51,10 +51,33 @@ function money(n: number, digits = 2) {
 }
 
 export default function DashboardPage() {
-  const { user, token, approveToken, claimTokens, distributeTokens, claimDividends, refundContribution } = useAuth();
+  const { user, token, approveToken, claimTokens, distributeTokens, claimDividends, refundContribution, fetchWalletSecret } = useAuth();
   const { t } = useI18n();
   const [book, setBook] = useState<Portfolio | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [secret, setSecret] = useState<string | null>(null);
+  const [secretErr, setSecretErr] = useState('');
+  const [secretCopied, setSecretCopied] = useState(false);
+
+  const revealSecret = async () => {
+    try {
+      setSecretErr('');
+      setSecret(await fetchWalletSecret());
+    } catch (e: any) {
+      setSecretErr(e?.message || 'Error');
+    }
+  };
+
+  const copySecret = async () => {
+    if (!secret) return;
+    try {
+      await navigator.clipboard.writeText(secret);
+      setSecretCopied(true);
+      setTimeout(() => setSecretCopied(false), 1600);
+    } catch {
+      // ignore
+    }
+  };
 
   const load = async () => {
     if (!token) return;
@@ -130,6 +153,32 @@ export default function DashboardPage() {
         <div className="p-4 rounded-2xl crystal-card max-w-lg">
           <p className="text-[11px] uppercase tracking-wider text-neutral-500 font-display font-bold mb-1">{t('nav.yourWallet')}</p>
           <WalletAddress address={user?.publicKey} />
+          {user?.custodyMode === 'CUSTODIAL' && !secret && (
+            <button
+              type="button"
+              onClick={revealSecret}
+              className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-neutral-600 hover:text-black"
+            >
+              <KeyRound className="w-3.5 h-3.5" /> {t('dash.revealSecret')}
+            </button>
+          )}
+          {secret && (
+            <div className="mt-2 space-y-1.5">
+              <p className="text-[10px] text-amber-700">{t('dash.secretWarn')}</p>
+              <div className="flex items-start gap-2">
+                <code className="flex-1 p-2 rounded-lg bg-neutral-100 text-[10px] font-mono break-all select-all">{secret}</code>
+                <button
+                  type="button"
+                  onClick={copySecret}
+                  className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-neutral-600 hover:text-black shrink-0"
+                >
+                  {secretCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {secretCopied ? t('wallet.copied') : t('wallet.copy')}
+                </button>
+              </div>
+            </div>
+          )}
+          {secretErr && <p className="mt-1 text-[11px] text-red-700">{secretErr}</p>}
         </div>
       </div>
 
