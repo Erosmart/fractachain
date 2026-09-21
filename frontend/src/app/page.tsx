@@ -53,6 +53,11 @@ export default function HomePage() {
                 <stop offset="0%" stopColor="#2fa8a0" />
                 <stop offset="100%" stopColor="#4ea743" />
               </linearGradient>
+              <linearGradient id="heroInf" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#1a6fb8" />
+                <stop offset="50%" stopColor="#2fa8a0" />
+                <stop offset="100%" stopColor="#4ea743" />
+              </linearGradient>
               <linearGradient id="heroBand" x1="0" y1="1" x2="1" y2="0">
                 <stop offset="0%" stopColor="#1a6fb8" />
                 <stop offset="55%" stopColor="#2fa8a0" />
