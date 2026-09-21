@@ -94,7 +94,8 @@ export async function buildPortfolio(accountId: string) {
   if (!account) throw new Error('Cuenta no encontrada');
 
   const listings = listListings();
-  const positions = await Promise.all(
+  const [positions, usdcOnChain] = await Promise.all([
+    Promise.all(
     (account.holdings || []).map(async (h) => {
       const listing = listings.find((l) => l.id === h.listingId) || getListing(h.listingId);
       const shares = economicShares(h);
@@ -142,16 +143,14 @@ export async function buildPortfolio(accountId: string) {
         canRefund: onChain && listingStatus === 'CLOSED_FAILED' && !h.refundedAt && ((h.tokensOwed || 0) > 0 || (h.tokens || 0) > 0 || (h.usdcAmount || 0) > 0),
       };
     }),
-  );
+    ),
+    account.publicKey ? loadAssetBalance(account.publicKey, 'USDC', USDC_ISSUER) : Promise.resolve(0),
+  ]);
 
   const costBasis = positions.reduce((s, p) => s + p.costBasis, 0);
   const marketValue = positions.reduce((s, p) => s + p.marketValue, 0);
   const pendingDividends = positions.reduce((s, p) => s + p.pendingDividendUsdc, 0);
   const pnl = Math.round((marketValue - costBasis) * 1e6) / 1e6;
-
-  const usdcOnChain = account.publicKey
-    ? await loadAssetBalance(account.publicKey, 'USDC', USDC_ISSUER)
-    : 0;
 
   return {
     cashUsdc: account.cashUsdc,

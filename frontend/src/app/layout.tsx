@@ -1,10 +1,34 @@
 import type { Metadata } from 'next';
+import { Lato, Share_Tech_Mono, Source_Serif_4 } from 'next/font/google';
 import './globals.css';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import CrystalBackdrop from '../components/CrystalBackdrop';
 import AppProviders from '../components/AppProviders';
 import AppGate from '../components/AppGate';
+
+const lato = Lato({
+  subsets: ['latin'],
+  weight: ['300', '400', '700', '900'],
+  style: ['normal', 'italic'],
+  display: 'swap',
+  variable: '--font-lato',
+});
+
+const shareTechMono = Share_Tech_Mono({
+  subsets: ['latin'],
+  weight: '400',
+  display: 'swap',
+  variable: '--font-lcd',
+});
+
+const sourceSerif = Source_Serif_4({
+  subsets: ['latin'],
+  weight: ['700', '800'],
+  style: 'italic',
+  display: 'swap',
+  variable: '--font-serif',
+});
 
 export const metadata: Metadata = {
   title: 'Fractachain | RWA y Merval en Stellar',
@@ -14,14 +38,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className="scroll-smooth" suppressHydrationWarning>
+    <html
+      lang="es"
+      className={`${lato.variable} ${shareTechMono.variable} ${sourceSerif.variable} scroll-smooth`}
+      suppressHydrationWarning
+    >
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,300;0,400;0,700;0,900;1,400;1,700&family=Source+Serif+4:ital,opsz,wght@1,8..60,700;1,8..60,800&family=Share+Tech+Mono&display=swap"
-          rel="stylesheet"
-        />
         <script
           dangerouslySetInnerHTML={{
             __html: `try{if(localStorage.getItem('fc_theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}`,

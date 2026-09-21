@@ -9,12 +9,12 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Lato', 'Helvetica Neue', 'Arial', 'sans-serif'],
-        display: ['Lato', 'Helvetica Neue', 'Arial', 'sans-serif'],
-        section: ['Lato', 'Helvetica Neue', 'Arial', 'sans-serif'],
-        body: ['Lato', 'Helvetica Neue', 'Arial', 'sans-serif'],
-        serif: ['Lato', 'Helvetica Neue', 'Arial', 'sans-serif'],
-        lcd: ['Share Tech Mono', 'ui-monospace', 'monospace'],
+        sans: ['var(--font-lato)', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        display: ['var(--font-lato)', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        section: ['var(--font-lato)', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        body: ['var(--font-lato)', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        serif: ['var(--font-serif)', 'Georgia', 'serif'],
+        lcd: ['var(--font-lcd)', 'ui-monospace', 'monospace'],
       },
       colors: {
         leaf: {

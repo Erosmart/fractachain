@@ -92,8 +92,10 @@ export async function contributeOnChain(
   });
   if (!hash) throw new Error('El aporte se envió pero no volvió hash de transacción');
 
-  const raisedStroops = await read<bigint>(client, 'get_total_raised');
-  const rwa = await read<bigint>(client, 'get_rwa_balance', { user: buyer.publicKey() });
+  const [raisedStroops, rwa] = await Promise.all([
+    read<bigint>(client, 'get_total_raised'),
+    read<bigint>(client, 'get_rwa_balance', { user: buyer.publicKey() }),
+  ]);
   return {
     hash,
     raised: fromStroops(raisedStroops),
@@ -138,8 +140,10 @@ export async function refundOnChain(
   }
   const contributor = Keypair.fromSecret(custodialSigningKey(accountId));
   const client = await contractClient(licitacionId(listing), contributor);
-  const before = await read<bigint>(client, 'get_rwa_balance', { user: contributor.publicKey() }).catch(() => 0n);
-  const price = await read<bigint>(client, 'get_price_per_unit').catch(() => 0n);
+  const [before, price] = await Promise.all([
+    read<bigint>(client, 'get_rwa_balance', { user: contributor.publicKey() }).catch(() => 0n),
+    read<bigint>(client, 'get_price_per_unit').catch(() => 0n),
+  ]);
   const { hash } = await invoke(client, 'refund', {
     contributor: contributor.publicKey(),
   });

@@ -1,8 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { API_BASE_URL } from '../lib/api';
-import { loginWithFirebaseGoogle, logoutFromFirebase } from '../lib/firebase';
 
 export type CustodyMode = 'CUSTODIAL' | 'SELF' | null;
 export type KycStatus = 'UNREGISTERED' | 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -112,12 +111,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [revealedSecret, setRevealedSecret] = useState<string | null>(null);
 
-  const applySession = (nextToken: string, raw: any) => {
+  const applySession = useCallback((nextToken: string, raw: any) => {
     const u = normalize(raw);
     setToken(nextToken);
     setUser(u);
     persist(nextToken, u);
-  };
+  }, []);
 
   const refreshUser = useCallback(async () => {
     const saved = localStorage.getItem('fc_auth_token');
@@ -138,7 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // keep local copy
     }
-  }, []);
+  }, [applySession]);
 
   useEffect(() => {
     try {
@@ -159,9 +158,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (token) refreshUser();
   }, [token, refreshUser]);
 
-  const loginWithGoogle = async () => {
+  const loginWithGoogle = useCallback(async () => {
     setIsLoading(true);
     try {
+      const { loginWithFirebaseGoogle } = await import('../lib/firebase');
       const fbData = await loginWithFirebaseGoogle();
       const res = await fetch(`${API_BASE_URL}/api/auth/firebase`, {
         method: 'POST',
@@ -187,9 +187,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [applySession]);
 
-  const loginWithWallet = async () => {
+  const loginWithWallet = useCallback(async () => {
     setIsLoading(true);
     try {
       const { freighterLoginPayload } = await import('../lib/freighter');
@@ -212,9 +212,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [applySession]);
 
-  const loginWithEmail = async (email: string, password: string, name?: string) => {
+  const loginWithEmail = useCallback(async (email: string, password: string, name?: string) => {
     setIsLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/api/auth/email`, {
@@ -235,9 +235,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [applySession]);
 
-  const chooseCustody = async (mode: 'CUSTODIAL' | 'SELF', publicKey?: string) => {
+  const chooseCustody = useCallback(async (mode: 'CUSTODIAL' | 'SELF', publicKey?: string) => {
     if (!token) throw new Error('Iniciá sesión');
     const res = await fetch(`${API_BASE_URL}/api/auth/wallet`, {
       method: 'POST',
@@ -248,9 +248,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo guardar la custodia');
     if (data.secretOnce) setRevealedSecret(data.secretOnce);
     applySession(token, data.user);
-  };
+  }, [token, applySession]);
 
-  const submitKyc = async (payload: { legalName: string; cuit: string; selfieDataUrl?: string; email?: string }) => {
+  const submitKyc = useCallback(async (payload: { legalName: string; cuit: string; selfieDataUrl?: string; email?: string }) => {
     if (!token) throw new Error('Iniciá sesión');
     const res = await fetch(`${API_BASE_URL}/api/kyc/onboard`, {
       method: 'POST',
@@ -260,9 +260,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo enviar el KYC');
     applySession(token, data.user);
-  };
+  }, [token, applySession]);
 
-  const approveToken = async (listingId: string) => {
+  const approveToken = useCallback(async (listingId: string) => {
     if (!token) throw new Error('Iniciá sesión');
     const res = await fetch(`${API_BASE_URL}/api/listings/${listingId}/trustline`, {
       method: 'POST',
@@ -271,9 +271,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo aprobar el token');
     applySession(token, data.data);
-  };
+  }, [token, applySession]);
 
-  const claimTokens = async (listingId: string) => {
+  const claimTokens = useCallback(async (listingId: string) => {
     if (!token) throw new Error('Iniciá sesión');
     const res = await fetch(`${API_BASE_URL}/api/listings/${listingId}/claim`, {
       method: 'POST',
@@ -282,9 +282,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.message || 'No se pudieron reclamar los tokens');
     applySession(token, data.data);
-  };
+  }, [token, applySession]);
 
-  const distributeTokens = async (listingId: string) => {
+  const distributeTokens = useCallback(async (listingId: string) => {
     if (!token) throw new Error('Iniciá sesión');
     const res = await fetch(`${API_BASE_URL}/api/listings/${listingId}/distribute`, {
       method: 'POST',
@@ -294,9 +294,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!res.ok || !data.success) throw new Error(data.message || 'No se pudieron enviar los tokens on-chain');
     await refreshUser();
     return data.data;
-  };
+  }, [token, refreshUser]);
 
-  const fetchWalletSecret = async () => {
+  const fetchWalletSecret = useCallback(async () => {
     if (!token) throw new Error('Iniciá sesión');
     const res = await fetch(`${API_BASE_URL}/api/auth/wallet/secret`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -304,9 +304,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo obtener la clave');
     return String(data.secret || '');
-  };
+  }, [token]);
 
-  const finalizeOffering = async (listingId: string) => {
+  const finalizeOffering = useCallback(async (listingId: string) => {
     if (!token) throw new Error('Iniciá sesión');
     const res = await fetch(`${API_BASE_URL}/api/listings/${listingId}/finalize`, {
       method: 'POST',
@@ -315,9 +315,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo finalizar la licitación');
     return data.data;
-  };
+  }, [token]);
 
-  const refundContribution = async (listingId: string) => {
+  const refundContribution = useCallback(async (listingId: string) => {
     if (!token) throw new Error('Iniciá sesión');
     const res = await fetch(`${API_BASE_URL}/api/listings/${listingId}/refund`, {
       method: 'POST',
@@ -327,9 +327,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo reembolsar');
     if (data.data?.user) applySession(token, data.data.user);
     return data.data;
-  };
+  }, [token, applySession]);
 
-  const claimDividends = async (listingId: string) => {
+  const claimDividends = useCallback(async (listingId: string) => {
     if (!token) throw new Error('Iniciá sesión');
     const res = await fetch(`${API_BASE_URL}/api/listings/${listingId}/dividends/claim`, {
       method: 'POST',
@@ -338,43 +338,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo cobrar el dividendo');
     applySession(token, data.data.user);
-  };
+  }, [token, applySession]);
 
-  const logout = () => {
-    logoutFromFirebase();
+  const logout = useCallback(() => {
+    void import('../lib/firebase').then((m) => m.logoutFromFirebase()).catch(() => undefined);
     setUser(null);
     setToken(null);
     setRevealedSecret(null);
     localStorage.removeItem('fc_auth_token');
     localStorage.removeItem('fc_auth_user');
-  };
+  }, []);
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        token,
-        isLoading,
-        revealedSecret,
-        loginWithGoogle,
-        loginWithWallet,
-        loginWithEmail,
-        chooseCustody,
-        submitKyc,
-        approveToken,
-        claimTokens,
-        distributeTokens,
-        fetchWalletSecret,
-        claimDividends,
-        finalizeOffering,
-        refundContribution,
-        refreshUser,
-        logout,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({
+      user,
+      token,
+      isLoading,
+      revealedSecret,
+      loginWithGoogle,
+      loginWithWallet,
+      loginWithEmail,
+      chooseCustody,
+      submitKyc,
+      approveToken,
+      claimTokens,
+      distributeTokens,
+      fetchWalletSecret,
+      claimDividends,
+      finalizeOffering,
+      refundContribution,
+      refreshUser,
+      logout,
+    }),
+    [
+      user,
+      token,
+      isLoading,
+      revealedSecret,
+      loginWithGoogle,
+      loginWithWallet,
+      loginWithEmail,
+      chooseCustody,
+      submitKyc,
+      approveToken,
+      claimTokens,
+      distributeTokens,
+      fetchWalletSecret,
+      claimDividends,
+      finalizeOffering,
+      refundContribution,
+      refreshUser,
+      logout,
+    ],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

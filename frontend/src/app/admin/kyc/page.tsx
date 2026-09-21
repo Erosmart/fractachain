@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { RefreshCw, Search, UserCheck } from 'lucide-react';
 import { KycRecord, API_BASE_URL } from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
+import { useVisibleInterval } from '../../../lib/useVisibleInterval';
 
 export default function AdminKycPage() {
   const { token } = useAuth();
@@ -23,11 +24,7 @@ export default function AdminKycPage() {
     else setRecords([]);
   };
 
-  useEffect(() => {
-    fetchRecords();
-    const t = setInterval(fetchRecords, 4000);
-    return () => clearInterval(t);
-  }, [token]);
+  useVisibleInterval(fetchRecords, 4000, Boolean(token), token);
 
   const update = async (id: string, status: 'APPROVED' | 'REJECTED') => {
     setBusy(id);

@@ -64,8 +64,16 @@ export interface TrustlineState {
   limit: number;
 }
 
+let horizon: Horizon.Server | null = null;
+let horizonUrl = '';
+
 function server() {
-  return new Horizon.Server(getTestnetConfig().horizonUrl);
+  const url = getTestnetConfig().horizonUrl;
+  if (!horizon || horizonUrl !== url) {
+    horizon = new Horizon.Server(url);
+    horizonUrl = url;
+  }
+  return horizon;
 }
 
 function networkPassphrase() {
@@ -118,7 +126,9 @@ async function buildAndSubmit(
   const tx = addOps(builder).setTimeout(TX_TIMEOUT_SECONDS).build();
   signers.forEach((s) => tx.sign(s));
   try {
-    return await srv.submitTransaction(tx);
+    const result = await srv.submitTransaction(tx);
+    invalidateSdexReads();
+    return result;
   } catch (err: any) {
     throw new Error(describeHorizonError(err));
   }
@@ -253,39 +263,59 @@ export async function distributeTokens(destination: string, asset: Asset, amount
   );
 }
 
-/** Reads whether a holder is cleared to trade, straight from the ledger. */
-export async function getTrustlineState(
-  accountId: string,
-  asset: Asset,
-): Promise<TrustlineState> {
-  const empty: TrustlineState = {
+function emptyTrustline(): TrustlineState {
+  return {
     exists: false,
     authorized: false,
     maintainingLiabilitiesOnly: false,
     balance: 0,
     limit: 0,
   };
+}
+
+function trustlineFromAccount(account: Horizon.AccountResponse, asset: Asset): TrustlineState {
+  const line = account.balances.find(
+    (b: any) =>
+      b.asset_type !== 'native' &&
+      b.asset_type !== 'liquidity_pool_shares' &&
+      b.asset_code === asset.getCode() &&
+      b.asset_issuer === asset.getIssuer(),
+  ) as any;
+  if (!line) return emptyTrustline();
+  return {
+    exists: true,
+    authorized: Boolean(line.is_authorized),
+    maintainingLiabilitiesOnly:
+      !line.is_authorized && Boolean(line.is_authorized_to_maintain_liabilities),
+    balance: Number(line.balance),
+    limit: Number(line.limit),
+  };
+}
+
+/**
+ * One Horizon `loadAccount` for every asset. Callers that previously hit
+ * `getTrustlineState` in a loop were paying N round-trips for the same account.
+ */
+export async function getTrustlineStates(
+  accountId: string,
+  assets: Asset[],
+): Promise<TrustlineState[]> {
+  if (assets.length === 0) return [];
   try {
     const account = await server().loadAccount(accountId);
-    const line = account.balances.find(
-      (b: any) =>
-        b.asset_type !== 'native' &&
-        b.asset_type !== 'liquidity_pool_shares' &&
-        b.asset_code === asset.getCode() &&
-        b.asset_issuer === asset.getIssuer(),
-    ) as any;
-    if (!line) return empty;
-    return {
-      exists: true,
-      authorized: Boolean(line.is_authorized),
-      maintainingLiabilitiesOnly:
-        !line.is_authorized && Boolean(line.is_authorized_to_maintain_liabilities),
-      balance: Number(line.balance),
-      limit: Number(line.limit),
-    };
+    return assets.map((asset) => trustlineFromAccount(account, asset));
   } catch {
-    return empty;
+    return assets.map(() => emptyTrustline());
   }
+}
+
+/** Reads whether a holder is cleared to trade, straight from the ledger. */
+export async function getTrustlineState(
+  accountId: string,
+  asset: Asset,
+): Promise<TrustlineState> {
+  const [line] = await getTrustlineStates(accountId, [asset]);
+  return line ?? emptyTrustline();
 }
 
 /* ------------------------------------------------------------------ *
@@ -299,11 +329,46 @@ export async function getTrustlineState(
  * UI renders them in, with a running cumulative total per level so the depth
  * column needs no client-side arithmetic.
  */
+const READ_TTL_MS = 2000;
+type CacheEntry<T> = { at: number; value: T };
+const orderBookCache = new Map<string, CacheEntry<OrderBook>>();
+const tradesCache = new Map<string, CacheEntry<Awaited<ReturnType<typeof fetchRecentTrades>>>>();
+
+function pairKey(security: Asset, counter: Asset, extra = '') {
+  return `${security.getCode()}:${security.getIssuer() || 'native'}|${counter.getCode()}:${counter.getIssuer() || 'native'}|${extra}`;
+}
+
+export function invalidateSdexReads() {
+  orderBookCache.clear();
+  tradesCache.clear();
+}
+
+const inflightReads = new Map<string, Promise<unknown>>();
+
+function cached<T>(map: Map<string, CacheEntry<T>>, key: string, produce: () => Promise<T>): Promise<T> {
+  const hit = map.get(key);
+  if (hit && Date.now() - hit.at < READ_TTL_MS) return Promise.resolve(hit.value);
+  const pending = inflightReads.get(key) as Promise<T> | undefined;
+  if (pending) return pending;
+  const next = produce()
+    .then((value) => {
+      map.set(key, { at: Date.now(), value });
+      return value;
+    })
+    .finally(() => inflightReads.delete(key));
+  inflightReads.set(key, next);
+  return next;
+}
+
 export async function getOrderBook(
   security: Asset,
   counter: Asset,
   limit = 20,
 ): Promise<OrderBook> {
+  return cached(orderBookCache, pairKey(security, counter, String(limit)), () => fetchOrderBook(security, counter, limit));
+}
+
+async function fetchOrderBook(security: Asset, counter: Asset, limit: number): Promise<OrderBook> {
   const raw = await server().orderbook(security, counter).limit(limit).call();
 
   const level = (rows: Array<{ price: string; amount: string }>): OrderBookLevel[] => {
@@ -340,6 +405,10 @@ export async function getOrderBook(
  * in the counter asset, matching the order book and the order form.
  */
 export async function getRecentTrades(security: Asset, counter: Asset, limit = 20) {
+  return cached(tradesCache, pairKey(security, counter, String(limit)), () => fetchRecentTrades(security, counter, limit));
+}
+
+async function fetchRecentTrades(security: Asset, counter: Asset, limit: number) {
   const page = await server()
     .trades()
     .forAssetPair(security, counter)
@@ -490,7 +559,9 @@ export async function submitSignedXdr(xdr: string) {
   const srv = server();
   const tx = new Transaction(xdr, networkPassphrase());
   try {
-    return await srv.submitTransaction(tx);
+    const result = await srv.submitTransaction(tx);
+    invalidateSdexReads();
+    return result;
   } catch (err: any) {
     throw new Error(describeHorizonError(err));
   }
@@ -507,7 +578,9 @@ export async function signAndSubmitXdr(xdr: string, secret: string) {
   const tx = new Transaction(xdr, networkPassphrase());
   tx.sign(Keypair.fromSecret(secret));
   try {
-    return await srv.submitTransaction(tx);
+    const result = await srv.submitTransaction(tx);
+    invalidateSdexReads();
+    return result;
   } catch (err: any) {
     throw new Error(describeHorizonError(err));
   }

@@ -5,16 +5,14 @@ import { useRouter } from 'next/navigation';
 import { Clock } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useI18n } from '../../../context/I18nContext';
+import { useVisibleInterval } from '../../../lib/useVisibleInterval';
 
 export default function PendingKycPage() {
   const { user, refreshUser, logout } = useAuth();
   const { t } = useI18n();
   const router = useRouter();
 
-  useEffect(() => {
-    const t = setInterval(() => refreshUser(), 4000);
-    return () => clearInterval(t);
-  }, [refreshUser]);
+  useVisibleInterval(refreshUser, 4000, true);
 
   useEffect(() => {
     if (user?.kycStatus === 'APPROVED') router.replace('/dashboard');
