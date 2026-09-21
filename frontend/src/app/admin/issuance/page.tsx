@@ -117,7 +117,8 @@ export default function AdminIssuancePage() {
   const act = async (id: string, path: string, body?: unknown) => {
     try {
       const data = await call(`/api/listings/${id}/${path}`, body);
-      flash(`${path} OK · estado ${data.status}`);
+      const hash = data.onChain?.hash;
+      flash(`${path} OK · estado ${data.status}${hash ? ` · ${hash}` : ''}`);
       load();
     } catch (e: any) {
       flash(e.message);
@@ -276,6 +277,14 @@ export default function AdminIssuancePage() {
             </div>
             {l.stockContract && <p className="text-[11px] font-mono break-all">stock {l.stockContract}</p>}
             {l.licitacionContract && <p className="text-[11px] font-mono break-all">licitación {l.licitacionContract}</p>}
+            {l.finalizeHash && (
+              <p className="text-[11px] font-mono break-all">
+                finalize{' '}
+                <a href={`https://stellar.expert/explorer/testnet/tx/${l.finalizeHash}`} target="_blank" rel="noreferrer" className="underline">
+                  {l.finalizeHash}
+                </a>
+              </p>
+            )}
             <p className="text-xs text-neutral-600">
               Cobra en{' '}
               <span className="font-mono break-all">{l.dossier.proceedsWallet || 'sin configurar'}</span>
@@ -336,8 +345,10 @@ export default function AdminIssuancePage() {
                   >
                     Guardar cuándo se reparte
                   </button>
-                  <button type="button" onClick={() => act(l.id, 'close')} className="px-3 py-2 rounded-xl border border-black/10 text-xs font-bold">
-                    Cerrar ahora (mínimo {l.dossier.offeringSoftCapUsdc} USDC)
+                  <button type="button" onClick={() => act(l.id, l.dossier.paymentKind === 'XLM' ? 'finalize' : 'close')} className="px-3 py-2 rounded-xl border border-black/10 text-xs font-bold">
+                    {l.dossier.paymentKind === 'XLM'
+                      ? 'Finalizar on-chain (hard cap o deadline)'
+                      : `Cerrar ahora (mínimo ${l.dossier.offeringSoftCapUsdc} USDC)`}
                   </button>
                 </>
               )}

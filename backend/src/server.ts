@@ -63,7 +63,15 @@ import { syncHolderAuthorization } from './stellar/compliance';
 import { getTestnetConfig, setTestnetConfig } from './admin/testnet';
 import { isOnChainDeployed, loadTestnetDeployment } from './stellar/deployment';
 import { getOnChainStatus, listingChainMeta, receiptAfterContribute, explorerTx } from './stellar/onchain';
-import { contributeOnChain, finalizeOnChain } from './stellar/licitacion';
+import {
+  alreadyClosedOnChain,
+  closeStatusFromChain,
+  contributeOnChain,
+  finalizeOnChain,
+  refundOnChain,
+  snapshotLicitacion,
+  withdrawProceedsOnChain,
+} from './stellar/licitacion';
 import {
   authenticateWithGoogle,
   getUserByToken,
@@ -77,6 +85,7 @@ import {
   addTrustline,
   claimListingTokens,
   claimPendingDividend,
+  markHoldingRefunded,
   getAccountByToken,
   hydrateTestnetWallet,
   isAdminAccount,
@@ -461,19 +470,109 @@ async function wrapAsync(fn: () => Promise<unknown>, res: Response, code = 200) 
   }
 }
 
+/**
+ * On-chain close: invoke `finalize()` unless the contract is already closed
+ * (then we just sync the listing). Rule: hard cap or deadline — not soft cap
+ * alone. Success pays the fiduciary in the same tx; failure unlocks `refund()`.
+ */
+async function finalizeListedOffering(listingId: string) {
+  const listing = getListing(listingId);
+  if (!listing) throw new Error('Listing no encontrado');
+  if (!isOnChainListing(listing)) return closeListing(listing.id);
+
+  const live = await snapshotLicitacion(listing);
+  if (alreadyClosedOnChain(live)) {
+    const status = closeStatusFromChain(live, listing);
+    if (!status) throw new Error('Estado on-chain ilegible');
+    const updated = markListingClosed(listing.id, status, live.raised, {
+      finalizeHash: listing.finalizeHash,
+      proceedsPaidTo: live.fiduciary,
+    });
+    return {
+      ...updated,
+      onChain: {
+        ...listingChainMeta(updated),
+        ...live,
+        hash: listing.finalizeHash || null,
+        explorer: explorerTx(listing.finalizeHash),
+        alreadyClosed: true,
+        note:
+          live.state === 1
+            ? 'La emisión ya estaba Successful. El XLM de testnet fue a la wallet fiduciaria en finalize(); no hay un segundo payout al inversor.'
+            : 'La emisión ya estaba Failed. El inversor puede llamar refund() para recuperar XLM.',
+      },
+    };
+  }
+
+  const result = await finalizeOnChain(listing);
+  const success = result.state === 1;
+  const updated = markListingClosed(
+    listing.id,
+    success ? 'CLOSED_SUCCESS' : 'CLOSED_FAILED',
+    result.raised,
+    {
+      finalizeHash: result.hash,
+      proceedsPaidTo: result.fiduciary,
+    },
+  );
+  return {
+    ...updated,
+    onChain: {
+      ...listingChainMeta(updated),
+      ...result,
+      explorer: explorerTx(result.hash),
+      alreadyClosed: false,
+      note: success
+        ? 'finalize() pagó el XLM recaudado a la wallet fiduciaria (proceeds). Las unidades RWA ya se mintearon en contribute(); no hay claim on-chain extra para el inversor.'
+        : 'finalize() dejó Failed (no se llegó al soft cap). El inversor recupera XLM con refund().',
+    },
+  };
+}
+
+async function listingPayload(listingId: string, investor?: string) {
+  const listing = getListing(listingId);
+  if (!listing) return null;
+  const live = await snapshotLicitacion(listing, investor);
+  let current = listing;
+  if (isOnChainListing(listing) && alreadyClosedOnChain(live) && listing.status === 'LISTED') {
+    const status = closeStatusFromChain(live, listing);
+    if (status) {
+      current = markListingClosed(listing.id, status, live.raised, {
+        proceedsPaidTo: live.fiduciary,
+      });
+    }
+  }
+  return {
+    listing: current,
+    validation: validationPack(current),
+    onChain: {
+      ...listingChainMeta(current),
+      ...live,
+      hash: current.finalizeHash || null,
+      explorer: current.finalizeHash ? explorerTx(current.finalizeHash) : listingChainMeta(current).explorer,
+      finalizeExplorer: explorerTx(current.finalizeHash),
+    },
+  };
+}
+
 app.get('/api/listings', (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
   wrap(() => listListings(), res);
 });
 
-app.get('/api/listings/:id', (req: Request, res: Response) => {
-  const listing = getListing(req.params.id);
-  if (!listing) return res.status(404).json({ success: false, message: 'Listing no encontrado' });
-  res.json({
-    success: true,
-    data: { ...listing, onChain: listingChainMeta(listing) },
-    validation: validationPack(listing),
-  });
+app.get('/api/listings/:id', async (req: Request, res: Response) => {
+  try {
+    const account = getAccountByToken(req.headers.authorization);
+    const payload = await listingPayload(req.params.id, account?.publicKey);
+    if (!payload) return res.status(404).json({ success: false, message: 'Listing no encontrado' });
+    res.json({
+      success: true,
+      data: { ...payload.listing, onChain: payload.onChain },
+      validation: payload.validation,
+    });
+  } catch (err: any) {
+    res.status(400).json({ success: false, message: err.message });
+  }
 });
 
 app.get('/api/listings/:id/validation', (req: Request, res: Response) => {
@@ -509,18 +608,73 @@ app.post('/api/listings/:id/settle', (req: Request, res: Response) => {
 
 app.post('/api/listings/:id/close', (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
+  wrapAsync(() => finalizeListedOffering(req.params.id), res);
+});
+
+/**
+ * Same on-chain `finalize()` as /close, but any logged-in user can trigger it.
+ * The contract itself is permissionless; the gate is hard cap or deadline.
+ */
+app.post('/api/listings/:id/finalize', (req: Request, res: Response) => {
+  const account = getAccountByToken(req.headers.authorization);
+  if (!account) return res.status(401).json({ success: false, message: 'Iniciá sesión' });
   wrapAsync(async () => {
     const listing = getListing(req.params.id);
     if (!listing) throw new Error('Listing no encontrado');
-    if (!isOnChainListing(listing)) return closeListing(listing.id);
-    const result = await finalizeOnChain(listing);
-    const success = Number(result.state) === 1;
+    if (!isOnChainListing(listing)) {
+      throw new Error('Esta licitación sandbox cierra con el endpoint admin /close');
+    }
+    return finalizeListedOffering(listing.id);
+  }, res);
+});
+
+app.post('/api/listings/:id/refund', (req: Request, res: Response) => {
+  const account = getAccountByToken(req.headers.authorization);
+  if (!account) return res.status(401).json({ success: false, message: 'Iniciá sesión' });
+  wrapAsync(async () => {
+    const listing = getListing(req.params.id);
+    if (!listing) throw new Error('Listing no encontrado');
+    if (!isOnChainListing(listing)) {
+      throw new Error('El reembolso on-chain solo existe en licitaciones XLM / Soroban');
+    }
+    const live = await snapshotLicitacion(listing, account.publicKey);
+    if (live.state !== 2 && listing.status !== 'CLOSED_FAILED') {
+      throw new Error('refund() solo corre si finalize() dejó la emisión en Failed');
+    }
+    const result = await refundOnChain(listing, account.id);
+    const user = markHoldingRefunded(account.id, listing.id, { hash: result.hash });
     return {
-      ...markListingClosed(listing.id, success ? 'CLOSED_SUCCESS' : 'CLOSED_FAILED', result.raised),
+      user,
+      refunded: result.refunded,
+      rwa: result.rwa,
       onChain: {
+        ...listingChainMeta(listing),
+        ...live,
         hash: result.hash,
         explorer: explorerTx(result.hash),
-        state: result.state,
+        note: 'refund() devolvió el XLM de testnet a tu wallet custodial y quemó las unidades RWA en el contrato.',
+      },
+    };
+  }, res);
+});
+
+app.post('/api/listings/:id/withdraw-proceeds', (req: Request, res: Response) => {
+  if (!requireAdmin(req, res)) return;
+  wrapAsync(async () => {
+    const listing = getListing(req.params.id);
+    if (!listing) throw new Error('Listing no encontrado');
+    if (!isOnChainListing(listing)) {
+      throw new Error('withdraw_proceeds es el reintento on-chain; esta listing no es XLM/Soroban');
+    }
+    const result = await withdrawProceedsOnChain(listing);
+    return {
+      ...listing,
+      onChain: {
+        ...listingChainMeta(listing),
+        hash: result.hash,
+        explorer: explorerTx(result.hash),
+        amount: result.amount,
+        note: 'Reintento de pago a la wallet fiduciaria. En el camino feliz finalize() ya pagó.',
       },
     };
   }, res);
@@ -544,8 +698,24 @@ app.post('/api/listings/:id/trustline', (req: Request, res: Response) => {
 app.post('/api/listings/:id/claim', (req: Request, res: Response) => {
   const account = getAccountByToken(req.headers.authorization);
   if (!account) return res.status(401).json({ success: false, message: 'Iniciá sesión' });
-  const listing = getListing(req.params.id);
-  wrap(() => claimListingTokens(account.id, req.params.id, listing?.status === 'CLOSED_SUCCESS'), res);
+  wrapAsync(async () => {
+    const listing = getListing(req.params.id);
+    const user = claimListingTokens(account.id, req.params.id, listing?.status === 'CLOSED_SUCCESS');
+    const live = listing ? await snapshotLicitacion(listing, account.publicKey) : null;
+    return {
+      ...user,
+      onChain: listing
+        ? {
+            ...listingChainMeta(listing),
+            ...live,
+            note:
+              listing.dossier.paymentKind === 'XLM'
+                ? 'Anotar en el portfolio no mueve XLM. Las unidades RWA ya existen en el contrato desde contribute(); finalize() pagó a la empresa.'
+                : 'Tokens acreditados en el ledger de la plataforma.',
+          }
+        : undefined,
+    };
+  }, res);
 });
 
 app.get('/api/admin/testnet', (req: Request, res: Response) => {

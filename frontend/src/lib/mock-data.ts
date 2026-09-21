@@ -14,7 +14,7 @@ export interface Pool {
   riskScore: 'AAA' | 'AA+' | 'A+';
   isSoftCapReached: boolean;
   minInvestment: number;
-  status: 'OPEN' | 'SUCCESSFUL' | 'SETTLED';
+  status: 'OPEN' | 'SUCCESSFUL' | 'SETTLED' | 'FAILED';
 }
 
 export const MOCK_POOLS: Pool[] = [

@@ -108,6 +108,8 @@ export async function buildPortfolio(accountId: string) {
       const costBasis = Math.round((h.usdcAmount || 0) * 1e6) / 1e6;
       const pnl = Math.round((marketValue - costBasis) * 1e6) / 1e6;
       const pendingDividendUsdc = Math.round((h.pendingDividendUsdc || 0) * 1e6) / 1e6;
+      const onChain = listing ? listing.dossier.paymentKind === 'XLM' : false;
+      const listingStatus = listing?.status || 'UNKNOWN';
       return {
         listingId: h.listingId,
         tokenTicker: h.tokenTicker,
@@ -125,6 +127,13 @@ export async function buildPortfolio(accountId: string) {
         priceAsOf: quote.asOf,
         pendingDividendUsdc,
         distributions: listDividends(h.listingId).slice(0, 3),
+        listingStatus,
+        paymentKind: listing?.dossier.paymentKind || null,
+        finalizeHash: listing?.finalizeHash || null,
+        refundedAt: h.refundedAt || null,
+        refundHash: h.refundHash || null,
+        canClaim: listingStatus === 'CLOSED_SUCCESS' && (h.tokensOwed || 0) > 0 && !h.refundedAt,
+        canRefund: onChain && listingStatus === 'CLOSED_FAILED' && !h.refundedAt && ((h.tokensOwed || 0) > 0 || (h.tokens || 0) > 0 || (h.usdcAmount || 0) > 0),
       };
     }),
   );
