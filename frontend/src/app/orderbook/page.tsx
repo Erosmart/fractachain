@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowUpRight, CheckCircle2, MousePointerClick, ShieldCheck, Zap } from 'lucide-react';
 import { API_BASE_URL, bearerHeaders } from '../../lib/api';
+import { isVisibleListing } from '../../lib/listings';
 import { useAuth } from '../../context/AuthContext';
 
 type Market = {
@@ -148,7 +149,7 @@ function OrderbookInner() {
 
   const loadMarkets = async () => {
     const json = await fetch(`${API_BASE_URL}/api/orderbook/markets`).then((r) => r.json()).catch(() => null);
-    if (Array.isArray(json?.data)) setMarkets(json.data);
+    if (Array.isArray(json?.data)) setMarkets(json.data.filter((m: Market) => isVisibleListing(m.listingId)));
   };
 
   /**
@@ -385,6 +386,8 @@ function OrderbookInner() {
               </span>
             </div>
 
+            <PriceSparkline trades={book.trades} refPrice={book.refPrice} />
+
             <p className="text-[11px] text-neutral-500 inline-flex items-center gap-1.5">
               <MousePointerClick className="w-3.5 h-3.5 shrink-0" />
               Tocá una punta para tomar su precio. Después elegís la cantidad.
@@ -599,6 +602,50 @@ function OrderbookInner() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Línea de tendencia del precio: polilínea SVG de los últimos trades.
+ * Con pocos trades dibuja de todas formas — arranca en el precio de
+ * referencia (IPO) para que siempre haya una línea visible.
+ */
+function PriceSparkline({ trades, refPrice }: { trades: { price: number; createdAt: string }[]; refPrice: number }) {
+  const points = useMemo(() => {
+    const sorted = [...(trades || [])].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+    const prices = [refPrice, ...sorted.map((t) => t.price)];
+    return prices.slice(-40);
+  }, [trades, refPrice]);
+
+  const w = 600;
+  const h = 80;
+  const pad = 6;
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const range = max - min || 1;
+  const step = points.length > 1 ? (w - pad * 2) / (points.length - 1) : 0;
+  const path = points
+    .map((p, i) => `${i === 0 ? 'M' : 'L'}${(pad + i * step).toFixed(1)},${(h - pad - ((p - min) / range) * (h - pad * 2)).toFixed(1)}`)
+    .join(' ');
+
+  const first = points[0];
+  const last = points[points.length - 1];
+  const up = last >= first;
+
+  return (
+    <div className="rounded-2xl border border-black/10 bg-white/60 p-3">
+      <div className="flex items-center justify-between text-[11px] text-neutral-500 mb-1">
+        <span className="uppercase tracking-wider font-lcd">Tendencia</span>
+        <span className={`font-mono font-bold ${up ? 'text-[#3f8f38]' : 'text-red-600'}`}>
+          {up ? '▲' : '▼'} ${last.toFixed(2)}
+        </span>
+      </div>
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-20" preserveAspectRatio="none" role="img">
+        <path d={path} fill="none" stroke={up ? '#3f8f38' : '#dc2626'} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+      </svg>
     </div>
   );
 }
