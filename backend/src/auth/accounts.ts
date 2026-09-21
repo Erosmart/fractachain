@@ -259,7 +259,7 @@ export function upsertLogin(payload: {
       passwordHash: payload.password ? hashPassword(payload.password) : undefined,
       custodyMode: null,
       publicKey: '',
-      kycStatus: 'UNREGISTERED',
+      kycStatus: process.env.HACKATHON_DEMO === 'true' ? 'APPROVED' : 'UNREGISTERED',
       holdings: [],
       trustlines: [],
       cashUsdc: 50000,
@@ -311,6 +311,11 @@ function ensureAdminAccount(account: Account) {
 }
 
 for (const existing of accounts.values()) ensureAdminAccount(existing);
+if (process.env.HACKATHON_DEMO === 'true') {
+  for (const a of accounts.values()) {
+    if (a.kycStatus === 'UNREGISTERED' || a.kycStatus === 'PENDING') a.kycStatus = 'APPROVED';
+  }
+}
 if (accounts.size) save();
 
 export function setCustody(accountId: string, mode: 'CUSTODIAL' | 'SELF') {
