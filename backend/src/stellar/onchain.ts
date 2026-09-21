@@ -5,13 +5,11 @@
  * contract is the primary. The classic LILAS trustline is still opened for
  * the SDEX rail, but it is not the subscription.
  */
-import { rpc } from '@stellar/stellar-sdk';
 import { getListing, isOnChainListing, Listing } from '../admin/listings';
-import { getTestnetConfig } from '../admin/testnet';
 import { addTrustline, getAccount } from '../auth/accounts';
 import { openCustodialTrustline, sdexAvailable } from '../market/sdex_book';
 import { loadTestnetDeployment } from './deployment';
-import { isLiveContractId } from './soroban';
+import { isLiveContractId, rpcServer } from './soroban';
 
 const EXPERT = 'https://stellar.expert/explorer/testnet';
 
@@ -38,13 +36,11 @@ export function listingChainMeta(listing?: Listing | null) {
 
 export async function getOnChainStatus() {
   const deployment = loadTestnetDeployment();
-  const cfg = getTestnetConfig();
   let ledger: number | null = null;
   let rpcOk = false;
   let error: string | undefined;
   try {
-    const srv = new rpc.Server(cfg.rpcUrl);
-    const latest = await srv.getLatestLedger();
+    const latest = await rpcServer().getLatestLedger();
     ledger = latest.sequence;
     rpcOk = true;
   } catch (err: any) {

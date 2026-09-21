@@ -19,6 +19,7 @@ import {
   getOrderBook,
   getRecentTrades,
   getTrustlineState,
+  getTrustlineStates,
   securityAsset,
   signAndSubmitXdr,
   type OrderBook,
@@ -87,7 +88,18 @@ export interface SdexBookView extends OrderBook {
  * so showing anything else would let the UI promise a trade the network will
  * reject.
  */
+const inflightBooks = new Map<string, Promise<SdexBookView>>();
+
 export async function getSdexBook(listingId: string, accountId?: string): Promise<SdexBookView> {
+  const key = `${listingId}:${accountId || ''}`;
+  const pending = inflightBooks.get(key);
+  if (pending) return pending;
+  const next = loadSdexBook(listingId, accountId).finally(() => inflightBooks.delete(key));
+  inflightBooks.set(key, next);
+  return next;
+}
+
+async function loadSdexBook(listingId: string, accountId?: string): Promise<SdexBookView> {
   const listing = requireSdexListing(listingId);
   const security = listingAsset(listing);
   const counter = counterAsset();
@@ -168,7 +180,8 @@ export async function prepareOrder(params: {
 
   // Fail here with a readable reason rather than letting Horizon reject the
   // signed transaction with op_not_authorized after the user has signed it.
-  const line = await getTrustlineState(account.publicKey, security);
+  // One loadAccount covers both the security and the USDC counter.
+  const [line, counterLine] = await getTrustlineStates(account.publicKey, [security, counter]);
   if (!line.exists) {
     throw new Error(`Primero aprobá el token ${listing.dossier.tokenTicker} (trustline)`);
   }
@@ -181,7 +194,6 @@ export async function prepareOrder(params: {
   // Selling also needs a trustline on the counter asset to receive it; buying
   // needs one to spend it. Open it inside the offer tx so a single signature
   // covers both ops — otherwise Horizon rejects with op_buy_no_trust.
-  const counterLine = await getTrustlineState(account.publicKey, counter);
 
   const req = {
     accountId: account.publicKey,

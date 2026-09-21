@@ -16,7 +16,7 @@ import { listListings } from '../admin/listings';
 import {
   authorizeHolder,
   deauthorizeHolder,
-  getTrustlineState,
+  getTrustlineStates,
   securityAsset,
 } from './sdex';
 
@@ -67,10 +67,17 @@ export async function grantHolderAuthorization(address: string): Promise<Complia
     return { address, enabled: false, outcomes: [] };
   }
 
+  const assets = authorizableAssets();
+  const states = await getTrustlineStates(
+    address,
+    assets.map((a) => a.asset),
+  );
+
   const outcomes: AuthorizationOutcome[] = [];
-  for (const { listingId, tokenTicker, asset } of authorizableAssets()) {
+  for (let i = 0; i < assets.length; i++) {
+    const { listingId, tokenTicker, asset } = assets[i];
+    const line = states[i];
     try {
-      const line = await getTrustlineState(address, asset);
       if (!line.exists) {
         outcomes.push({
           listingId,
@@ -84,6 +91,7 @@ export async function grantHolderAuthorization(address: string): Promise<Complia
         outcomes.push({ listingId, tokenTicker, result: 'authorized', detail: 'Ya estaba autorizada' });
         continue;
       }
+      // Sequential on purpose: each authorize is a tx from the same issuer sequence.
       await authorizeHolder(asset, address);
       outcomes.push({ listingId, tokenTicker, result: 'authorized' });
     } catch (err: any) {
@@ -109,14 +117,22 @@ export async function revokeHolderAuthorization(
     return { address, enabled: false, outcomes: [] };
   }
 
+  const assets = authorizableAssets();
+  const states = await getTrustlineStates(
+    address,
+    assets.map((a) => a.asset),
+  );
+
   const outcomes: AuthorizationOutcome[] = [];
-  for (const { listingId, tokenTicker, asset } of authorizableAssets()) {
+  for (let i = 0; i < assets.length; i++) {
+    const { listingId, tokenTicker, asset } = assets[i];
+    const line = states[i];
     try {
-      const line = await getTrustlineState(address, asset);
       if (!line.exists) {
         outcomes.push({ listingId, tokenTicker, result: 'skipped' });
         continue;
       }
+      // Sequential on purpose: each deauthorize is a tx from the same issuer sequence.
       await deauthorizeHolder(asset, address, { allowUnwind: opts?.allowUnwind });
       outcomes.push({ listingId, tokenTicker, result: 'deauthorized' });
     } catch (err: any) {

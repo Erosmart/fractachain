@@ -64,10 +64,16 @@ function fundFriendbotCurl(url: string): Promise<{ funded: boolean; already: boo
   });
 }
 
+let horizon: Horizon.Server | null = null;
+
+function horizonServer() {
+  if (!horizon) horizon = new Horizon.Server(HORIZON);
+  return horizon;
+}
+
 export async function loadNativeXlm(publicKey: string): Promise<number> {
   try {
-    const server = new Horizon.Server(HORIZON);
-    const account = await server.loadAccount(publicKey);
+    const account = await horizonServer().loadAccount(publicKey);
     const native = account.balances.find((b) => b.asset_type === 'native');
     return native ? Number(native.balance) : 0;
   } catch {
@@ -81,8 +87,7 @@ export async function loadAssetBalance(
   issuer: string,
 ): Promise<number> {
   try {
-    const server = new Horizon.Server(HORIZON);
-    const account = await server.loadAccount(publicKey);
+    const account = await horizonServer().loadAccount(publicKey);
     const bal = account.balances.find(
       (b) =>
         (b.asset_type === 'credit_alphanum4' || b.asset_type === 'credit_alphanum12') &&
