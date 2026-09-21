@@ -22,7 +22,6 @@ import ProductsSection from '../components/ProductsSection';
 import RegulationSection from '../components/RegulationSection';
 import MervalLogosSection from '../components/MervalLogosSection';
 import LiquidityFirstBanner from '../components/LiquidityFirstBanner';
-import ContractInspectorBanner from '../components/ContractInspectorBanner';
 import PartnersShowcase from '../components/PartnersShowcase';
 import IssuerCtaBanner from '../components/IssuerCtaBanner';
 import MoreThanRwaSection from '../components/MoreThanRwaSection';
@@ -218,7 +217,6 @@ export default function HomePage() {
       </section>
 
       <LiquidityFirstBanner />
-      <ContractInspectorBanner />
 
       <section className="space-y-5 sm:space-y-6">
         <h2 className="font-section text-2xl sm:text-3xl font-extrabold">{t('home.soon')}</h2>

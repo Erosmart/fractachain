@@ -200,11 +200,6 @@ const es = {
     },
     scf: 'Diseñado bajo el Argentina Builder Challenge.',
   },
-  contracts: {
-    kicker: 'On-chain',
-    title: 'Contratos on-chain',
-    lead: 'Interfaz pública de cada wasm. Hashes reproducibles.',
-  },
   auth: {
     alreadyIn: 'Ya estás adentro',
     continue: 'Continuar',
@@ -561,11 +556,6 @@ const en: Messages = {
       ],
     },
     scf: 'Built under the Argentina Builder Challenge.',
-  },
-  contracts: {
-    kicker: 'On-chain',
-    title: 'On-chain contracts',
-    lead: 'Public interface of each wasm. Reproducible hashes.',
   },
   auth: {
     alreadyIn: 'You are already in',
