@@ -35,6 +35,7 @@ interface AuthContextType {
   isLoading: boolean;
   revealedSecret: string | null;
   loginWithGoogle: () => Promise<User>;
+  loginWithWallet: () => Promise<User>;
   loginWithEmail: (email: string, password: string, name?: string) => Promise<User>;
   chooseCustody: (mode: 'CUSTODIAL' | 'SELF') => Promise<void>;
   submitKyc: (payload: { legalName: string; cuit: string; selfieDataUrl: string }) => Promise<void>;
@@ -53,6 +54,9 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   revealedSecret: null,
   loginWithGoogle: async () => {
+    throw new Error('no session');
+  },
+  loginWithWallet: async () => {
     throw new Error('no session');
   },
   loginWithEmail: async () => {
@@ -168,6 +172,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       const data = await res.json();
       if (!data.success || !data.user) throw new Error(data.message || 'Login falló');
+      const u = normalize(data.user);
+      applySession(data.token, data.user);
+      return u;
+    } catch (err: any) {
+      if (err?.name === 'TypeError' || /failed to fetch/i.test(err?.message || '')) {
+        throw new Error('No se pudo conectar al backend. Probá recargar; el API tiene que estar en el puerto 4000.');
+      }
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithWallet = async () => {
+    setIsLoading(true);
+    try {
+      const { freighterLoginPayload } = await import('../lib/freighter');
+      const payload = await freighterLoginPayload();
+      const res = await fetch(`${API_BASE_URL}/api/auth/freighter`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.user) throw new Error(data.message || 'No se pudo entrar con la wallet');
       const u = normalize(data.user);
       applySession(data.token, data.user);
       return u;
@@ -302,6 +331,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         revealedSecret,
         loginWithGoogle,
+        loginWithWallet,
         loginWithEmail,
         chooseCustody,
         submitKyc,

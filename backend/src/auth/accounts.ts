@@ -291,6 +291,39 @@ export function upsertLogin(payload: {
   };
 }
 
+export function upsertWalletLogin(publicKey: string) {
+  const email = `wallet-${publicKey.toLowerCase()}@fractachain`;
+  let account = [...accounts.values()].find((a) => a.email === email);
+  const now = new Date().toISOString();
+
+  if (!account) {
+    account = {
+      id: `usr_${crypto.randomBytes(6).toString('hex')}`,
+      email,
+      name: `Wallet ${publicKey.slice(0, 6)}…${publicKey.slice(-4)}`,
+      avatar: '',
+      custodyMode: 'SELF',
+      publicKey,
+      kycStatus: process.env.HACKATHON_DEMO === 'true' ? 'APPROVED' : 'UNREGISTERED',
+      holdings: [],
+      trustlines: [],
+      cashUsdc: 50000,
+      authProvider: 'wallet',
+      createdAt: now,
+      lastLoginAt: now,
+    };
+    accounts.set(account.id, account);
+  } else {
+    account.lastLoginAt = now;
+    if (!account.publicKey) account.publicKey = publicKey;
+    if (!account.custodyMode) account.custodyMode = 'SELF';
+  }
+
+  ensureAdminAccount(account);
+  save();
+  return { token: issueToken(account.id), user: toPublic(account) };
+}
+
 function randomKeypair() {
   return createStellarKeypair();
 }

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Wallet } from 'lucide-react';
 import { useAuth, afterAuthPath } from '../../context/AuthContext';
 import { useI18n } from '../../context/I18nContext';
 import GoogleLoginButton from '../../components/GoogleLoginButton';
@@ -10,7 +11,7 @@ import WalletAddress from '../../components/WalletAddress';
 export default function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
-  const { user, loginWithEmail, isLoading, logout } = useAuth();
+  const { user, loginWithEmail, loginWithWallet, isLoading, logout } = useAuth();
   const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,6 +31,16 @@ export default function LoginInner() {
       router.push(afterAuthPath(u, params.get('next')));
     } catch (err: any) {
       setError(err.message || 'No se pudo entrar');
+    }
+  };
+
+  const handleWallet = async () => {
+    setError('');
+    try {
+      const u = await loginWithWallet();
+      router.push(afterAuthPath(u, params.get('next')));
+    } catch (err: any) {
+      setError(err.message || 'No se pudo entrar con la wallet');
     }
   };
 
@@ -66,6 +77,16 @@ export default function LoginInner() {
           className="w-full py-3"
           onSuccess={(u) => router.push(afterAuthPath(u as any, params.get('next')))}
         />
+        <button
+          type="button"
+          onClick={handleWallet}
+          disabled={isLoading}
+          className="w-full py-3 rounded-2xl border border-black/15 bg-white font-display font-bold flex items-center justify-center gap-2 hover:bg-black/[0.03] transition-colors"
+        >
+          <Wallet size={18} />
+          {isLoading ? t('auth.walletLoading') : t('auth.wallet')}
+        </button>
+        {error && <p className="text-sm text-red-700">{error}</p>}
         <p className="text-center text-xs text-neutral-500">{t('auth.orEmail')}</p>
         <form onSubmit={handleEmail} className="space-y-3">
           <input

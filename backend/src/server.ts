@@ -81,6 +81,7 @@ import {
   authenticateWithFirebase,
   getFirebaseUserByToken,
 } from './auth/firebase_auth';
+import { authenticateWithWallet } from './auth/wallet_auth';
 import {
   addTrustline,
   claimListingTokens,
@@ -219,6 +220,16 @@ app.get('/api/kyc/selfie/:id', (req: Request, res: Response) => {
   const file = readSelfie(req.params.id);
   if (!file) return res.status(404).end();
   res.sendFile(path.resolve(file));
+});
+
+// --- Wallet (Freighter) auth: firma del mensaje "fractachain-login:<ts>" ---
+app.post('/api/auth/freighter', async (req: Request, res: Response) => {
+  try {
+    const result = authenticateWithWallet(req.body);
+    res.status(result.success ? 200 : 400).json(result);
+  } catch (err: any) {
+    res.status(400).json({ success: false, message: err.message });
+  }
 });
 
 // --- Firebase Authentication Routes ---
