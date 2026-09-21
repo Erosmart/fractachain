@@ -5,9 +5,9 @@ import { Building2, ArrowRight } from 'lucide-react';
 import { useI18n } from '../context/I18nContext';
 
 export default function IssuerCtaBanner() {
-  const { t } = useI18n();
+  const { messages, t } = useI18n();
   return (
-    <section className="p-5 sm:p-8 lg:p-10 rounded-2xl sm:rounded-3xl crystal-card">
+    <section className="p-5 sm:p-8 lg:p-10 rounded-2xl sm:rounded-3xl crystal-card space-y-6">
       <div className="flex flex-col lg:flex-row lg:items-center gap-5 sm:gap-6 justify-between">
         <div className="max-w-2xl space-y-3">
           <p className="font-lcd text-[11px] uppercase tracking-[0.22em] text-neutral-500">{t('issuer.kicker')}</p>
@@ -27,6 +27,17 @@ export default function IssuerCtaBanner() {
           <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
+      <ol className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        {messages.issuer.steps.map(([title, desc], i) => (
+          <li key={title} className="rounded-2xl border border-black/10 bg-white/70 p-4 space-y-1.5">
+            <span className="font-lcd text-[10px] uppercase tracking-wider text-neutral-500">
+              {String(i + 1).padStart(2, '0')}
+            </span>
+            <div className="text-sm font-display font-bold text-black">{title}</div>
+            <p className="text-xs text-neutral-600 leading-relaxed">{desc}</p>
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }

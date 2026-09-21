@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, ShoppingBasket, LineChart, Landmark } from 'lucide-react';
+import { ArrowRight, ShoppingBasket, LineChart, Landmark, Info } from 'lucide-react';
 import { useI18n } from '../context/I18nContext';
 
 const ICONS = [ShoppingBasket, LineChart, Landmark];
@@ -33,7 +33,23 @@ export default function ProductsSection() {
             </div>
             <h3 className="font-section text-xl font-extrabold text-black leading-tight">{p.title}</h3>
             <p className="font-semibold text-black">{p.lead}</p>
-            <p className="text-neutral-600 flex-1 text-sm sm:text-base">{p.body}</p>
+            <p className="text-neutral-600 flex-1 text-sm sm:text-base">
+              {p.body}{' '}
+              {p.tip && (
+                <span className="group relative inline-flex align-middle">
+                  <button
+                    type="button"
+                    aria-label={p.tip}
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-black/20 text-neutral-500 transition-colors hover:border-black/40 hover:text-black"
+                  >
+                    <Info className="h-3 w-3" />
+                  </button>
+                  <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden w-64 -translate-x-1/2 rounded-xl border border-black/10 bg-white p-3 text-left text-xs font-normal leading-snug text-neutral-700 shadow-lg group-hover:block group-focus-within:block">
+                    {p.tip}
+                  </span>
+                </span>
+              )}
+            </p>
             <Link href={HREFS[i]} className="inline-flex items-center gap-2 text-sm font-section font-bold text-black pt-2">
               {p.cta} <ArrowRight className="w-3.5 h-3.5" />
             </Link>

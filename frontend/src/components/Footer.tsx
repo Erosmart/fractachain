@@ -13,31 +13,42 @@ export default function Footer() {
   return (
     <footer className="relative z-10 border-t border-black/10 pt-8 sm:pt-14 pb-8 sm:pb-10 text-neutral-600 text-sm">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-10 mb-8 sm:mb-10">
-          <div className="space-y-4">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-8 md:gap-12 mb-8 sm:mb-10">
+          <div className="space-y-4 max-w-sm shrink-0">
             <BrandMark />
-            <p className="text-neutral-600 text-sm leading-relaxed max-w-sm">
+            <p className="text-neutral-600 text-sm leading-relaxed">
               {t('footer.blurb')} <strong className="text-black">Stellar</strong>.
             </p>
           </div>
-          <div>
-            <h4 className="font-display font-extrabold text-black text-xs tracking-wider uppercase mb-3">{t('footer.markets')}</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/market" className="hover:text-black">{t('nav.market')}</Link></li>
-              <li><Link href="/stocks" className="hover:text-black">{t('footer.stocks')}</Link></li>
-              <li><Link href="/forwards" className="hover:text-black">{t('nav.forwards')}</Link></li>
-              <li><Link href="/warrants" className="hover:text-black">{t('nav.warrants')}</Link></li>
-            </ul>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-8">
+            <div>
+              <h4 className="font-display font-extrabold text-black text-xs tracking-wider uppercase mb-3">{t('footer.markets')}</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/market" className="hover:text-black">{t('nav.market')}</Link></li>
+                <li><Link href="/stocks" className="hover:text-black">{t('footer.stocks')}</Link></li>
+                <li><Link href="/forwards" className="hover:text-black">{t('nav.forwards')}</Link></li>
+                <li><Link href="/warrants" className="hover:text-black">{t('nav.warrants')}</Link></li>
+                <li><Link href="/orderbook" className="hover:text-black">{t('nav.orderbook')}</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-display font-extrabold text-black text-xs tracking-wider uppercase mb-3">{t('footer.platform')}</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/dashboard" className="hover:text-black">{t('nav.portfolio')}</Link></li>
+                <li><Link href="/wallet" className="hover:text-black">{t('nav.wallet')}</Link></li>
+                <li><Link href="/login" className="hover:text-black">{t('nav.login')}</Link></li>
+              </ul>
+            </div>
+            {user?.isAdmin && (
+            <div>
+              <h4 className="font-display font-extrabold text-black text-xs tracking-wider uppercase mb-3">Admin</h4>
+              <ul className="space-y-2 text-sm">
+                <li><Link href="/admin/issuance" className="hover:text-black">{t('nav.issuance')}</Link></li>
+                <li><Link href="/admin/kyc" className="hover:text-black">{t('nav.kyc')}</Link></li>
+              </ul>
+            </div>
+            )}
           </div>
-          {user?.isAdmin && (
-          <div>
-            <h4 className="font-display font-extrabold text-black text-xs tracking-wider uppercase mb-3">Admin</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/admin/issuance" className="hover:text-black">{t('nav.issuance')}</Link></li>
-              <li><Link href="/admin/kyc" className="hover:text-black">{t('nav.kyc')}</Link></li>
-            </ul>
-          </div>
-          )}
         </div>
         <div className="p-4 rounded-2xl crystal-card mb-8">
           <div className="flex items-center gap-2 text-black font-display font-bold text-xs uppercase tracking-wider">

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Landmark, ShieldCheck, Zap, Globe, Coins, Building2, ExternalLink } from 'lucide-react';
+import { Landmark, ShieldCheck, Zap, Globe, Coins, Building2, ExternalLink, Wallet } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import { partnerSlug } from '../lib/brands';
 import { useI18n } from '../context/I18nContext';
@@ -75,10 +75,52 @@ const PARTNERS: Partner[] = [
 ];
 
 export default function PartnersShowcase() {
-  const { t } = useI18n();
+  const { messages, t } = useI18n();
+  const funding = messages.partners.funding;
+  const fundingLogos = [
+    <BrandLogo
+      key="alfred"
+      slug="alfred-pay"
+      alt="Alfred Pay"
+      className="h-7 w-auto max-h-7 max-w-[6rem] object-contain object-left"
+      fallback={<span className="text-xs font-display font-bold text-black">Alfred Pay</span>}
+    />,
+    <BrandLogo
+      key="moneygram"
+      slug="moneygram"
+      alt="MoneyGram"
+      className="h-7 w-auto max-h-7 max-w-[6rem] object-contain object-left"
+      fallback={<span className="text-xs font-display font-bold text-black">MoneyGram</span>}
+    />,
+    <span key="wallet" className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-black/10 bg-white/80">
+      <Wallet className="h-4 w-4 text-[#4ea743]" />
+    </span>,
+  ];
   return (
     <section className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <h2 className="font-section text-3xl font-extrabold text-black">{funding.title}</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {funding.items.map((item, i) => (
+            <div key={item.title} className="p-5 rounded-2xl crystal-card space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                {fundingLogos[i]}
+                <span className="text-[10px] font-lcd text-neutral-500 bg-white/80 px-2 py-0.5 rounded border border-black/10 shrink-0">
+                  {item.tag}
+                </span>
+              </div>
+              <div>
+                <div className="text-sm font-display font-bold text-black">{item.title}</div>
+                <p className="text-xs text-neutral-600 mt-1 leading-relaxed">{item.body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pt-4">
         <div className="space-y-1">
           <div className="inline-flex items-center gap-2 text-xs font-display font-bold text-neutral-500 uppercase tracking-wider">
             <Building2 className="w-4 h-4" />

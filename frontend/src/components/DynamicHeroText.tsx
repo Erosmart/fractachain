@@ -24,7 +24,7 @@ export default function DynamicHeroText() {
 
   return (
     <div className="flex flex-col items-center justify-center gap-3 w-full px-1">
-      <h1 className="flex flex-wrap items-baseline justify-center gap-x-[0.28em] gap-y-0 text-[1.85rem] sm:text-5xl xl:text-[3.35rem] font-extrabold tracking-tight text-black leading-[1.15] text-center max-w-full">
+      <h1 className="flex flex-wrap items-baseline justify-center gap-x-[0.28em] gap-y-0 text-[2.15rem] sm:text-[3.45rem] xl:text-[3.9rem] font-extrabold tracking-tight text-black leading-[1.15] text-center max-w-full">
         <span className="font-display">{messages.hero.invert}</span>
         <span
           className={`hero-lcd text-[1.02em] sm:text-[1.04em] text-left transition-all duration-500 ease-out ${
@@ -35,10 +35,10 @@ export default function DynamicHeroText() {
         </span>
       </h1>
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <span className="px-3 py-1 rounded-full text-[11px] font-medium bg-white/70 border border-black/10 text-neutral-600">
+        <span className="px-3.5 py-1 rounded-full text-xs font-medium bg-white/70 border border-black/10 text-neutral-600">
           {current.tag}
         </span>
-        <span className="px-3 py-1 rounded-full text-[11px] font-lcd border border-[#4ea743]/40 text-[#3f8f38] bg-[#eaf7e6]/90">
+        <span className="px-3.5 py-1 rounded-full text-xs font-lcd border border-[#4ea743]/40 text-[#3f8f38] bg-[#eaf7e6]/90">
           {current.yieldEst}
         </span>
       </div>
