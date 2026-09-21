@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { persistToPg } from '../data/pgstore';
 
 export type TestnetMode = 'local' | 'faucet' | 'deploy';
 
@@ -46,6 +47,7 @@ function load() {
 function save() {
   fs.mkdirSync(path.dirname(FILE), { recursive: true });
   fs.writeFileSync(FILE, JSON.stringify(config, null, 2));
+  persistToPg('testnet.json', config);
 }
 
 load();

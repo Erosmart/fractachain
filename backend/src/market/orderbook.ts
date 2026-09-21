@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { getListing, tradeableMarkets } from '../admin/listings';
+import { persistToPg } from '../data/pgstore';
 import {
   addHolding,
   cashBalance,
@@ -64,6 +65,7 @@ function load() {
 function save() {
   fs.mkdirSync(path.dirname(DATA), { recursive: true });
   fs.writeFileSync(DATA, JSON.stringify({ orders, trades }, null, 2));
+  persistToPg('orderbook.json', { orders, trades });
 }
 
 load();
