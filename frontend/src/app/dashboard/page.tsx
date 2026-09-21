@@ -36,6 +36,7 @@ type Position = {
 
 type Portfolio = {
   cashUsdc: number;
+  usdcOnChain?: number;
   positions: Position[];
   totals: {
     costBasis: number;
@@ -185,7 +186,10 @@ export default function DashboardPage() {
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-5 rounded-3xl crystal-card">
           <div className="text-xs text-neutral-500">{t('dash.cash')}</div>
-          <div className="text-2xl font-lcd font-bold">${money(Number(user?.cashUsdc || book?.cashUsdc || 0))}</div>
+          <div className="text-2xl font-lcd font-bold">${money(book?.usdcOnChain ?? 0)}</div>
+          <div className="text-[10px] text-neutral-400 mt-0.5">
+            {t('dash.cashDemo')}: ${money(Number(user?.cashUsdc || book?.cashUsdc || 0))}
+          </div>
         </div>
         <div className="p-5 rounded-3xl crystal-card">
           <div className="text-xs text-neutral-500">{t('dash.marked')}</div>
