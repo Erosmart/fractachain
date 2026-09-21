@@ -117,6 +117,8 @@ export async function buildPortfolio(accountId: string) {
         shares,
         tokens: h.tokens,
         tokensOwed: h.tokensOwed || 0,
+        tokensOnChain: h.tokensOnChain || 0,
+        sdex: listing ? sdexAvailable(listing) : false,
         costBasis,
         marketPrice: quote.price,
         marketValue,

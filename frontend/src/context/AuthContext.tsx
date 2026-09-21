@@ -21,7 +21,7 @@ export interface User {
   selfieUrl?: string;
   custodialWallet?: string;
   authProvider?: string;
-  holdings?: { listingId: string; tokenTicker: string; usdcAmount: number; tokens: number; tokensOwed?: number; pendingDividendUsdc?: number; refundedAt?: string; refundHash?: string }[];
+  holdings?: { listingId: string; tokenTicker: string; usdcAmount: number; tokens: number; tokensOwed?: number; tokensOnChain?: number; pendingDividendUsdc?: number; refundedAt?: string; refundHash?: string }[];
   trustlines?: string[];
   cashUsdc?: number;
   xlmBalance?: number;
@@ -41,6 +41,7 @@ interface AuthContextType {
   submitKyc: (payload: { legalName: string; cuit: string; selfieDataUrl?: string; email?: string }) => Promise<void>;
   approveToken: (listingId: string) => Promise<void>;
   claimTokens: (listingId: string) => Promise<void>;
+  distributeTokens: (listingId: string) => Promise<any>;
   claimDividends: (listingId: string) => Promise<void>;
   finalizeOffering: (listingId: string) => Promise<any>;
   refundContribution: (listingId: string) => Promise<any>;
@@ -66,6 +67,7 @@ const AuthContext = createContext<AuthContextType>({
   submitKyc: async () => {},
   approveToken: async () => {},
   claimTokens: async () => {},
+  distributeTokens: async () => {},
   claimDividends: async () => {},
   finalizeOffering: async () => ({}),
   refundContribution: async () => ({}),
@@ -280,6 +282,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     applySession(token, data.data);
   };
 
+  const distributeTokens = async (listingId: string) => {
+    if (!token) throw new Error('Iniciá sesión');
+    const res = await fetch(`${API_BASE_URL}/api/listings/${listingId}/distribute`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'No se pudieron enviar los tokens on-chain');
+    await refreshUser();
+    return data.data;
+  };
+
   const finalizeOffering = async (listingId: string) => {
     if (!token) throw new Error('Iniciá sesión');
     const res = await fetch(`${API_BASE_URL}/api/listings/${listingId}/finalize`, {
@@ -337,6 +351,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         submitKyc,
         approveToken,
         claimTokens,
+        distributeTokens,
         claimDividends,
         finalizeOffering,
         refundContribution,

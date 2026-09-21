@@ -20,6 +20,8 @@ export interface Holding {
   tokensOwed: number;
   /** Accrued USDC from a dividend deposit, claimable by the holder. */
   pendingDividendUsdc?: number;
+  /** Tokens already paid on-ledger to the holder's trustline (SDEX listings). */
+  tokensOnChain?: number;
   /** Set after an on-chain `refund()` on a failed licitacion. */
   refundedAt?: string;
   refundHash?: string;
@@ -376,6 +378,15 @@ export function setCustody(accountId: string, mode: 'CUSTODIAL' | 'SELF', extern
   }
   save();
   return { user: toPublic(account), secretOnce: keys.secretKey };
+}
+
+export function markTokensOnChain(accountId: string, listingId: string, amount: number) {
+  const account = accounts.get(accountId);
+  const holding = account?.holdings?.find((h) => h.listingId === listingId);
+  if (!account || !holding) throw new Error('Tenencia no encontrada');
+  holding.tokensOnChain = (holding.tokensOnChain || 0) + amount;
+  save();
+  return toPublic(account);
 }
 
 export function submitOnboardingKyc(
