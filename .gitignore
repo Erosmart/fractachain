@@ -28,3 +28,4 @@ fractalchain.md
 # Runtime local: hashes, secretKey y fotos KYC
 backend/data/users.json
 backend/data/selfies/
+agents_secrets.json
