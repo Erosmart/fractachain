@@ -63,7 +63,7 @@ p {
   font-weight: 400;
   font-size: 1rem;
   line-height: 1.5;
-  max-width: 36rem;
+  max-width: 48rem;
 }
 
 @media (min-width: 640px) {
@@ -178,6 +178,35 @@ p {
   color: #4ea743;
   text-shadow: 0 0 12px rgba(78, 167, 67, 0.28);
   letter-spacing: -0.015em;
+}
+
+@keyframes globe-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.globe-float {
+  animation: globe-float 8s ease-in-out infinite;
+}
+
+@keyframes infinity-drift {
+  to { stroke-dashoffset: -256; }
+}
+
+.infinity-drift {
+  animation: infinity-drift 18s linear infinite;
+}
+
+.infinity-drift-rev {
+  animation: infinity-drift 22s linear infinite reverse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .globe-float,
+  .infinity-drift,
+  .infinity-drift-rev {
+    animation: none;
+  }
 }
 
 @keyframes merval-reel {

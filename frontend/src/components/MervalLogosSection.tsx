@@ -59,6 +59,9 @@ export default function MervalLogosSection() {
           {t('merval.ctaBonds')}
         </Link>
       </div>
+      <p className="text-sm text-neutral-600 max-w-3xl border-l-2 border-[#4ea743] pl-4">
+        {t('merval.stake')}
+      </p>
     </section>
   );
 }
