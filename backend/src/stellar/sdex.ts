@@ -353,10 +353,16 @@ export async function getRecentTrades(security: Asset, counter: Asset, limit = 2
     const n = Number(t.price?.n ?? 0);
     const d = Number(t.price?.d ?? 1);
     const raw = d === 0 ? 0 : n / d;
+    // `base_is_seller` dice qué cuenta entregó el asset base: con eso se
+    // resuelve quién compró el token y quién lo vendió.
+    const seller = t.base_is_seller ? t.base_account : t.counter_account;
+    const buyer = t.base_is_seller ? t.counter_account : t.base_account;
     return {
       id: String(t.id),
       price: securityIsBase ? raw : raw === 0 ? 0 : 1 / raw,
       amount: Number(securityIsBase ? t.base_amount : t.counter_amount),
+      buyer: securityIsBase ? buyer : seller,
+      seller: securityIsBase ? seller : buyer,
       createdAt: t.ledger_close_time,
     };
   });
