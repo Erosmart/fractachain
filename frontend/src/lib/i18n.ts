@@ -54,17 +54,12 @@ const es = {
     ctaMarket: 'Explorar licitaciones',
     ctaStocks: 'Acciones Merval',
     ctaOrderbook: 'Mercado secundario',
-    stats: [
-      { k: 'TVL en custodia', v: '$2.450.000', s: 'USDC · PoR' },
-      { k: 'Grano respaldado', v: '12.400 Tn', s: 'Soja, maíz, vinos' },
-      { k: 'Rendimiento medio', v: '14.2%', s: 'TNA USD' },
-      { k: 'Liquidación', v: '< 4 s', s: 'Stellar T+0' },
-    ],
     soon: 'Próximamente',
     soonItems: [
       ['Bonos soberanos', 'Bopreal / AL30 con cupón on-chain.'],
       ['ETFs sectoriales', 'Agro, energía y bancos.'],
       ['Carbono agro', 'Siembra directa verificada.'],
+      ['Tarjeta Mastercard', 'Pagá con Mastercard gastando el saldo de tus acciones.'],
     ],
     badges: [
       ['Sandbox CNV', 'RG 1150'],
@@ -421,17 +416,12 @@ const en: Messages = {
     ctaMarket: 'Explore offerings',
     ctaStocks: 'Merval stocks',
     ctaOrderbook: 'Secondary market',
-    stats: [
-      { k: 'TVL in custody', v: '$2,450,000', s: 'USDC · PoR' },
-      { k: 'Grain backed', v: '12,400 t', s: 'Soy, corn, wine' },
-      { k: 'Average yield', v: '14.2%', s: 'USD APR' },
-      { k: 'Settlement', v: '< 4 s', s: 'Stellar T+0' },
-    ],
     soon: 'Coming soon',
     soonItems: [
       ['Sovereign bonds', 'Bopreal / AL30 with on-chain coupon.'],
       ['Sector ETFs', 'Agri, energy and banks.'],
       ['Agro carbon', 'Verified no-till.'],
+      ['Mastercard card', 'Pay with Mastercard, spending from your stocks.'],
     ],
     badges: [
       ['CNV sandbox', 'RG 1150'],
