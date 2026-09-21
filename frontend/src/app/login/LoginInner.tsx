@@ -7,6 +7,7 @@ import { useAuth, afterAuthPath } from '../../context/AuthContext';
 import { useI18n } from '../../context/I18nContext';
 import GoogleLoginButton from '../../components/GoogleLoginButton';
 import WalletAddress from '../../components/WalletAddress';
+import BrandLogo from '../../components/BrandLogo';
 
 export default function LoginInner() {
   const router = useRouter();
@@ -83,7 +84,12 @@ export default function LoginInner() {
           disabled={isLoading}
           className="w-full py-3 rounded-2xl border border-black/15 bg-white font-display font-bold flex items-center justify-center gap-2 hover:bg-black/[0.03] transition-colors"
         >
-          <Wallet size={18} />
+          <BrandLogo
+            slug="freighter"
+            alt="Freighter"
+            className="h-4 w-auto object-contain"
+            fallback={<Wallet size={18} />}
+          />
           {isLoading ? t('auth.walletLoading') : t('auth.wallet')}
         </button>
         {error && <p className="text-sm text-red-700">{error}</p>}

@@ -184,6 +184,11 @@ const es = {
           title: 'Cripto directo a tu wallet',
           body: 'Enviá USDC directamente a tu wallet de Fractachain, sin pasar por ningún exchange.',
         },
+        {
+          tag: 'Partner · Stellar',
+          title: 'Cosmos Pay',
+          body: 'Pagá y fondeá en USDC desde tu wallet Cosmos Pay con un link SEP-7 de Stellar: se acredita on-chain en segundos.',
+        },
       ],
     },
     stellar: {
@@ -349,6 +354,7 @@ const es = {
     publicKey: 'Clave publica Stellar (testnet)',
     copy: 'Copiar',
     copied: 'Copiado',
+    cosmosPay: 'Fondear con Cosmos Pay (USDC)',
     balance: 'Saldo aproximado',
     noKey: 'Todavia no hay G... asociada. Completa el onboarding de wallet custodial.',
     goOnboarding: 'Ir a onboarding de wallet',
@@ -549,6 +555,11 @@ const en: Messages = {
           title: 'Crypto straight to your wallet',
           body: 'Send USDC directly to your Fractachain wallet, without going through any exchange.',
         },
+        {
+          tag: 'Partner · Stellar',
+          title: 'Cosmos Pay',
+          body: 'Pay and fund in USDC from your Cosmos Pay wallet with a Stellar SEP-7 link: credited on-chain in seconds.',
+        },
       ],
     },
     stellar: {
@@ -713,6 +724,7 @@ const en: Messages = {
     publicKey: 'Stellar public key (testnet)',
     copy: 'Copy',
     copied: 'Copied',
+    cosmosPay: 'Fund with Cosmos Pay (USDC)',
     balance: 'Approx. balance',
     noKey: 'No G... key yet. Finish custodial wallet onboarding.',
     goOnboarding: 'Go to wallet onboarding',
