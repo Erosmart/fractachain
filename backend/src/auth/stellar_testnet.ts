@@ -74,3 +74,23 @@ export async function loadNativeXlm(publicKey: string): Promise<number> {
     return 0;
   }
 }
+
+export async function loadAssetBalance(
+  publicKey: string,
+  code: string,
+  issuer: string,
+): Promise<number> {
+  try {
+    const server = new Horizon.Server(HORIZON);
+    const account = await server.loadAccount(publicKey);
+    const bal = account.balances.find(
+      (b) =>
+        (b.asset_type === 'credit_alphanum4' || b.asset_type === 'credit_alphanum12') &&
+        b.asset_code === code &&
+        b.asset_issuer === issuer,
+    );
+    return bal ? Number(bal.balance) : 0;
+  } catch {
+    return 0;
+  }
+}

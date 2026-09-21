@@ -12,6 +12,10 @@ import { getBook } from './orderbook';
 import { counterAsset, listingAsset, sdexAvailable } from './sdex_book';
 import { getOrderBook, getRecentTrades } from '../stellar/sdex';
 import { listDividends } from './dividends';
+import { loadAssetBalance } from '../auth/stellar_testnet';
+
+const USDC_ISSUER =
+  process.env.STELLAR_USDC_ISSUER || 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
 
 export type PriceSource = 'sdex_last' | 'sdex_mid' | 'sandbox_last' | 'ipo';
 
@@ -145,8 +149,13 @@ export async function buildPortfolio(accountId: string) {
   const pendingDividends = positions.reduce((s, p) => s + p.pendingDividendUsdc, 0);
   const pnl = Math.round((marketValue - costBasis) * 1e6) / 1e6;
 
+  const usdcOnChain = account.publicKey
+    ? await loadAssetBalance(account.publicKey, 'USDC', USDC_ISSUER)
+    : 0;
+
   return {
     cashUsdc: account.cashUsdc,
+    usdcOnChain,
     positions,
     totals: {
       costBasis: Math.round(costBasis * 1e6) / 1e6,
