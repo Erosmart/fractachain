@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { KeyRound, Landmark, Wallet } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useI18n } from '../../../context/I18nContext';
+import BrandLogo from '../../../components/BrandLogo';
 
 export default function WalletOnboardingPage() {
   const { user, chooseCustody, revealedSecret, isLoading } = useAuth();
@@ -87,7 +88,12 @@ export default function WalletOnboardingPage() {
           onClick={pickFreighter}
           className="p-6 rounded-3xl crystal-card text-left space-y-3 hover:border-black/20"
         >
-          <Wallet className="w-7 h-7" />
+          <BrandLogo
+            slug="freighter"
+            alt="Freighter"
+            className="h-7 w-auto object-contain object-left"
+            fallback={<Wallet className="w-7 h-7" />}
+          />
           <h2 className="font-section text-xl font-extrabold">{t('onboarding.freighterTitle')}</h2>
           <p className="text-neutral-600 text-sm">
             {t('onboarding.freighterBody')}

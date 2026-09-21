@@ -95,7 +95,13 @@ export default function PartnersShowcase() {
     <span key="wallet" className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-black/10 bg-white/80">
       <Wallet className="h-4 w-4 text-[#4ea743]" />
     </span>,
-    <span key="cosmos" className="text-xs font-display font-bold text-black">Cosmos Pay</span>,
+    <BrandLogo
+      key="cosmos"
+      slug="cosmos-pay"
+      alt="Cosmos Pay"
+      className="h-7 w-auto max-h-7 max-w-[6rem] object-contain object-left"
+      fallback={<span className="text-xs font-display font-bold text-black">Cosmos Pay</span>}
+    />,
   ];
   return (
     <section className="space-y-6">
