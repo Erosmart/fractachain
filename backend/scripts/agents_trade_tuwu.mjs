@@ -41,6 +41,7 @@ const N_AGENTS = Number(process.env.AGENTS || 6);
 const ROUNDS = Number(process.env.ROUNDS || 16);
 const START_PRICE = Number(process.env.PRICE || 10);
 const VOL = Number(process.env.VOL || 0.06); // drift máximo por ronda
+const BULL_BIAS = Number(process.env.BULL_BIAS || 0.5); // prob. de que gane el bando bull
 const TUWU_PER_AGENT = 8;
 const USDC_AMMO_XLM = 60; // XLM que cada agente swapea a USDC para comprar
 
@@ -175,41 +176,51 @@ async function setup(agents, issuer, TUWU, USDC) {
 async function trade(agents, TUWU, USDC) {
   let mid = START_PRICE;
   let fills = 0;
-  for (let r = 0; r < ROUNDS; r++) {
-    // caminata: precio de la ronda alrededor del anterior
-    mid = Math.max(0.5, mid * (1 + rnd(-VOL, VOL)));
-    const price = mid.toFixed(4);
-    const seller = agents[Math.floor(Math.random() * agents.length)];
-    let buyer = seller;
-    while (buyer === seller) buyer = agents[Math.floor(Math.random() * agents.length)];
-    const qty = rnd(0.5, 4).toFixed(3);
+  // Dos bandos: los bulls levantan asks (empujan el precio arriba), los bears
+  // pegan bids (lo tiran abajo). El cruce se ejecuta al precio de la orden
+  // resting, así que quien "ataca" decide la dirección del movimiento.
+  const bulls = agents.filter((_, i) => i % 2 === 0);
+  const bears = agents.filter((_, i) => i % 2 === 1);
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
+  for (let r = 0; r < ROUNDS; r++) {
+    const qty = rnd(0.5, 4).toFixed(3);
+    const ask = Math.max(0.5, mid * (1 + rnd(0.005, VOL))).toFixed(4);
+    const bid = Math.max(0.5, mid * (1 - rnd(0.005, VOL))).toFixed(4);
+    const seller = pick(bears);
+    const buyer = pick(bulls);
     try {
-      // el comprador cruza al vendedor: ambos a `price` → trade inmediato
+      // resting orders primero: quedan en el libro si no cruzan (profundidad)
       await submit(seller.kp, [
-        Operation.manageSellOffer({
-          selling: TUWU,
-          buying: USDC,
-          amount: qty,
-          price,
-        }),
+        Operation.manageSellOffer({ selling: TUWU, buying: USDC, amount: qty, price: ask }),
       ]);
       await submit(buyer.kp, [
-        Operation.manageBuyOffer({
-          selling: USDC,
-          buying: TUWU,
-          buyAmount: qty,
-          price,
-        }),
+        Operation.manageBuyOffer({ selling: USDC, buying: TUWU, buyAmount: qty, price: bid }),
       ]);
+
+      // el bando ganador cruza la punta contraria → trade + mid nuevo
+      if (Math.random() < BULL_BIAS) {
+        const attacker = pick(bulls);
+        await submit(attacker.kp, [
+          Operation.manageBuyOffer({ selling: USDC, buying: TUWU, buyAmount: qty, price: ask }),
+        ]);
+        mid = Number(ask);
+        console.log(`  ronda ${r + 1}: bull ${qty} @ ${ask} USDC ↑`);
+      } else {
+        const attacker = pick(bears);
+        await submit(attacker.kp, [
+          Operation.manageSellOffer({ selling: TUWU, buying: USDC, amount: qty, price: bid }),
+        ]);
+        mid = Number(bid);
+        console.log(`  ronda ${r + 1}: bear ${qty} @ ${bid} USDC ↓`);
+      }
       fills++;
-      console.log(`  ronda ${r + 1}: ${qty} ${TUWU_CODE} @ ${price} USDC (${seller.email} → ${buyer.email})`);
     } catch (e) {
       console.error(`  ronda ${r + 1} falló: ${e.message?.slice(0, 140)}`);
     }
     await sleep(Number(process.env.DELAY_MS || 1500));
   }
-  console.log(`listo — ${fills} trades on-chain en ${TUWU_CODE}/USDC`);
+  console.log(`listo — ${fills} rondas de trade on-chain en ${TUWU_CODE}/USDC`);
 }
 
 const issuerSecret = process.env.STELLAR_ISSUER_SECRET;
