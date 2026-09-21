@@ -4,7 +4,7 @@ import { isConnected, isAllowed, requestAccess, getAddress, signMessage } from '
 
 export type FreighterLoginPayload = { publicKey: string; message: string; signature: string };
 
-export async function freighterLoginPayload(): Promise<FreighterLoginPayload> {
+export async function freighterAddress(): Promise<string> {
   const conn = await isConnected().catch(() => ({ isConnected: false }));
   if (!conn.isConnected) {
     throw new Error('No encontramos Freighter. Instalá la extensión desde freighter.app y recargá.');
@@ -16,7 +16,11 @@ export async function freighterLoginPayload(): Promise<FreighterLoginPayload> {
   }
   const { address, error: addrErr } = await getAddress();
   if (addrErr || !address) throw new Error(addrErr?.message || 'Freighter no devolvió tu dirección');
+  return address;
+}
 
+export async function freighterLoginPayload(): Promise<FreighterLoginPayload> {
+  const address = await freighterAddress();
   const message = `fractachain-login:${Date.now()}`;
   const res = await signMessage(message, { address });
   if (res.error) throw new Error(res.error.message || 'Freighter no firmó el mensaje');

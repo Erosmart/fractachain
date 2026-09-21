@@ -346,10 +346,18 @@ function ensureAdminAccount(account: Account) {
 for (const existing of accounts.values()) ensureAdminAccount(existing);
 if (accounts.size) save();
 
-export function setCustody(accountId: string, mode: 'CUSTODIAL' | 'SELF') {
+export function setCustody(accountId: string, mode: 'CUSTODIAL' | 'SELF', externalPublicKey?: string) {
   const account = accounts.get(accountId);
   if (!account) throw new Error('Cuenta no encontrada');
   if (account.custodyMode) {
+    return { user: toPublic(account), secretOnce: undefined as string | undefined };
+  }
+  if (mode === 'SELF' && externalPublicKey) {
+    if (!isStellarPublicKey(externalPublicKey)) throw new Error('Public key Stellar inválida');
+    account.custodyMode = 'SELF';
+    account.publicKey = externalPublicKey;
+    account.authProvider = account.authProvider || 'wallet';
+    save();
     return { user: toPublic(account), secretOnce: undefined as string | undefined };
   }
   const keys = randomKeypair();

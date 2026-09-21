@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { KeyRound, Landmark } from 'lucide-react';
+import { KeyRound, Landmark, Wallet } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useI18n } from '../../../context/I18nContext';
 
@@ -13,15 +13,28 @@ export default function WalletOnboardingPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const pick = async (mode: 'CUSTODIAL' | 'SELF') => {
+  const pick = async (mode: 'CUSTODIAL' | 'SELF', publicKey?: string) => {
     setError('');
     setBusy(true);
     try {
-      await chooseCustody(mode);
-      if (mode === 'CUSTODIAL') router.push('/onboarding/kyc');
+      await chooseCustody(mode, publicKey);
+      if (mode === 'CUSTODIAL' || publicKey) router.push('/onboarding/kyc');
     } catch (err: any) {
       setError(err.message);
     } finally {
+      setBusy(false);
+    }
+  };
+
+  const pickFreighter = async () => {
+    setError('');
+    setBusy(true);
+    try {
+      const { freighterAddress } = await import('../../../lib/freighter');
+      const address = await freighterAddress();
+      await pick('SELF', address);
+    } catch (err: any) {
+      setError(err.message);
       setBusy(false);
     }
   };
@@ -43,7 +56,7 @@ export default function WalletOnboardingPage() {
         <p className="text-neutral-600">{t('onboarding.walletLead')}</p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className="grid md:grid-cols-3 gap-4">
         <button
           type="button"
           disabled={busy || isLoading}
@@ -66,6 +79,18 @@ export default function WalletOnboardingPage() {
           <h2 className="font-section text-xl font-extrabold">{t('onboarding.selfTitle')}</h2>
           <p className="text-neutral-600 text-sm">
             {t('onboarding.selfBody')}
+          </p>
+        </button>
+        <button
+          type="button"
+          disabled={busy || isLoading}
+          onClick={pickFreighter}
+          className="p-6 rounded-3xl crystal-card text-left space-y-3 hover:border-black/20"
+        >
+          <Wallet className="w-7 h-7" />
+          <h2 className="font-section text-xl font-extrabold">{t('onboarding.freighterTitle')}</h2>
+          <p className="text-neutral-600 text-sm">
+            {t('onboarding.freighterBody')}
           </p>
         </button>
       </div>

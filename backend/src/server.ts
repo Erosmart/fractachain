@@ -179,11 +179,14 @@ app.post('/api/auth/wallet', async (req: Request, res: Response) => {
   const account = getAccountByToken(req.headers.authorization);
   if (!account) return res.status(401).json({ success: false, message: 'No autenticado' });
   try {
-    const { mode } = req.body as { mode: 'CUSTODIAL' | 'SELF' };
+    const { mode, publicKey } = req.body as { mode: 'CUSTODIAL' | 'SELF'; publicKey?: string };
     if (mode !== 'CUSTODIAL' && mode !== 'SELF') {
       return res.status(400).json({ success: false, message: 'Modo inválido' });
     }
-    const result = setCustody(account.id, mode);
+    if (publicKey && mode !== 'SELF') {
+      return res.status(400).json({ success: false, message: 'publicKey solo aplica a SELF' });
+    }
+    const result = setCustody(account.id, mode, publicKey);
     const user = (await hydrateTestnetWallet(account.id)) || result.user;
     res.json({ success: true, user, secretOnce: result.secretOnce });
   } catch (err: any) {
