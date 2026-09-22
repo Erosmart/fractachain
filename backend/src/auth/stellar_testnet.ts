@@ -1,8 +1,12 @@
 import { Horizon, Keypair, StrKey } from '@stellar/stellar-sdk';
 import { spawn } from 'child_process';
+import { getTestnetConfig } from '../admin/testnet';
 
 const FRIENDBOT = process.env.STELLAR_FRIENDBOT_URL || 'https://friendbot.stellar.org';
-const HORIZON = process.env.STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org';
+
+function horizonUrl() {
+  return process.env.STELLAR_HORIZON_URL || getTestnetConfig().horizonUrl;
+}
 
 export function isStellarPublicKey(pk?: string) {
   if (!pk) return false;
@@ -21,7 +25,7 @@ export function createStellarKeypair() {
 export async function fundFriendbot(publicKey: string) {
   const urls = [
     `${FRIENDBOT}/?addr=${encodeURIComponent(publicKey)}`,
-    `${HORIZON}/friendbot?addr=${encodeURIComponent(publicKey)}`,
+    `${horizonUrl()}/friendbot?addr=${encodeURIComponent(publicKey)}`,
   ];
   for (const url of urls) {
     const ctrl = new AbortController();
@@ -65,9 +69,14 @@ function fundFriendbotCurl(url: string): Promise<{ funded: boolean; already: boo
 }
 
 let horizon: Horizon.Server | null = null;
+let horizonBound = '';
 
 function horizonServer() {
-  if (!horizon) horizon = new Horizon.Server(HORIZON);
+  const url = horizonUrl();
+  if (!horizon || horizonBound !== url) {
+    horizon = new Horizon.Server(url);
+    horizonBound = url;
+  }
   return horizon;
 }
 

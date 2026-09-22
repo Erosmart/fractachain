@@ -81,23 +81,3 @@ export function bearerHeaders(token?: string | null): HeadersInit {
   if (!token) return {};
   return { Authorization: `Bearer ${token}` };
 }
-
-export async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  try {
-    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options?.headers || {}),
-      },
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: 'Error en la petición' }));
-      throw new Error(err.message || `HTTP ${res.status}`);
-    }
-    return (await res.json()) as T;
-  } catch (error: any) {
-    console.warn(`API call failed for ${endpoint}:`, error.message);
-    throw error;
-  }
-}

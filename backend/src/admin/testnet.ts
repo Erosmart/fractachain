@@ -24,7 +24,7 @@ const DEFAULTS: TestnetConfig = {
   horizonUrl: 'https://horizon-testnet.stellar.org',
   rpcUrl: 'https://soroban-testnet.stellar.org',
   networkPassphrase: 'Test SDF Network ; September 2015',
-  notes: 'Modo elegido: testnet completo. Friendbot fondea XLM. El deploy de contratos WASM se hace en un paso siguiente.',
+  notes: 'Testnet. Friendbot fondea XLM. Los IDs públicos de contratos están en deployments/testnet.json.',
   settlePolicy: 'ON_MIN',
   settleAt: undefined,
   updatedAt: new Date().toISOString(),

@@ -17,8 +17,7 @@ node_modules/
 deployments/wasm/
 
 # Agent / graph cache
-graphify-out/cache/
-**/graphify-out/cache/
+graphify-out/
 *.tsbuildinfo
 
 # Documento que no se publica
