@@ -345,18 +345,26 @@ export function invalidateSdexReads() {
 
 const inflightReads = new Map<string, Promise<unknown>>();
 
-function cached<T>(map: Map<string, CacheEntry<T>>, key: string, produce: () => Promise<T>): Promise<T> {
+function cached<T>(
+  namespace: string,
+  map: Map<string, CacheEntry<T>>,
+  key: string,
+  produce: () => Promise<T>,
+): Promise<T> {
   const hit = map.get(key);
   if (hit && Date.now() - hit.at < READ_TTL_MS) return Promise.resolve(hit.value);
-  const pending = inflightReads.get(key) as Promise<T> | undefined;
+  // Book and trades share the pair key and are fetched together. The in-flight
+  // map has to keep them apart, or the trades call receives the order book.
+  const flightKey = `${namespace}:${key}`;
+  const pending = inflightReads.get(flightKey) as Promise<T> | undefined;
   if (pending) return pending;
   const next = produce()
     .then((value) => {
       map.set(key, { at: Date.now(), value });
       return value;
     })
-    .finally(() => inflightReads.delete(key));
-  inflightReads.set(key, next);
+    .finally(() => inflightReads.delete(flightKey));
+  inflightReads.set(flightKey, next);
   return next;
 }
 
@@ -365,7 +373,7 @@ export async function getOrderBook(
   counter: Asset,
   limit = 20,
 ): Promise<OrderBook> {
-  return cached(orderBookCache, pairKey(security, counter, String(limit)), () => fetchOrderBook(security, counter, limit));
+  return cached('book', orderBookCache, pairKey(security, counter, String(limit)), () => fetchOrderBook(security, counter, limit));
 }
 
 async function fetchOrderBook(security: Asset, counter: Asset, limit: number): Promise<OrderBook> {
@@ -405,7 +413,7 @@ async function fetchOrderBook(security: Asset, counter: Asset, limit: number): P
  * in the counter asset, matching the order book and the order form.
  */
 export async function getRecentTrades(security: Asset, counter: Asset, limit = 20) {
-  return cached(tradesCache, pairKey(security, counter, String(limit)), () => fetchRecentTrades(security, counter, limit));
+  return cached('trades', tradesCache, pairKey(security, counter, String(limit)), () => fetchRecentTrades(security, counter, limit));
 }
 
 async function fetchRecentTrades(security: Asset, counter: Asset, limit: number) {

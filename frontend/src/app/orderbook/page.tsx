@@ -100,7 +100,7 @@ function fromSdex(d: any): Book {
     spread: d.spread,
     asks: level(d.asks || []),
     bids: level(d.bids || []),
-    trades: d.trades || [],
+    trades: Array.isArray(d.trades) ? d.trades : [],
     myOrders,
     venue: 'sdex',
     authorized: d.authorized,
@@ -175,7 +175,13 @@ function OrderbookInner() {
     const local = await fetch(`${API_BASE_URL}/api/orderbook/${id}`, { headers: auth })
       .then((r) => r.json())
       .catch(() => null);
-    if (local?.success) setBook({ ...local.data, venue: 'sandbox' });
+    if (local?.success) {
+      setBook({
+        ...local.data,
+        trades: Array.isArray(local.data?.trades) ? local.data.trades : [],
+        venue: 'sandbox',
+      });
+    }
   };
 
   useEffect(() => {
@@ -265,7 +271,11 @@ function OrderbookInner() {
         setBook(fromSdex(json.data.book));
         setNotice(`Orden enviada al DEX de Stellar. Hash ${String(json.data.hash).slice(0, 12)}…`);
       } else {
-        setBook({ ...json.data.book, venue: 'sandbox' });
+        setBook({
+          ...json.data.book,
+          trades: Array.isArray(json.data.book?.trades) ? json.data.book.trades : [],
+          venue: 'sandbox',
+        });
         setNotice(
           json.data.order.status === 'FILLED'
             ? 'Orden ejecutada. Tokens y USDC actualizados.'
@@ -308,7 +318,11 @@ function OrderbookInner() {
     });
     const json = await res.json();
     if (json.success) {
-      setBook({ ...json.data.book, venue: 'sandbox' });
+      setBook({
+        ...json.data.book,
+        trades: Array.isArray(json.data.book?.trades) ? json.data.book.trades : [],
+        venue: 'sandbox',
+      });
       refreshUser();
     }
   };
@@ -634,7 +648,8 @@ function OrderbookInner() {
  */
 function PriceSparkline({ trades, refPrice }: { trades: { price: number; createdAt: string }[]; refPrice: number }) {
   const points = useMemo(() => {
-    const sorted = [...(trades || [])].sort(
+    const rows = Array.isArray(trades) ? trades : [];
+    const sorted = [...rows].sort(
       (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     );
     const prices = [refPrice, ...sorted.map((t) => t.price)];
