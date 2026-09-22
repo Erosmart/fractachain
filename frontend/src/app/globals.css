@@ -208,6 +208,10 @@ p {
   .infinity-drift-rev {
     animation: none;
   }
+
+  .hero-slot {
+    transition: none;
+  }
 }
 
 @keyframes merval-reel {
