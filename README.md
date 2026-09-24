@@ -105,6 +105,12 @@ On-chain = contrato `C…` válido y `paymentKind === 'XLM'`.
 | Freighter para aportar | Fuera del happy path |
 | `HACKATHON_DEMO=true` | KYC auto. No es compliance real |
 
+### IDs de contrato en testnet
+
+Los `C…` de abajo son los **contract IDs** de los contratos Soroban desplegados en Stellar testnet, tal como quedan en `deployments/testnet.json`. Son instancias compartidas del proyecto: no se deploya un contrato por empresa, así que todos los listings de `backend/data/listings.json` referencian el mismo `stockContract` (`stockVault`) y la misma `licitacionContract` (`licitacion`).
+
+Que el listing tenga un contract ID no significa que opere on-chain: el backend solo invoca al contrato cuando el ID es válido **y** el listing paga en XLM (`isOnChainListing` en `backend/src/admin/listings.ts`). Con `paymentKind: 'USDC'` los montos (`raisedUsdc`, `tokensMinted`, `cvDepositHash`) son sandbox del backend, no estado del contrato.
+
 Testnet (2026-09-20): [factory](https://stellar.expert/explorer/testnet/contract/CDF7VE4JMPQYR6Q76MYFEEG64CZIZLOJLGSUQN5NXTZSP3U5JTWHNJGW) · [licitación](https://stellar.expert/explorer/testnet/contract/CDHKGEJNNFYKXW4XOEDXXE5LOF5HCYVORR2JT7AOK2FAN5B6I65X7JLM) · [stock](https://stellar.expert/explorer/testnet/contract/CD3MZ34ER36Z7WR66YIXH6MIYMY4OGFYVN3S5P7NNXGT6DZXVJUBDGL5) · [forward](https://stellar.expert/explorer/testnet/contract/CDAVRDFDCACOHNXXIGQGEDSVDANQ5EJISUPVMSYIDUPWRNEA4JY5AANU) · [warrant](https://stellar.expert/explorer/testnet/contract/CCC4AE7Y6VGEYCPP45Q7EUQGLHFHJNZVUV6GGAPYGMYLEAXYGHOUE2QA).
 
 Pitch en 5 pasos: register → wallet custodial → KYC → `/market` aportar XLM (`contribute`) → `finalize` / `refund`. Guion: `HACKATHON.md`, `RUNBOOK_DEMO_P0.md`.
