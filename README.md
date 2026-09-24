@@ -5,11 +5,25 @@
 [![Next.js](https://img.shields.io/badge/Next.js_14-000000?style=flat&logo=nextdotjs&logoColor=white)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 
-Riel de activos reales tokenizados (RWA) sobre Stellar / Soroban 28, para Argentina: financiamiento agropecuario, warrants, forwards y acciones del Merval.
+El primer mercado regulado de Activos del Mundo Real (RWA), sobre Stellar / Soroban 28: financiamiento para empresas y productores, warrants, forwards y acciones del Merval.
 
 [github.com/Erosmart/fractachain](https://github.com/Erosmart/fractachain) · Argentina Builder Challenge · Stellar. Código source-available (`LICENSE`).
 
-La home (`/`) es el pitch: "el primer mercado crypto RWA regulado", licitaciones, forwards, Merval, stake y on-ramps. Este README dice qué de eso corre de verdad en testnet.
+La home (`/`) es el pitch. Este README dice qué de eso corre de verdad en testnet. Pitch completo: [`pitch/`](pitch/README.md).
+
+---
+
+## 0. Visión
+
+Queremos ser el primer mercado regulado de Activos del Mundo Real. La solución se centra en darles a empresas y productores acceso a financiamiento —emitir un título de deuda o vender sus acciones en el mercado— a un costo mucho más bajo que en el mercado tradicional.
+
+Soluciones de tokenización puede haber muchas, pero tokenización sin un mercado con liquidez no sirve. Con las herramientas de on-ramping y off-ramping que ya funcionan en Stellar, las empresas quedan expuestas a inversores de más de 90 países bajo el mismo marco jurídico que un inversor en Argentina, con operación y liquidez inmediata las 24 horas.
+
+Aplicaciones de RWA puede haber miles, pero si son cerradas, donde solo comercia un grupo chico, es lo mismo de siempre. En FractaChain, cuando una empresa hace su oferta pública de acciones pueden participar todos: desde inversores pequeños hasta grandes instituciones financieras.
+
+La regulación actual ya permite lo anterior, y sería un orgullo ser el puente que conecte la economía de Argentina con el capital financiero global: que las empresas comercien sus materias primas, que se compren y vendan acciones del mercado tradicional las 24 horas, y que instituciones e inversores minoristas puedan hacer carry trade con la misma facilidad.
+
+En definitiva, llevar lo mejor del mercado tradicional (seguridad jurídica, custodia y reglas claras) a las finanzas descentralizadas: acceso global, liquidez inmediata y bajos costos. No es una idea a futuro: es lo que ya estamos construyendo en Stellar.
 
 ---
 
