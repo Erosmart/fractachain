@@ -1,5 +1,3 @@
-'use client';
-
 import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -26,10 +24,10 @@ import LiquidityFirstBanner from '../components/LiquidityFirstBanner';
 import PartnersShowcase from '../components/PartnersShowcase';
 import IssuerCtaBanner from '../components/IssuerCtaBanner';
 import MoreThanRwaSection from '../components/MoreThanRwaSection';
-import { useI18n } from '../context/I18nContext';
+import { getServerMessages } from '../lib/i18n-server';
 
 export default function HomePage() {
-  const { messages, t } = useI18n();
+  const messages = getServerMessages();
 
   const soonIcons: LucideIcon[] = [Landmark, Layers, Globe2, CreditCard];
   const badgeIcons: LucideIcon[] = [ShieldCheck, Lock, Zap, CheckCircle2];
@@ -43,22 +41,22 @@ export default function HomePage() {
         <div className="relative z-10 flex w-full flex-col items-center gap-4 sm:gap-5">
           <div className="inline-flex max-w-full flex-wrap items-center justify-center gap-2 px-4 py-2 rounded-full bg-white/70 border border-black/10 text-neutral-600 text-xs font-display font-bold uppercase tracking-[0.14em]">
             <Sparkles className="w-4 h-4 shrink-0" />
-            <span className="text-left">{t('home.badge')}</span>
+            <span className="text-left">{messages.home.badge}</span>
           </div>
           <DynamicHeroText />
           <p className="hero-lead text-neutral-600 mx-auto px-1 text-[0.95rem] sm:text-[1.2rem] leading-relaxed">
             <span className="block">
-              {t('home.leadBefore')} <strong className="text-black font-bold">{t('home.leadStrong')}</strong>{' '}
-              {t('home.leadL1End')}
+              {messages.home.leadBefore} <strong className="text-black font-bold">{messages.home.leadStrong}</strong>{' '}
+              {messages.home.leadL1End}
             </span>
             <span className="block">
-              {t('home.leadL2Pre')}
-              <strong className="text-black font-semibold">{t('home.leadStrongCap')}</strong>
-              {t('home.leadL2Post')}
+              {messages.home.leadL2Pre}
+              <strong className="text-black font-semibold">{messages.home.leadStrongCap}</strong>
+              {messages.home.leadL2Post}
             </span>
             <span className="block">
-              {t('home.leadL3Pre')}
-              <strong className="text-black font-semibold">{t('home.leadStrong90')}</strong>
+              {messages.home.leadL3Pre}
+              <strong className="text-black font-semibold">{messages.home.leadStrong90}</strong>
             </span>
           </p>
           <div className="flex w-full flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap items-stretch sm:items-center justify-center gap-2.5 pt-1 px-1">
@@ -67,21 +65,21 @@ export default function HomePage() {
               className="w-full sm:w-auto justify-center px-7 py-3.5 rounded-2xl bg-black text-white font-display font-bold text-[0.95rem] flex items-center gap-2"
             >
               <Layers className="w-4 h-4 shrink-0" />
-              {t('home.ctaMarket')}
+              {messages.home.ctaMarket}
             </Link>
             <Link
               href="/stocks"
               className="w-full sm:w-auto justify-center px-7 py-3.5 rounded-2xl bg-white/80 border border-black/10 text-black font-display font-bold text-[0.95rem] flex items-center gap-2"
             >
               <TrendingUp className="w-4 h-4 shrink-0" />
-              {t('home.ctaStocks')}
+              {messages.home.ctaStocks}
             </Link>
             <Link
               href="/orderbook"
               className="w-full sm:w-auto justify-center px-7 py-3.5 rounded-2xl bg-white/60 border border-black/10 text-black font-display font-semibold text-[0.95rem] flex items-center gap-2"
             >
               <Droplets className="w-4 h-4 shrink-0" />
-              {t('home.ctaOrderbook')}
+              {messages.home.ctaOrderbook}
             </Link>
           </div>
         </div>
@@ -129,7 +127,7 @@ export default function HomePage() {
       <LiquidityFirstBanner />
 
       <section className="space-y-5 sm:space-y-6">
-        <h2 className="font-section text-2xl sm:text-3xl font-extrabold">{t('home.soon')}</h2>
+        <h2 className="font-section text-2xl sm:text-3xl font-extrabold">{messages.home.soon}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {messages.home.soonItems.map(([title, desc], i) => {
             const Icon = soonIcons[i];

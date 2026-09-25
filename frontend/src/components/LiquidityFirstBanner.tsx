@@ -1,12 +1,10 @@
-'use client';
-
 import React from 'react';
 import Link from 'next/link';
 import { Zap, Droplets, ShieldCheck, ArrowRight, Activity, Sparkles } from 'lucide-react';
-import { useI18n } from '../context/I18nContext';
+import { getServerMessages } from '../lib/i18n-server';
 
 export default function LiquidityFirstBanner() {
-  const { t, messages } = useI18n();
+  const messages = getServerMessages();
   const cards = [
     [Zap, messages.liquidity.cards[0][0], messages.liquidity.cards[0][1]],
     [Activity, messages.liquidity.cards[1][0], messages.liquidity.cards[1][1]],
@@ -20,17 +18,17 @@ export default function LiquidityFirstBanner() {
         <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-black/10 text-neutral-600 text-xs font-section font-bold uppercase tracking-wider">
             <Droplets className="w-3.5 h-3.5" />
-            {t('liquidity.kicker')}
+            {messages.liquidity.kicker}
           </div>
           <div className="font-lcd text-xs text-black border border-black/10 px-3 py-1 rounded-xl bg-white/80">
             T+0 · &lt; 4s
           </div>
         </div>
         <h2 className="font-section text-2xl sm:text-3xl lg:text-4xl font-extrabold text-black leading-snug max-w-3xl">
-          {t('liquidity.title')}
+          {messages.liquidity.title}
         </h2>
         <p className="text-neutral-600 text-sm sm:text-base max-w-3xl leading-relaxed">
-          {t('liquidity.body')}
+          {messages.liquidity.body}
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
           {cards.map(([Icon, title, desc]) => (
@@ -47,10 +45,10 @@ export default function LiquidityFirstBanner() {
           </span>
           <div className="flex flex-wrap gap-2 sm:gap-3">
             <Link href="/orderbook" className="flex-1 sm:flex-none justify-center px-5 py-2.5 btn-lcd btn-lcd-solid text-xs">
-              {t('nav.orderbook')} <ArrowRight className="w-3.5 h-3.5" />
+              {messages.nav.orderbook} <ArrowRight className="w-3.5 h-3.5" />
             </Link>
             <Link href="/warrants" className="flex-1 sm:flex-none justify-center px-5 py-2.5 btn-lcd btn-lcd-ghost text-xs">
-              {t('liquidity.burst')}
+              {messages.liquidity.burst}
             </Link>
           </div>
         </div>
