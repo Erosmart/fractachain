@@ -106,6 +106,9 @@ export default function PartnersShowcase() {
       <div className="space-y-4">
         <div className="space-y-1">
           <h2 className="font-section text-3xl font-extrabold text-black">{funding.title}</h2>
+          <p className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-300/80 text-amber-900 text-xs">
+            {funding.demo}
+          </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {funding.items.map((item, i) => (

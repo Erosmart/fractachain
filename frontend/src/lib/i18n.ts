@@ -168,6 +168,7 @@ const es = {
     lead: 'Caja de Valores y BYMA, liquidados en Stellar.',
     funding: {
       title: 'Cómo ingresar dinero',
+      demo: 'Maqueta: estas rampas están en roadmap. En esta demo el fondeo real es XLM vía Friendbot o USDC directo a tu wallet.',
       items: [
         {
           tag: 'Partner · Argentina',
@@ -543,6 +544,7 @@ const en: Messages = {
     lead: 'Caja de Valores and BYMA, settled on Stellar.',
     funding: {
       title: 'How to add money',
+      demo: 'Mockup: these ramps are on the roadmap. In this demo real funding is XLM via Friendbot or USDC sent straight to your wallet.',
       items: [
         {
           tag: 'Partner · Argentina',
