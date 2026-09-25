@@ -32,7 +32,7 @@ const DEFAULT_STOCKS: StockCustody[] = [
     totalSharesInCustody: 150000,
     tokensCirculating: 150000,
     backingRatio: 1.0,
-    lastAuditTimestamp: new Date().toISOString().split('T')[0] + ' 10:00 UTC',
+    lastAuditTimestamp: '2026-09-20 10:00 UTC',
     auditor: 'PricewaterhouseCoopers (PwC) / CNV',
     priceUsd: 28.50,
     change24h: 3.2,
@@ -46,7 +46,7 @@ const DEFAULT_STOCKS: StockCustody[] = [
     totalSharesInCustody: 220000,
     tokensCirculating: 220000,
     backingRatio: 1.0,
-    lastAuditTimestamp: new Date().toISOString().split('T')[0] + ' 10:00 UTC',
+    lastAuditTimestamp: '2026-09-20 10:00 UTC',
     auditor: 'PricewaterhouseCoopers (PwC) / CNV',
     priceUsd: 41.20,
     change24h: -1.1,
@@ -60,7 +60,7 @@ const DEFAULT_STOCKS: StockCustody[] = [
     totalSharesInCustody: 85000,
     tokensCirculating: 85000,
     backingRatio: 1.0,
-    lastAuditTimestamp: new Date().toISOString().split('T')[0] + ' 10:00 UTC',
+    lastAuditTimestamp: '2026-09-20 10:00 UTC',
     auditor: 'PricewaterhouseCoopers (PwC) / CNV',
     priceUsd: 54.80,
     change24h: 1.8,
@@ -171,7 +171,7 @@ export default function StocksPage() {
           </div>
           <div className="p-3 rounded-xl bg-black/5 border border-black/8">
             <span className="text-[10px] text-neutral-500 block">Última Conciliación</span>
-            <span className="font-mono text-neutral-700">Hoy 10:00 UTC</span>
+            <span className="font-mono text-neutral-700">{selectedStock.lastAuditTimestamp || '—'}</span>
           </div>
           <div className="p-3 rounded-xl bg-black/5 border border-black/8">
             <span className="text-[10px] text-neutral-500 block">Liquidación</span>
