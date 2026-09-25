@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { StockCustody, API_BASE_URL } from '../../lib/api';
 import MockDisclaimer from '../../components/MockDisclaimer';
+import LiveContractLink from '../../components/LiveContractLink';
 import { useI18n } from '../../context/I18nContext';
 
 const DEFAULT_STOCKS: StockCustody[] = [
@@ -139,6 +140,7 @@ export default function StocksPage() {
           Opera títulos líderes del panel principal de Bolsas y Mercados Argentinos (BYMA) con respaldo real e inmovilización en subcuenta comitente de Caja de Valores S.A.
         </p>
         <MockDisclaimer product="Merval" />
+        <LiveContractLink kind="stockVault" />
       </div>
 
       {/* Proof of Reserve (PoR) Card */}

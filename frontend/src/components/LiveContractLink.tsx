@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../lib/api';
 
-export default function LiveContractLink({ kind }: { kind: 'forward' | 'warrant' }) {
+export default function LiveContractLink({ kind }: { kind: 'forward' | 'warrant' | 'stockVault' }) {
   const [id, setId] = useState<string | null>(null);
 
   useEffect(() => {
