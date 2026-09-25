@@ -1,11 +1,9 @@
-'use client';
-
 import { Globe2, ShieldCheck, Scale } from 'lucide-react';
 import BrandLogo from './BrandLogo';
-import { useI18n } from '../context/I18nContext';
+import { getServerMessages } from '../lib/i18n-server';
 
 function CnvMark() {
-  const { messages } = useI18n();
+  const messages = getServerMessages();
   return (
     <div className="flex items-center gap-3 min-w-0">
       <BrandLogo
@@ -34,7 +32,7 @@ function CnvMark() {
 }
 
 function CajaMark() {
-  const { messages } = useI18n();
+  const messages = getServerMessages();
   return (
     <div className="flex items-center gap-3 min-w-0">
       <BrandLogo
@@ -58,7 +56,7 @@ function CajaMark() {
 }
 
 export default function RegulationSection() {
-  const { messages } = useI18n();
+  const messages = getServerMessages();
   const copy = messages.regulation;
   const icons = [ShieldCheck, Globe2, Scale] as const;
 

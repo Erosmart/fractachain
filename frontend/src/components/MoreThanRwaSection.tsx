@@ -1,7 +1,5 @@
-'use client';
-
 import { CheckCircle2 } from 'lucide-react';
-import { useI18n } from '../context/I18nContext';
+import { getServerMessages } from '../lib/i18n-server';
 
 const CX = 200;
 const CY = 190;
@@ -58,7 +56,7 @@ for (let x = CX - R; x <= CX + R; x += STEP) {
 }
 
 export default function MoreThanRwaSection() {
-  const { messages } = useI18n();
+  const messages = getServerMessages();
   const copy = messages.home.moreRwa;
 
   return (

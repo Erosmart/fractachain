@@ -1,14 +1,12 @@
-'use client';
-
 import Link from 'next/link';
 import { ArrowRight, ShoppingBasket, LineChart, Landmark, Info } from 'lucide-react';
-import { useI18n } from '../context/I18nContext';
+import { getServerMessages } from '../lib/i18n-server';
 
 const ICONS = [ShoppingBasket, LineChart, Landmark];
 const HREFS = ['/forwards', '/market', '/warrants'];
 
 export default function ProductsSection() {
-  const { messages } = useI18n();
+  const messages = getServerMessages();
   const copy = messages.products;
 
   return (

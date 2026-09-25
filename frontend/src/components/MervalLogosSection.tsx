@@ -1,9 +1,7 @@
-'use client';
-
 import Link from 'next/link';
 import { MERVAL_NAMES } from '../lib/merval';
 import BrandLogo from './BrandLogo';
-import { useI18n } from '../context/I18nContext';
+import { getServerMessages } from '../lib/i18n-server';
 
 function StockCard({
   ticker,
@@ -28,20 +26,20 @@ function StockCard({
 }
 
 export default function MervalLogosSection() {
-  const { t } = useI18n();
+  const { merval } = getServerMessages();
   const loop = [...MERVAL_NAMES, ...MERVAL_NAMES];
 
   return (
     <section className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
-          <p className="font-lcd text-[11px] uppercase tracking-[0.22em] text-neutral-500">{t('merval.kicker')}</p>
+          <p className="font-lcd text-[11px] uppercase tracking-[0.22em] text-neutral-500">{merval.kicker}</p>
           <h2 className="font-section text-3xl sm:text-4xl font-extrabold text-black mt-1">
-            {t('merval.title')}
+            {merval.title}
           </h2>
         </div>
         <p className="text-sm text-neutral-600 max-w-md">
-          {t('merval.lead')}
+          {merval.lead}
         </p>
       </div>
       <div className="merval-reel">
@@ -53,14 +51,14 @@ export default function MervalLogosSection() {
       </div>
       <div className="flex flex-wrap gap-3">
         <Link href="/stocks" className="px-6 py-3.5 rounded-2xl bg-black text-white font-section font-bold text-sm">
-          {t('merval.ctaStocks')}
+          {merval.ctaStocks}
         </Link>
         <Link href="/market" className="px-6 py-3.5 rounded-2xl bg-white/80 border border-black/10 text-black font-section font-bold text-sm">
-          {t('merval.ctaBonds')}
+          {merval.ctaBonds}
         </Link>
       </div>
       <p className="text-sm text-neutral-600 max-w-3xl border-l-2 border-[#4ea743] pl-4">
-        {t('merval.stake')}
+        {merval.stake}
       </p>
     </section>
   );
