@@ -287,9 +287,15 @@ const es = {
     refundBusy: 'Reembolsando en testnet…',
     refundNotice: 'refund() envió XLM de testnet a tu wallet custodial. Hash: {hash}',
     claimHint:
-      'Las unidades RWA ya se mintearon en contribute(). Este paso las anota en el portfolio; no mueve XLM ni USDC Circle.',
+      'Las unidades RWA ya se mintearon en contribute() y se anotan solas al cierre. Este botón es sólo un reintento si algo falló.',
     payoutHint:
       'No hay un payout extra al inversor si la emisión cierra bien: el XLM va a la wallet fiduciaria en el mismo finalize().',
+    autoSettle:
+      'El cierre es automático: al llegar al hard cap o vencer el deadline el backend manda finalize() y acredita las unidades.',
+    payoutTo: 'Cobra la wallet',
+    payoutBalance: 'Saldo on-chain: {n} XLM',
+    payoutMismatch:
+      'Ojo: el contrato paga a otra wallet que la del expediente. Corregí la wallet de cobro antes del primer aporte.',
     approve: 'Aprobar recepción del token',
     claim: 'Anotar unidades RWA en el portfolio',
     kycOnly: 'Solo cuentas con KYC aprobado pueden comprar en esta licitación.',
@@ -341,6 +347,11 @@ const es = {
     receiveOnChain: 'Recibir tokens on-chain',
     refund: 'Reembolsar XLM',
     refunded: 'Reembolsado on-chain',
+    proceeds: 'Cobros de tus licitaciones',
+    proceedsLead: 'XLM que finalize() envió a tu wallet de cobro.',
+    proceedsPending: 'Todavía abierta: cobra al cerrar.',
+    xlmOnChain: 'Saldo XLM on-chain: {n}',
+    proceedsTx: 'Ver finalize() en Stellar Expert',
     closedSuccess: 'Emisión Successful · XLM pagado a la empresa',
     closedFailed: 'Emisión Failed · podés refund()',
     listed: 'Licitación abierta',
@@ -662,9 +673,15 @@ const en: Messages = {
     refundBusy: 'Refunding on testnet…',
     refundNotice: 'refund() sent testnet XLM to your custodial wallet. Hash: {hash}',
     claimHint:
-      'RWA units were minted on contribute(). This step records them in the portfolio; it does not move XLM or Circle USDC.',
+      'RWA units were minted on contribute() and are recorded automatically at close. This button is only a retry if something failed.',
     payoutHint:
       'There is no extra investor payout on success: XLM goes to the fiduciary wallet in the same finalize().',
+    autoSettle:
+      'Closing is automatic: on hard cap or deadline the backend sends finalize() and credits the units.',
+    payoutTo: 'Paid to wallet',
+    payoutBalance: 'On-chain balance: {n} XLM',
+    payoutMismatch:
+      'Heads up: the contract pays a different wallet than the dossier. Fix the payout wallet before the first contribution.',
     approve: 'Approve token receipt',
     claim: 'Record RWA units in the portfolio',
     kycOnly: 'Only KYC-approved accounts can buy in this offering.',
@@ -716,6 +733,11 @@ const en: Messages = {
     receiveOnChain: 'Receive tokens on-chain',
     refund: 'Refund XLM',
     refunded: 'Refunded on-chain',
+    proceeds: 'Proceeds from your offerings',
+    proceedsLead: 'XLM that finalize() sent to your payout wallet.',
+    proceedsPending: 'Still open: paid at close.',
+    xlmOnChain: 'On-chain XLM balance: {n}',
+    proceedsTx: 'View finalize() on Stellar Expert',
     closedSuccess: 'Successful issuance · XLM paid to the company',
     closedFailed: 'Failed issuance · you can refund()',
     listed: 'Offering open',

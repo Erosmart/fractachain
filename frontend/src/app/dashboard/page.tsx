@@ -34,9 +34,23 @@ type Position = {
   canRefund?: boolean;
 };
 
+type Proceed = {
+  listingId: string;
+  tokenTicker: string;
+  legalName: string;
+  status: string;
+  paymentKind?: string | null;
+  amount: number;
+  paidAt?: string | null;
+  finalizeHash?: string | null;
+  explorer?: string | null;
+};
+
 type Portfolio = {
   cashUsdc: number;
   usdcOnChain?: number;
+  xlmOnChain?: number;
+  proceeds?: Proceed[];
   positions: Position[];
   totals: {
     costBasis: number;
@@ -208,6 +222,44 @@ export default function DashboardPage() {
           <div className="text-xs text-neutral-500 mt-1">{t('dash.positionsCount', { n: holdings.length })}</div>
         </div>
       </div>
+
+      {(book?.proceeds?.length ?? 0) > 0 && (
+        <div className="p-5 rounded-3xl crystal-card space-y-3">
+          <div>
+            <p className="font-display font-extrabold">{t('dash.proceeds')}</p>
+            <p className="text-sm text-neutral-600 mt-0.5">{t('dash.proceedsLead')}</p>
+            <p className="text-xs text-neutral-500 mt-1">
+              {t('dash.xlmOnChain', { n: money(book?.xlmOnChain ?? 0, 4) })}
+            </p>
+          </div>
+          <div className="space-y-2">
+            {book?.proceeds?.map((p) => (
+              <div key={p.listingId} className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+                <div>
+                  <span className="font-bold">{p.tokenTicker}</span>{' '}
+                  <span className="text-neutral-600">{p.legalName}</span>
+                  {p.explorer && (
+                    <a
+                      href={p.explorer}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block text-[11px] font-mono underline break-all"
+                    >
+                      {t('dash.proceedsTx')}
+                    </a>
+                  )}
+                  {!p.finalizeHash && p.status === 'LISTED' && (
+                    <span className="block text-[11px] text-neutral-500">{t('dash.proceedsPending')}</span>
+                  )}
+                </div>
+                <div className="font-lcd font-bold">
+                  {money(p.amount, p.paymentKind === 'XLM' ? 4 : 2)} {p.paymentKind === 'XLM' ? 'XLM' : 'USDC'}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="p-5 rounded-3xl crystal-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>

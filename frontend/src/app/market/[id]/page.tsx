@@ -258,7 +258,25 @@ export default function PoolDetailPage() {
                     : t('market.closesAt', { n: formatInt(d.offeringSoftCapUsdc) })}
                 </p>
               )}
-              {xlm && <p className="text-xs text-neutral-500">{t('market.payoutHint')}</p>}
+              {xlm && (
+                <div className="space-y-1">
+                  <p className="text-xs text-neutral-500">{t('market.payoutHint')}</p>
+                  <p className="text-xs text-neutral-500">{t('market.autoSettle')}</p>
+                  {live.fiduciary && (
+                    <p className="text-[11px] font-mono break-all text-neutral-500">
+                      {t('market.payoutTo')} {live.fiduciary}
+                    </p>
+                  )}
+                  {typeof live.fiduciaryXlm === 'number' && (
+                    <p className="text-[11px] text-neutral-500">
+                      {t('market.payoutBalance', { n: live.fiduciaryXlm.toFixed(4) })}
+                    </p>
+                  )}
+                  {live.fiduciaryMismatch && (
+                    <p className="text-[11px] text-red-800 font-bold">{t('market.payoutMismatch')}</p>
+                  )}
+                </div>
+              )}
               {user?.kycStatus === 'APPROVED' && !user?.trustlines?.includes(listing.id) && (
                 <button
                   type="button"
