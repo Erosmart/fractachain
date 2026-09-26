@@ -293,6 +293,7 @@ const es = {
     autoSettle:
       'El cierre es automático: al llegar al hard cap o vencer el deadline el backend manda finalize() y acredita las unidades.',
     payoutTo: 'Cobra la wallet',
+    freighterSign: 'Abrí Freighter y firmá la transacción para completar el aporte…',
     payoutBalance: 'Saldo on-chain: {n} XLM',
     payoutMismatch:
       'Ojo: el contrato paga a otra wallet que la del expediente. Corregí la wallet de cobro antes del primer aporte.',
@@ -375,7 +376,7 @@ const es = {
     noKey: 'Todavia no hay G... asociada. Completa el onboarding de wallet custodial.',
     goOnboarding: 'Ir a onboarding de wallet',
     selfCustodyTitle: 'Self-custody / Freighter',
-    selfCustodyBody: 'Firmar contribute desde Freighter no esta en el happy path de esta demo. Usa custodial para el pitch.',
+    selfCustodyBody: 'Aporte, refund, trustline y ordenes del DEX se firman desde Freighter: el backend arma la transaccion sin firmar y tu clave nunca sale del navegador.',
     ctaInvest: 'Ir a Las Lilas',
   },
   pages: {
@@ -679,6 +680,7 @@ const en: Messages = {
     autoSettle:
       'Closing is automatic: on hard cap or deadline the backend sends finalize() and credits the units.',
     payoutTo: 'Paid to wallet',
+    freighterSign: 'Open Freighter and sign the transaction to complete the contribution…',
     payoutBalance: 'On-chain balance: {n} XLM',
     payoutMismatch:
       'Heads up: the contract pays a different wallet than the dossier. Fix the payout wallet before the first contribution.',
@@ -761,7 +763,7 @@ const en: Messages = {
     noKey: 'No G... key yet. Finish custodial wallet onboarding.',
     goOnboarding: 'Go to wallet onboarding',
     selfCustodyTitle: 'Self-custody / Freighter',
-    selfCustodyBody: 'Freighter-signed contribute is not on the happy path of this demo. Use custodial for the pitch.',
+    selfCustodyBody: 'Contribute, refund, trustline and DEX orders are signed in Freighter: the backend builds the unsigned transaction and your key never leaves the browser.',
     ctaInvest: 'Go to Las Lilas',
   },
   pages: {

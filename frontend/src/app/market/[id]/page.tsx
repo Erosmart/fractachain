@@ -8,6 +8,7 @@ import { API_BASE_URL, bearerHeaders, getApiBaseUrl } from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
 import { useI18n } from '../../../context/I18nContext';
 import { formatInt } from '../../../lib/format';
+import { isSelfCustody, signAndRelay } from '../../../lib/selfCustody';
 
 export default function PoolDetailPage() {
   const params = useParams();
@@ -55,32 +56,46 @@ export default function PoolDetailPage() {
     }
     setBusy(true);
     try {
-      const res = await fetch(`${getApiBaseUrl()}/api/listings/${poolId}/contribute`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${auth}`,
-        },
-        body: JSON.stringify({ usdcAmount: Number(amount) }),
-      });
-      const raw = await res.text();
-      let json: any = {};
-      try {
-        json = raw ? JSON.parse(raw) : {};
-      } catch {
-        throw new Error('El servidor no respondió bien. ¿Está el API en el puerto 4000?');
+      let data: any;
+      if (xlm && isSelfCustody(user)) {
+        // Wallet propia: el contrato pide la firma del inversor, así que el
+        // backend arma la invocación y Freighter la firma.
+        setNotice(t('market.freighterSign'));
+        data = await signAndRelay({
+          prepare: `/api/listings/${poolId}/contribute/prepare`,
+          submit: `/api/listings/${poolId}/contribute/submit`,
+          token: auth,
+          body: { usdcAmount: Number(amount) },
+        });
+      } else {
+        const res = await fetch(`${getApiBaseUrl()}/api/listings/${poolId}/contribute`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${auth}`,
+          },
+          body: JSON.stringify({ usdcAmount: Number(amount) }),
+        });
+        const raw = await res.text();
+        let json: any = {};
+        try {
+          json = raw ? JSON.parse(raw) : {};
+        } catch {
+          throw new Error('El servidor no respondió bien. ¿Está el API en el puerto 4000?');
+        }
+        if (!res.ok || json.success === false) {
+          throw new Error(json.message || 'No se pudo suscribir');
+        }
+        data = json.data;
       }
-      if (!res.ok || json.success === false) {
-        throw new Error(json.message || 'No se pudo suscribir');
-      }
-      setListing(json.data);
+      setListing(data);
       await refreshUser();
       await load();
-      const onChain = json.data?.onChain;
+      const onChain = data?.onChain;
       const contributeHash = onChain?.contributeHash;
       const hash = contributeHash || onChain?.trustlineHash;
-      const raised = Number(json.data.raisedUsdc).toLocaleString('es-AR');
-      const unit = json.data?.dossier?.paymentKind === 'XLM' ? 'XLM' : 'USDC';
+      const raised = Number(data.raisedUsdc).toLocaleString('es-AR');
+      const unit = data?.dossier?.paymentKind === 'XLM' ? 'XLM' : 'USDC';
       if (contributeHash) {
         setLastHash({ kind: 'contribute', hash: contributeHash, explorer: onChain?.contributeExplorer });
         setNotice(t('market.subscribedContributeHash', { n: raised, hash: contributeHash }));
@@ -129,7 +144,7 @@ export default function PoolDetailPage() {
     }
     setBusy(true);
     try {
-      const data = await refundContribution(poolId);
+      const data = await refundContribution(poolId, isSelfCustody(user));
       const hash = data?.onChain?.hash;
       if (hash) setLastHash({ kind: 'refund', hash, explorer: data?.onChain?.explorer });
       setNotice(hash ? t('market.refundNotice', { hash }) : data?.onChain?.note || 'refund() OK');
@@ -158,7 +173,7 @@ export default function PoolDetailPage() {
       (holding?.tokensOwed || 0) > 0 &&
       !holding?.refundedAt;
     const canRefund =
-      xlm && failed && Boolean(holding) && !holding?.refundedAt && user?.custodyMode === 'CUSTODIAL';
+      xlm && failed && Boolean(holding) && !holding?.refundedAt;
     const statusLabel = failed
       ? t('market.stateFailed')
       : success

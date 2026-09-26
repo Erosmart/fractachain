@@ -8,6 +8,8 @@ import { API_BASE_URL, bearerHeaders } from '../../lib/api';
 import { isVisibleListing } from '../../lib/listings';
 import { useAuth } from '../../context/AuthContext';
 import { useVisibleInterval } from '../../lib/useVisibleInterval';
+import { freighterSignXdr } from '../../lib/freighter';
+import { isSelfCustody, postJson } from '../../lib/selfCustody';
 
 type Market = {
   listingId: string;
@@ -248,6 +250,22 @@ function OrderbookInner() {
     setNotice('');
     const onSdex = book?.venue === 'sdex';
     try {
+      if (onSdex && isSelfCustody(user)) {
+        // La orden sale de la wallet del inversor, así que la firma Freighter
+        // y el backend solo la retransmite.
+        setNotice('Firmá la orden en Freighter…');
+        const prepared = await postJson<{ xdr: string }>(
+          `/api/sdex/${listingId}/orders/prepare`,
+          token,
+          { side, price, quantity: amount },
+        );
+        const relayed = await submitSigned(await freighterSignXdr(prepared.xdr));
+        setTaken(null);
+        await refreshUser();
+        await loadBook(listingId);
+        setNotice(`Orden enviada al DEX de Stellar. Hash ${String(relayed?.hash || '').slice(0, 12)}…`);
+        return;
+      }
       const res = await fetch(
         onSdex
           ? `${API_BASE_URL}/api/sdex/${listingId}/orders`
@@ -306,7 +324,10 @@ function OrderbookInner() {
         setNotice(json.message || 'No se pudo cancelar la orden');
         return;
       }
-      await submitSigned(json.data.xdr);
+      // Custodial: el backend ya lo envió. Self-custody: firmamos y relay.
+      if (json.data?.xdr) {
+        await submitSigned(await freighterSignXdr(json.data.xdr));
+      }
       await loadBook(listingId);
       refreshUser();
       return;
