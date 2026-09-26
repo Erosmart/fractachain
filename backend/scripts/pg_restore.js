@@ -11,7 +11,7 @@ const path = require('path');
 const { Pool } = require('pg');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
-const ALLOWED = new Set(['users.json', 'listings.json', 'orderbook.json', 'dividends.json', 'testnet.json']);
+const ALLOWED = new Set(['users.json', 'listings.json', 'orderbook.json', 'dividends.json', 'testnet.json', 'stocks.json']);
 
 async function main() {
   if (!process.env.DATABASE_URL) {

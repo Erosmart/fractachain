@@ -18,7 +18,14 @@ import {
 } from './mocks/payment_gateway';
 import { getAllCommodityPrices, getCommodityPrice } from './mocks/fiat_oracle';
 import { getAllWeatherData, getWeatherData } from './mocks/weather_oracle';
-import { getMervalStocks, getProofOfReserveAudit } from './custody/stocks';
+import {
+  createStock,
+  getMervalStocks,
+  getProofOfReserveAudit,
+  listStocksAdmin,
+  setStockActive,
+  updateStockPrice,
+} from './custody/stocks';
 import {
   bindContract,
   createProduct,
@@ -443,6 +450,52 @@ app.get('/api/custody/stocks', (_req: Request, res: Response) => {
 
 app.get('/api/custody/por', (_req: Request, res: Response) => {
   res.json({ success: true, data: getProofOfReserveAudit() });
+});
+
+/** Admin sees the whole catalog, including stocks hidden from the market. */
+app.get('/api/admin/stocks', (req: Request, res: Response) => {
+  if (!requireAdmin(req, res)) return;
+  wrap(() => listStocksAdmin(), res);
+});
+
+/** "Emitir acción": a new tokenized stock appears in the market right away. */
+app.post('/api/admin/stocks', (req: Request, res: Response) => {
+  if (!requireAdmin(req, res)) return;
+  wrap(
+    () =>
+      createStock({
+        ticker: String(req.body?.ticker || ''),
+        tokenTicker: req.body?.tokenTicker ? String(req.body.tokenTicker) : undefined,
+        companyName: String(req.body?.companyName || ''),
+        isin: String(req.body?.isin || ''),
+        sector: req.body?.sector ? String(req.body.sector) : undefined,
+        priceUsdc: Number(req.body?.priceUsdc),
+        custodiedShares: Number(req.body?.custodiedShares),
+        custodianCuit: req.body?.custodianCuit ? String(req.body.custodianCuit) : undefined,
+      }),
+    res,
+    201,
+  );
+});
+
+/** Toggle whether a stock trades in the public market. */
+app.post('/api/admin/stocks/:ticker/active', (req: Request, res: Response) => {
+  if (!requireAdmin(req, res)) return;
+  wrap(() => setStockActive(req.params.ticker, Boolean(req.body?.active)), res);
+});
+
+/** Admin-set quote for the demo market. */
+app.post('/api/admin/stocks/:ticker/price', (req: Request, res: Response) => {
+  if (!requireAdmin(req, res)) return;
+  wrap(
+    () =>
+      updateStockPrice(
+        req.params.ticker,
+        Number(req.body?.priceUsdc),
+        req.body?.change24hPct !== undefined ? Number(req.body.change24hPct) : undefined,
+      ),
+    res,
+  );
 });
 
 app.get('/api/admin/issuance/assets', (req: Request, res: Response) => {

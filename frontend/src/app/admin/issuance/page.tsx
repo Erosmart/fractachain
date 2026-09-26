@@ -35,10 +35,22 @@ const empty = {
   useOfProceeds: 'Capital de trabajo y listado primario de acciones tokenizadas.',
 };
 
+const emptyStock = {
+  ticker: '',
+  tokenTicker: '',
+  companyName: '',
+  isin: '',
+  sector: 'General',
+  priceUsdc: 10,
+  custodiedShares: 10000,
+};
+
 export default function AdminIssuancePage() {
   const { token } = useAuth();
   const [form, setForm] = useState(empty);
   const [listings, setListings] = useState<any[]>([]);
+  const [stocks, setStocks] = useState<any[]>([]);
+  const [stockForm, setStockForm] = useState(emptyStock);
   const [notice, setNotice] = useState('');
   const [mintAmount, setMintAmount] = useState(1000);
   const [settlePolicy, setSettlePolicy] = useState<'ON_MIN' | 'ON_DATE'>('ON_MIN');
@@ -57,6 +69,10 @@ export default function AdminIssuancePage() {
       headers: bearerHeaders(token),
     }).then((r) => r.json()).catch(() => null);
     if (Array.isArray(res?.data)) setListings(res.data);
+    const st = await fetch(`${API_BASE_URL}/api/admin/stocks`, {
+      headers: bearerHeaders(token),
+    }).then((r) => r.json()).catch(() => null);
+    if (Array.isArray(st?.data)) setStocks(st.data);
   };
 
   useEffect(() => {
@@ -137,6 +153,30 @@ export default function AdminIssuancePage() {
     try {
       await call(`/api/listings/${id}/proceeds-wallet`, { wallet });
       await act(id, 'licitacion', { settlePolicy, settleAt: settlePolicy === 'ON_DATE' ? settleAt : undefined });
+    } catch (e: any) {
+      flash(e.message);
+    }
+  };
+
+  const emitStock = async () => {
+    try {
+      const data = await call('/api/admin/stocks', {
+        ...stockForm,
+        tokenTicker: stockForm.tokenTicker || `t${stockForm.ticker}`,
+      });
+      flash(`Acción ${data.tokenTicker} emitida: ya cotiza en /stocks`);
+      setStockForm(emptyStock);
+      load();
+    } catch (e: any) {
+      flash(e.message);
+    }
+  };
+
+  const toggleStock = async (ticker: string, active: boolean) => {
+    try {
+      await call(`/api/admin/stocks/${ticker}/active`, { active });
+      flash(`${ticker} ${active ? 'activada en' : 'quitada de'} /stocks`);
+      load();
     } catch (e: any) {
       flash(e.message);
     }
@@ -378,6 +418,76 @@ export default function AdminIssuancePage() {
             )}
           </article>
         ))}
+      </section>
+
+      <section className="space-y-4">
+        <h2 className="font-section text-xl font-extrabold">Acciones del mercado secundario</h2>
+        <p className="text-sm text-neutral-600 max-w-2xl">
+          Emitir una acción la lista en <span className="font-mono">/stocks</span> al instante. El switch la
+          activa o la saca del mercado sin borrarla.
+        </p>
+
+        <div className="p-5 rounded-3xl crystal-card space-y-3">
+          <h3 className="text-sm font-bold">Emitir acción nueva</h3>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              ['ticker', 'Ticker BYMA (ej. TECO)'],
+              ['tokenTicker', 'Token (tTECO…) — vacío = t+ticker'],
+              ['companyName', 'Razón social'],
+              ['isin', 'ISIN'],
+              ['sector', 'Sector'],
+            ].map(([k, label]) => (
+              <label key={k} className="text-xs space-y-1">
+                <span className="font-bold">{label}</span>
+                <input
+                  className="w-full px-3 py-2 rounded-xl border border-black/10"
+                  value={(stockForm as any)[k]}
+                  onChange={(e) => setStockForm((f) => ({ ...f, [k]: e.target.value }))}
+                />
+              </label>
+            ))}
+            <label className="text-xs space-y-1">
+              <span className="font-bold">Precio USDC</span>
+              <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={stockForm.priceUsdc} onChange={(e) => setStockForm((f) => ({ ...f, priceUsdc: Number(e.target.value) }))} />
+            </label>
+            <label className="text-xs space-y-1">
+              <span className="font-bold">Acciones en custodia (CdV)</span>
+              <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={stockForm.custodiedShares} onChange={(e) => setStockForm((f) => ({ ...f, custodiedShares: Number(e.target.value) }))} />
+            </label>
+          </div>
+          <button type="button" onClick={emitStock} className="px-5 py-3 rounded-2xl bg-black text-white font-display font-bold text-sm">
+            Emitir acción
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          {stocks.length === 0 && <p className="text-neutral-500 text-sm">Sin acciones cargadas.</p>}
+          {stocks.map((s) => (
+            <div key={s.ticker} className="p-4 rounded-3xl crystal-card flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-display font-extrabold">{s.tokenTicker}</span>
+                  <span className="text-xs text-neutral-500 font-mono">({s.ticker})</span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${s.active ? 'bg-leaf-100 text-[#2f6f28] border border-[#8fcb7a]/50' : 'bg-neutral-200 text-neutral-500'}`}>
+                    {s.active ? 'EN MERCADO' : 'OCULTA'}
+                  </span>
+                </div>
+                <div className="text-xs text-neutral-600 truncate">{s.companyName} · ISIN {s.isin}</div>
+                <div className="text-[11px] text-neutral-500 font-mono">${s.priceUsdc} USDC · {s.custodiedSharesInCajaDeValores.toLocaleString()} en custodia</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a href="/stocks" className="px-3 py-2 text-xs font-bold underline">Ver mercado</a>
+                <button
+                  type="button"
+                  onClick={() => toggleStock(s.ticker, !s.active)}
+                  className={`px-3 py-2 rounded-xl text-xs font-bold ${s.active ? 'border border-red-300 text-red-700' : 'bg-black text-white'}`}
+                >
+                  {s.active ? 'Desactivar' : 'Activar'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
     </div>
   );

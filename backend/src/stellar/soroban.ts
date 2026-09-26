@@ -1,13 +1,12 @@
+import { createHash } from 'crypto';
 import {
   Address,
   Keypair,
   StrKey,
   Transaction,
   TransactionBuilder,
-  authorizeEntry,
   contract,
   rpc,
-  xdr,
 } from '@stellar/stellar-sdk';
 import { getTestnetConfig } from '../admin/testnet';
 import { loadTestnetDeployment } from './deployment';
@@ -69,11 +68,16 @@ export function nodeSigners(kp: Keypair) {
       (tx as Transaction).sign(kp);
       return { signedTxXdr: tx.toXDR() };
     },
-    signAuthEntry: async (entryXdr: string) => {
-      const entry = xdr.SorobanAuthorizationEntry.fromXDR(entryXdr, 'base64');
-      const latest = await rpcServer().getLatestLedger();
-      const signed = await authorizeEntry(entry, kp, latest.sequence + 100, passphrase);
-      return { signedAuthEntry: signed.toXDR('base64') };
+    // SDK ≥14 hands signAuthEntry the HashIDPreimage and expects the raw
+    // signature back — the entry is assembled and grafted onto the tx by the
+    // SDK itself. Returning a signed entry here parses the preimage as a
+    // SorobanAuthorizationEntry and dies with "unknown enum value".
+    signAuthEntry: async (preimageXdr: string) => {
+      const digest = createHash('sha256').update(Buffer.from(preimageXdr, 'base64')).digest();
+      return {
+        signedAuthEntry: Buffer.from(kp.sign(digest)).toString('base64'),
+        signerAddress: kp.publicKey(),
+      };
     },
   };
 }
