@@ -38,6 +38,7 @@ import {
   listedPools,
   mintListingTokens,
   openLicitacion,
+  prepareOpenLicitacion,
   closeListing,
   setListingProceedsWallet,
   setListingSettle,
@@ -84,6 +85,8 @@ import {
   submitRefundXdr,
   syncFiduciaryOnChain,
   withdrawProceedsOnChain,
+  canDeployLicitacion,
+  deployLicitacionForListing,
 } from './stellar/licitacion';
 import {
   authenticateWithGoogle,
@@ -609,14 +612,13 @@ app.post('/api/listings/:id/mint', (req: Request, res: Response) => {
 app.post('/api/listings/:id/licitacion', (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
   wrapAsync(async () => {
-    const listing = openLicitacion(req.params.id, req.body || {});
-    // The instance is deployed before the dossier exists, so it still pays
-    // the platform deployer until we repoint it. Opening the offering is the
-    // last moment where the contract still accepts the change.
-    const fiduciary = await syncFiduciaryOnChain(listing).catch((err: any) => ({
-      error: err?.message || String(err),
-    }));
-    return { ...listing, fiduciary };
+    const opts = req.body || {};
+    const { listing: draft, deadlineMs } = prepareOpenLicitacion(req.params.id, opts);
+    // Each offering gets its own instance, initialized with the company wallet
+    // as fiduciary, so there is nothing left to repoint afterwards.
+    const onChain = canDeployLicitacion() ? await deployLicitacionForListing(draft, deadlineMs) : undefined;
+    const listing = openLicitacion(req.params.id, opts, onChain);
+    return { ...listing, fiduciary: onChain ? { hash: onChain.hash, fiduciary: listing.dossier.proceedsWallet } : null };
   }, res);
 });
 
@@ -1024,7 +1026,9 @@ app.post('/api/listings/:id/proceeds-wallet', (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
   wrapAsync(async () => {
     const listing = setListingProceedsWallet(req.params.id, String(req.body?.wallet || ''));
-    const fiduciary = await syncFiduciaryOnChain(listing);
+    // Before the offering opens there is no instance of its own yet: the
+    // wallet goes straight into `initialize` when it is deployed.
+    const fiduciary = listing.status === 'LISTED' ? await syncFiduciaryOnChain(listing) : null;
     return { ...listing, fiduciary };
   }, res);
 });

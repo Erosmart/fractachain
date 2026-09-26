@@ -217,7 +217,9 @@ export function deployListing(id: string): Listing {
   if (listing.status !== 'DRAFT') throw new Error('Ya está deployado');
   const chain = loadTestnetDeployment();
   listing.stockContract = chain?.stockVault || contractId(`${listing.id}:stock`);
-  listing.licitacionContract = chain?.licitacion || listing.licitacionContract;
+  // The licitación gets its own instance when the offering opens; pointing at
+  // the shared one here made every listing inherit its payout wallet.
+  listing.licitacionContract = '';
   listing.factoryProductId = listings.filter((l) => l.factoryProductId).length + 1;
   listing.deployedAt = new Date().toISOString();
   listing.status = 'DEPLOYED';
@@ -247,7 +249,13 @@ export function mintListingTokens(id: string, amount: number, cvDepositHash?: st
   return listing;
 }
 
-export function openLicitacion(id: string, opts?: { settlePolicy?: 'ON_MIN' | 'ON_DATE'; settleAt?: string }): Listing {
+type SettleOpts = { settlePolicy?: 'ON_MIN' | 'ON_DATE'; settleAt?: string };
+
+/**
+ * Checks a listing can open and returns when its offering will close, so the
+ * contract can be initialized with that deadline before anything is saved.
+ */
+export function prepareOpenLicitacion(id: string, opts?: SettleOpts): { listing: Listing; deadlineMs: number } {
   const listing = listings.find((l) => l.id === id);
   if (!listing) throw new Error('Listing no encontrado');
   if (listing.tokensMinted <= 0) throw new Error('Primero minteá los tokens respaldados 1:1');
@@ -255,8 +263,23 @@ export function openLicitacion(id: string, opts?: { settlePolicy?: 'ON_MIN' | 'O
   if (!isStellarPublicKey(listing.dossier.proceedsWallet)) {
     throw new Error('Configurá la wallet de cobro de la empresa antes de abrir la licitación');
   }
-  const chain = loadTestnetDeployment();
-  listing.licitacionContract = chain?.licitacion || contractId(`${listing.id}:licitacion`);
+  const { settleAt } = resolveSettleChoice(opts);
+  const days = listing.dossier.offeringDays > 0 ? listing.dossier.offeringDays : 30;
+  const deadlineMs = settleAt ? new Date(settleAt).getTime() : Date.now() + days * 86_400_000;
+  if (!Number.isFinite(deadlineMs) || deadlineMs <= Date.now()) {
+    throw new Error('La fecha de cierre tiene que ser futura');
+  }
+  return { listing, deadlineMs };
+}
+
+export function openLicitacion(
+  id: string,
+  opts?: SettleOpts,
+  onChain?: { contractId: string; factoryProductId?: number | null },
+): Listing {
+  const { listing } = prepareOpenLicitacion(id, opts);
+  listing.licitacionContract = onChain?.contractId || contractId(`${listing.id}:licitacion`);
+  if (onChain?.factoryProductId != null) listing.factoryProductId = onChain.factoryProductId;
   listing.status = 'LISTED';
   listing.listedAt = new Date().toISOString();
   applySettleChoice(listing, opts);
@@ -299,17 +322,19 @@ export function setListingSettle(id: string, opts?: { settlePolicy?: 'ON_MIN' | 
   return listing;
 }
 
-function applySettleChoice(listing: Listing, opts?: { settlePolicy?: 'ON_MIN' | 'ON_DATE'; settleAt?: string }) {
+function resolveSettleChoice(opts?: SettleOpts): { settlePolicy: 'ON_MIN' | 'ON_DATE'; settleAt?: string } {
   const cfg = getTestnetConfig();
   const policy = opts?.settlePolicy || cfg.settlePolicy || 'ON_MIN';
-  listing.settlePolicy = policy === 'ON_DATE' ? 'ON_DATE' : 'ON_MIN';
+  if (policy !== 'ON_DATE') return { settlePolicy: 'ON_MIN' };
   const at = opts?.settleAt || cfg.settleAt;
-  if (listing.settlePolicy === 'ON_DATE') {
-    if (!at) throw new Error('Indicá la fecha hasta la que esperás para repartir tokens');
-    listing.settleAt = new Date(at).toISOString();
-  } else {
-    listing.settleAt = undefined;
-  }
+  if (!at) throw new Error('Indicá la fecha hasta la que esperás para repartir tokens');
+  return { settlePolicy: 'ON_DATE', settleAt: new Date(at).toISOString() };
+}
+
+function applySettleChoice(listing: Listing, opts?: SettleOpts) {
+  const { settlePolicy, settleAt } = resolveSettleChoice(opts);
+  listing.settlePolicy = settlePolicy;
+  listing.settleAt = settleAt;
 }
 
 export function validationPack(listing: Listing) {
