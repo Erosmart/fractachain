@@ -5,7 +5,8 @@
  *   cd backend && npx ts-node src/stellar/deploy_licitacion.ts
  */
 import 'dotenv/config';
-import { bindLicitacionForDemo } from '../admin/listings';
+import { bindLicitacionForDemo, getListing } from '../admin/listings';
+import { isStellarPublicKey } from '../auth/stellar_testnet';
 import { saveTestnetDeployment, loadTestnetDeployment } from './deployment';
 import { hasDeployerSecret, licitacionAdminKeypair } from './keys';
 import {
@@ -38,9 +39,16 @@ async function main() {
 
   const client = await contractClient(deployed.contractId, admin);
   const deadline = BigInt(Math.floor(Date.now() / 1000) + 21 * 86400);
+  // finalize() pays this address: it has to be the company's wallet, not the
+  // platform deployer, and after the first contribution it can no longer move.
+  const proceedsWallet = getListing(LISTING_ID)?.dossier.proceedsWallet;
+  const fiduciary = isStellarPublicKey(proceedsWallet)
+    ? proceedsWallet!
+    : deployment.deployer || admin.publicKey();
+  console.log('fiduciary', fiduciary);
   await invoke(client, 'initialize', {
     admin: admin.publicKey(),
-    fiduciary: deployment.deployer || admin.publicKey(),
+    fiduciary,
     payment_token: xlmSac(),
     soft_cap: SOFT,
     hard_cap: HARD,

@@ -12,7 +12,8 @@ import { getBook } from './orderbook';
 import { counterAsset, listingAsset, sdexAvailable } from './sdex_book';
 import { getOrderBook, getRecentTrades } from '../stellar/sdex';
 import { listDividends } from './dividends';
-import { loadAssetBalance } from '../auth/stellar_testnet';
+import { loadAssetBalance, loadNativeXlm } from '../auth/stellar_testnet';
+import { explorerTx } from '../stellar/onchain';
 
 const USDC_ISSUER =
   process.env.STELLAR_USDC_ISSUER || 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
@@ -94,7 +95,7 @@ export async function buildPortfolio(accountId: string) {
   if (!account) throw new Error('Cuenta no encontrada');
 
   const listings = listListings();
-  const [positions, usdcOnChain] = await Promise.all([
+  const [positions, usdcOnChain, xlmOnChain] = await Promise.all([
     Promise.all(
     (account.holdings || []).map(async (h) => {
       const listing = listings.find((l) => l.id === h.listingId) || getListing(h.listingId);
@@ -145,7 +146,27 @@ export async function buildPortfolio(accountId: string) {
     }),
     ),
     account.publicKey ? loadAssetBalance(account.publicKey, 'USDC', USDC_ISSUER) : Promise.resolve(0),
+    account.publicKey ? loadNativeXlm(account.publicKey) : Promise.resolve(0),
   ]);
+
+  // What the company sees: the offerings whose raise is paid into this wallet.
+  // Without this the issuer only saw sandbox USDC and concluded the XLM never
+  // arrived, when `finalize()` had already sent it on ledger.
+  const proceeds = account.publicKey
+    ? listings
+        .filter((l) => l.dossier.proceedsWallet?.toUpperCase() === account.publicKey?.toUpperCase())
+        .map((l) => ({
+          listingId: l.id,
+          tokenTicker: l.dossier.tokenTicker,
+          legalName: l.dossier.legalName,
+          status: l.status,
+          paymentKind: l.dossier.paymentKind,
+          amount: l.raisedUsdc,
+          paidAt: l.proceedsPaidAt || null,
+          finalizeHash: l.finalizeHash || null,
+          explorer: explorerTx(l.finalizeHash),
+        }))
+    : [];
 
   const costBasis = positions.reduce((s, p) => s + p.costBasis, 0);
   const marketValue = positions.reduce((s, p) => s + p.marketValue, 0);
@@ -155,6 +176,8 @@ export async function buildPortfolio(accountId: string) {
   return {
     cashUsdc: account.cashUsdc,
     usdcOnChain,
+    xlmOnChain,
+    proceeds,
     positions,
     totals: {
       costBasis: Math.round(costBasis * 1e6) / 1e6,

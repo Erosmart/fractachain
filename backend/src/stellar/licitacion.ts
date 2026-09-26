@@ -1,6 +1,6 @@
 import { Keypair } from '@stellar/stellar-sdk';
 import { custodialSigningKey, getAccount } from '../auth/accounts';
-import { loadNativeXlm } from '../auth/stellar_testnet';
+import { isStellarPublicKey, loadNativeXlm } from '../auth/stellar_testnet';
 import { Listing } from '../admin/listings';
 import { licitacionAdminKeypair } from './keys';
 import {
@@ -55,6 +55,40 @@ export async function verifyInvestorOnChain(listing: Listing, investor: string):
     expiry,
   });
   return hash;
+}
+
+/**
+ * Points the contract's `Fiduciary` at the company wallet of the dossier.
+ *
+ * The instance is deployed before the dossier exists, so it starts paying the
+ * platform deployer. The contract only accepts the change while nothing has
+ * been raised, which is also the only window where it is fair to move it.
+ */
+export async function syncFiduciaryOnChain(listing: Listing): Promise<{
+  hash: string | null;
+  fiduciary: string;
+} | null> {
+  if (!isLiveContractId(listing.licitacionContract)) return null;
+  const wallet = listing.dossier.proceedsWallet?.trim().toUpperCase();
+  if (!isStellarPublicKey(wallet)) return null;
+
+  const { client, admin } = await adminClient(listing);
+  const [current, raised] = await Promise.all([
+    read<string>(client, 'get_fiduciary').catch(() => null),
+    read<bigint>(client, 'get_total_raised').catch(() => 0n),
+  ]);
+  if (current && String(current) === wallet) return { hash: null, fiduciary: wallet };
+  if (fromStroops(raised) > 0) {
+    throw new Error(
+      `La licitación ya recibió aportes: el contrato paga a ${current} y no se puede repuntar a ${wallet}`,
+    );
+  }
+
+  const { hash } = await invoke(client, 'set_fiduciary', {
+    admin: admin.publicKey(),
+    fiduciary: wallet,
+  });
+  return { hash, fiduciary: wallet };
 }
 
 export async function contributeOnChain(
@@ -179,6 +213,10 @@ export type LicitacionSnapshot = {
   canFinalize: boolean;
   finalizeReason: string;
   deadline: string | null;
+  /** XLM actually sitting in the wallet the contract pays. */
+  fiduciaryXlm?: number | null;
+  /** The dossier wallet differs from the address `finalize()` pays. */
+  fiduciaryMismatch?: boolean;
   error?: string;
 };
 
@@ -273,7 +311,13 @@ export async function snapshotLicitacion(
   }
   try {
     const reads = await readLicitacion(listing, investor);
-    return snapshotFromReads(listing, reads);
+    const snapshot = snapshotFromReads(listing, reads);
+    const wallet = listing.dossier.proceedsWallet?.trim().toUpperCase();
+    snapshot.fiduciaryXlm = reads.fiduciary ? await loadNativeXlm(reads.fiduciary) : null;
+    snapshot.fiduciaryMismatch = Boolean(
+      reads.fiduciary && isStellarPublicKey(wallet) && reads.fiduciary !== wallet,
+    );
+    return snapshot;
   } catch (err: any) {
     const deadlineMs = listingDeadlineMs({
       settleAt: listing.settleAt,

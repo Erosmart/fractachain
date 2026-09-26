@@ -47,6 +47,12 @@ import {
   markListingClosed,
 } from './admin/listings';
 import { cancelOrder, getBook, listMarkets, placeOrder } from './market/orderbook';
+import {
+  autoFinalizeIfDue,
+  finalizeListedOffering,
+  settleHolders,
+  startSettlementSweep,
+} from './market/settlement';
 import { depositDividends, listDividends } from './market/dividends';
 import { buildPortfolio } from './market/prices';
 import {
@@ -68,9 +74,9 @@ import {
   alreadyClosedOnChain,
   closeStatusFromChain,
   contributeOnChain,
-  finalizeOnChain,
   refundOnChain,
   snapshotLicitacion,
+  syncFiduciaryOnChain,
   withdrawProceedsOnChain,
 } from './stellar/licitacion';
 import {
@@ -496,65 +502,6 @@ async function wrapAsync(fn: () => Promise<unknown>, res: Response, code = 200) 
   }
 }
 
-/**
- * On-chain close: invoke `finalize()` unless the contract is already closed
- * (then we just sync the listing). Rule: hard cap or deadline — not soft cap
- * alone. Success pays the fiduciary in the same tx; failure unlocks `refund()`.
- */
-async function finalizeListedOffering(listingId: string) {
-  const listing = getListing(listingId);
-  if (!listing) throw new Error('Listing no encontrado');
-  if (!isOnChainListing(listing)) return closeListing(listing.id);
-
-  const live = await snapshotLicitacion(listing);
-  if (alreadyClosedOnChain(live)) {
-    const status = closeStatusFromChain(live, listing);
-    if (!status) throw new Error('Estado on-chain ilegible');
-    const updated = markListingClosed(listing.id, status, live.raised, {
-      finalizeHash: listing.finalizeHash,
-      proceedsPaidTo: live.fiduciary,
-    });
-    return {
-      ...updated,
-      onChain: {
-        ...listingChainMeta(updated),
-        ...live,
-        hash: listing.finalizeHash || null,
-        explorer: explorerTx(listing.finalizeHash),
-        alreadyClosed: true,
-        note:
-          live.state === 1
-            ? 'La emisión ya estaba Successful. El XLM de testnet fue a la wallet fiduciaria en finalize(); no hay un segundo payout al inversor.'
-            : 'La emisión ya estaba Failed. El inversor puede llamar refund() para recuperar XLM.',
-      },
-    };
-  }
-
-  const result = await finalizeOnChain(listing);
-  const success = result.state === 1;
-  const updated = markListingClosed(
-    listing.id,
-    success ? 'CLOSED_SUCCESS' : 'CLOSED_FAILED',
-    result.raised,
-    {
-      finalizeHash: result.hash,
-      proceedsPaidTo: result.fiduciary,
-    },
-  );
-  return {
-    ...updated,
-    onChain: {
-      ...listingChainMeta(updated),
-      ...result,
-      explorer: explorerTx(result.hash),
-      alreadyClosed: false,
-      note: success
-        ? 'finalize() pagó el XLM recaudado a la wallet fiduciaria (proceeds). Las unidades RWA ya se mintearon en contribute(); no hay claim on-chain extra para el inversor.'
-        : 'finalize() dejó Failed (no se llegó al soft cap). El inversor recupera XLM con refund().',
-    },
-  };
-}
-
 async function listingPayload(listingId: string, investor?: string) {
   const listing = getListing(listingId);
   if (!listing) return null;
@@ -566,6 +513,7 @@ async function listingPayload(listingId: string, investor?: string) {
       current = markListingClosed(listing.id, status, live.raised, {
         proceedsPaidTo: live.fiduciary,
       });
+      await settleHolders(current).catch(() => []);
     }
   }
   return {
@@ -624,7 +572,16 @@ app.post('/api/listings/:id/mint', (req: Request, res: Response) => {
 
 app.post('/api/listings/:id/licitacion', (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
-  wrap(() => openLicitacion(req.params.id, req.body || {}), res);
+  wrapAsync(async () => {
+    const listing = openLicitacion(req.params.id, req.body || {});
+    // The instance is deployed before the dossier exists, so it still pays
+    // the platform deployer until we repoint it. Opening the offering is the
+    // last moment where the contract still accepts the change.
+    const fiduciary = await syncFiduciaryOnChain(listing).catch((err: any) => ({
+      error: err?.message || String(err),
+    }));
+    return { ...listing, fiduciary };
+  }, res);
 });
 
 app.post('/api/listings/:id/settle', (req: Request, res: Response) => {
@@ -804,7 +761,7 @@ app.post('/api/listings/:id/contribute', (req: Request, res: Response) => {
     const amount = Number(req.body.usdcAmount);
     if (isOnChainListing(listing)) {
       const chain = await contributeOnChain(listing, account.id, amount);
-      const updated = recordOnChainContribution(listing.id, account.id, {
+      recordOnChainContribution(listing.id, account.id, {
         amount,
         tokens: chain.tokens,
         raised: chain.raised,
@@ -812,11 +769,17 @@ app.post('/api/listings/:id/contribute', (req: Request, res: Response) => {
       const onChain = await receiptAfterContribute(listing.id, account.id, {
         contributeHash: chain.hash,
       });
-      return { ...updated, onChain };
+      // Hitting the hard cap is what the contract waits for; closing here is
+      // what keeps the company from having to ask someone to press a button.
+      const closed = await autoFinalizeIfDue(listing.id);
+      const updated = getListing(listing.id)!;
+      return { ...updated, onChain: { ...onChain, autoFinalized: Boolean(closed) } };
     }
-    const updated = contributeListing(listing.id, amount, account.id);
+    contributeListing(listing.id, amount, account.id);
     const onChain = await receiptAfterContribute(listing.id, account.id);
-    return { ...updated, onChain };
+    const closed = await autoFinalizeIfDue(listing.id);
+    const updated = getListing(listing.id)!;
+    return { ...updated, onChain: { ...onChain, autoFinalized: Boolean(closed) } };
   }, res);
 });
 
@@ -953,7 +916,11 @@ app.post('/api/sdex/submit', (req: Request, res: Response) => {
 /** Repoints the wallet the company receives the raise in. */
 app.post('/api/listings/:id/proceeds-wallet', (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
-  wrap(() => setListingProceedsWallet(req.params.id, String(req.body?.wallet || '')), res);
+  wrapAsync(async () => {
+    const listing = setListingProceedsWallet(req.params.id, String(req.body?.wallet || ''));
+    const fiduciary = await syncFiduciaryOnChain(listing);
+    return { ...listing, fiduciary };
+  }, res);
 });
 
 app.post('/api/listings/:id/dividends', (req: Request, res: Response) => {
@@ -993,4 +960,5 @@ app.post('/api/admin/compliance/sync', (req: Request, res: Response) => {
 
 app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`[Fractachain Backend] API Server corriendo en puerto ${PORT}`);
+  startSettlementSweep();
 });

@@ -6,6 +6,7 @@ import { processArsOnRamp, processCctpBridge } from './mocks/payment_gateway';
 import { getAllCommodityPrices } from './mocks/fiat_oracle';
 import { getMervalStocks } from './custody/stocks';
 import { canFinalizeFromSnapshot, parseLicitacionState } from './stellar/licitacion_state';
+import { settlementAction } from './market/settlement_rules';
 
 console.log('=== INICIANDO SUITE DE PRUEBAS DE FRACTACHAIN BACKEND ===');
 
@@ -151,6 +152,25 @@ assert(late.canFinalize && late.reason === 'deadline', 'Deadline vencido habilit
 
 const closed = canFinalizeFromSnapshot({ state: 1, raised: 100, hardCap: 100, deadlineMs: null });
 assert(!closed.canFinalize && closed.reason === 'already_closed', 'Successful no se vuelve a finalizar');
+
+console.log('\n[8] Probando el settlement automático:');
+
+assert(
+  settlementAction({ status: 'LISTED', onChain: true }) === 'check_chain',
+  'Una licitación on-chain abierta consulta el contrato antes de cerrar',
+);
+assert(
+  settlementAction({ status: 'LISTED', onChain: false }) === 'skip',
+  'Una licitación sandbox abierta no la cierra el settlement automático',
+);
+assert(
+  settlementAction({ status: 'CLOSED_SUCCESS', onChain: true }) === 'settle_holders',
+  'Cerrada con éxito acredita las unidades sin que el inversor reclame',
+);
+assert(
+  settlementAction({ status: 'CLOSED_FAILED', onChain: true }) === 'skip',
+  'Cerrada fallida no acredita nada (el inversor usa refund)',
+);
 
 console.log(`\n=== RESUMEN: ${testsPassed} PASADOS, ${testsFailed} FALLIDOS ===\n`);
 if (testsFailed > 0) {
