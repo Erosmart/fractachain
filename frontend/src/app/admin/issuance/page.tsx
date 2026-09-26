@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { API_BASE_URL, bearerHeaders } from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
+import Toast from '../../../components/Toast';
 
 const empty = {
   legalName: '',
@@ -161,7 +162,7 @@ export default function AdminIssuancePage() {
           Al cerrar con éxito, el USDC va a la wallet de cobro de la empresa. El secundario cotiza en el order book nativo de Stellar, y solo opera quien tenga KYC aprobado.
         </p>
       </div>
-      {notice && <div className="p-3 rounded-2xl bg-black text-white text-sm">{notice}</div>}
+      <Toast message={notice} />
 
       <section className="p-6 rounded-3xl crystal-card space-y-4">
         <h2 className="font-section text-xl font-extrabold">1. Expediente de la empresa</h2>
