@@ -8,7 +8,7 @@ import { useI18n } from '../../../context/I18nContext';
 import BrandLogo from '../../../components/BrandLogo';
 
 export default function WalletOnboardingPage() {
-  const { user, chooseCustody, revealedSecret, isLoading } = useAuth();
+  const { user, chooseCustody, linkFreighterWallet, revealedSecret, isLoading } = useAuth();
   const { t } = useI18n();
   const router = useRouter();
   const [error, setError] = useState('');
@@ -31,9 +31,10 @@ export default function WalletOnboardingPage() {
     setError('');
     setBusy(true);
     try {
-      const { freighterAddress } = await import('../../../lib/freighter');
-      const address = await freighterAddress();
-      await pick('SELF', address);
+      // Firma un challenge: el backend verifica que controlás la clave y
+      // guarda publicKey + custodyMode=SELF antes de seguir al KYC.
+      await linkFreighterWallet();
+      router.push('/onboarding/kyc');
     } catch (err: any) {
       setError(err.message);
       setBusy(false);

@@ -349,6 +349,32 @@ function ensureAdminAccount(account: Account) {
 }
 
 for (const existing of accounts.values()) ensureAdminAccount(existing);
+
+// Cuenta de prueba para validar el flujo de primera vez: login → custodia
+// (linkear Freighter) → KYC. Se crea sólo si no existe.
+const TEST_EMAIL = 'test@fractachain.dev';
+if (![...accounts.values()].some((a) => a.email === TEST_EMAIL)) {
+  const now = new Date().toISOString();
+  const testId = `usr_test_${crypto.randomBytes(3).toString('hex')}`;
+  accounts.set(testId, {
+    id: testId,
+    email: TEST_EMAIL,
+    name: 'Cuenta de prueba',
+    avatar: '',
+    passwordHash: hashPassword('test1234'),
+    custodyMode: null,
+    publicKey: '',
+    kycStatus: 'UNREGISTERED',
+    holdings: [],
+    trustlines: [],
+    cashUsdc: 50000,
+    authProvider: 'email',
+    createdAt: now,
+    lastLoginAt: now,
+  });
+  save();
+}
+
 if (process.env.HACKATHON_DEMO === 'true') {
   for (const a of accounts.values()) {
     if (a.kycStatus === 'UNREGISTERED' || a.kycStatus === 'PENDING') a.kycStatus = 'APPROVED';
@@ -381,6 +407,25 @@ export function setCustody(accountId: string, mode: 'CUSTODIAL' | 'SELF', extern
   }
   save();
   return { user: toPublic(account), secretOnce: keys.secretKey };
+}
+
+/**
+ * Linkea una wallet self-custody a una cuenta existente. La firma ya se
+ * verificó en wallet_auth; acá sólo se persiste. Idempotente si la wallet
+ * ya era esta; rechaza pisar otra clave que ya tiene operaciones.
+ */
+export function linkSelfCustodyWallet(accountId: string, publicKey: string) {
+  const account = accounts.get(accountId);
+  if (!account) throw new Error('Cuenta no encontrada');
+  if (!isStellarPublicKey(publicKey)) throw new Error('Public key Stellar inválida');
+  if (account.publicKey && account.publicKey !== publicKey) {
+    throw new Error('La cuenta ya tiene otra wallet vinculada');
+  }
+  account.custodyMode = 'SELF';
+  account.publicKey = publicKey;
+  account.authProvider = account.authProvider || 'wallet';
+  save();
+  return toPublic(account);
 }
 
 export function markTokensOnChain(accountId: string, listingId: string, amount: number) {

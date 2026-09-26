@@ -38,6 +38,7 @@ interface AuthContextType {
   loginWithWallet: () => Promise<User>;
   loginWithEmail: (email: string, password: string, name?: string) => Promise<User>;
   chooseCustody: (mode: 'CUSTODIAL' | 'SELF', publicKey?: string) => Promise<void>;
+  linkFreighterWallet: () => Promise<void>;
   submitKyc: (payload: { legalName: string; cuit: string; selfieDataUrl?: string; email?: string }) => Promise<void>;
   approveToken: (listingId: string) => Promise<void>;
   claimTokens: (listingId: string) => Promise<void>;
@@ -65,6 +66,7 @@ const AuthContext = createContext<AuthContextType>({
     throw new Error('no session');
   },
   chooseCustody: async () => {},
+  linkFreighterWallet: async () => {},
   submitKyc: async () => {},
   approveToken: async () => {},
   claimTokens: async () => {},
@@ -238,6 +240,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [applySession]);
 
+  const linkFreighterWallet = useCallback(async () => {
+    if (!token) throw new Error('Iniciá sesión');
+    const { freighterLinkPayload } = await import('../lib/freighter');
+    const payload = await freighterLinkPayload();
+    const res = await fetch(`${API_BASE_URL}/api/auth/wallet/link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo vincular la wallet');
+    applySession(token, data.user);
+  }, [token, applySession]);
+
   const chooseCustody = useCallback(async (mode: 'CUSTODIAL' | 'SELF', publicKey?: string) => {
     if (!token) throw new Error('Iniciá sesión');
     const res = await fetch(`${API_BASE_URL}/api/auth/wallet`, {
@@ -383,6 +399,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loginWithWallet,
       loginWithEmail,
       chooseCustody,
+      linkFreighterWallet,
       submitKyc,
       approveToken,
       claimTokens,
@@ -403,6 +420,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loginWithWallet,
       loginWithEmail,
       chooseCustody,
+      linkFreighterWallet,
       submitKyc,
       approveToken,
       claimTokens,

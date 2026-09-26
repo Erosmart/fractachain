@@ -223,6 +223,11 @@ const es = {
     password: 'Contraseña (mín. 6)',
     entering: 'Entrando…',
     loading: 'Cargando sesión…',
+    kycNoticeTitle: 'Verificación de identidad (KYC)',
+    kycNoticeBody:
+      'Después de crear tu cuenta pedimos nombre, CUIT y selfie. En producción la validación la hace un proveedor de KYC del ecosistema Stellar habilitado en Argentina (SEP-12).',
+    linkWallet: 'Vincular mi Freighter a esta cuenta',
+    linkWalletHint: 'Firma el challenge y queda guardada en el backend.',
   },
   onboarding: {
     walletTitle: '¿Quién guarda las claves?',
@@ -611,6 +616,11 @@ const en: Messages = {
     password: 'Password (min. 6)',
     entering: 'Signing in…',
     loading: 'Loading session…',
+    kycNoticeTitle: 'Identity check (KYC)',
+    kycNoticeBody:
+      'After creating your account we ask for name, tax ID and a selfie. In production, verification is done by a Stellar-ecosystem KYC provider enabled for Argentina (SEP-12).',
+    linkWallet: 'Link my Freighter to this account',
+    linkWalletHint: 'Sign the challenge and it is stored in the backend.',
   },
   onboarding: {
     walletTitle: 'Who holds the keys?',
