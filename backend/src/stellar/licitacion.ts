@@ -10,7 +10,9 @@ import {
   invoke,
   isLiveContractId,
   read,
+  submitSignedSorobanXdr,
   toStroops,
+  unsignedInvocationXdr,
 } from './soroban';
 import {
   canFinalizeFromSnapshot,
@@ -35,6 +37,17 @@ function licitacionId(listing: Listing): string {
 async function adminClient(listing: Listing): Promise<{ client: AnyClient; admin: Keypair }> {
   const admin = await licitacionAdminKeypair();
   return { client: await contractClient(licitacionId(listing), admin), admin };
+}
+
+/** The wallet a self-custody investor signs with, or why they cannot yet. */
+function selfCustodyWallet(accountId: string): string {
+  const account = getAccount(accountId);
+  if (!account) throw new Error('Inversor no encontrado');
+  if (!account.publicKey) throw new Error('Conectá tu wallet Freighter antes de operar');
+  if (account.custodyMode === 'CUSTODIAL') {
+    throw new Error('Esta cuenta es custodial: el backend firma por vos, no hace falta Freighter');
+  }
+  return account.publicKey;
 }
 
 export async function isInvestorVerified(listing: Listing, investor: string): Promise<boolean> {
@@ -104,9 +117,7 @@ export async function contributeOnChain(
   const account = getAccount(accountId);
   if (!account) throw new Error('Inversor no encontrado');
   if (account.custodyMode !== 'CUSTODIAL' || !account.publicKey) {
-    throw new Error(
-      'El aporte on-chain de esta demo se firma con custodia de la plataforma. Las wallets propias (Freighter) vienen después del 27/09.',
-    );
+    throw new Error('Wallet propia: firmá el aporte con Freighter desde la ficha de la licitación');
   }
   const buyer = Keypair.fromSecret(custodialSigningKey(accountId));
   const xlm = await loadNativeXlm(buyer.publicKey());
@@ -135,6 +146,86 @@ export async function contributeOnChain(
     raised: fromStroops(raisedStroops),
     tokens: Number(rwa),
     licitacion: listing.licitacionContract,
+  };
+}
+
+/**
+ * Self-custody counterpart of `contributeOnChain`.
+ *
+ * Returns the simulated invocation so Freighter can sign it; the platform
+ * still runs the admin-only `verify_investor` first, because the contract
+ * rejects a contribution from a wallet it has no KYC record for.
+ */
+export async function prepareContributeXdr(
+  listing: Listing,
+  accountId: string,
+  amount: number,
+): Promise<{ xdr: string; publicKey: string; verifyHash: string | null }> {
+  const wallet = selfCustodyWallet(accountId);
+  const xlm = await loadNativeXlm(wallet);
+  if (xlm < amount + 2) {
+    throw new Error(
+      `Tu wallet tiene ${xlm.toFixed(2)} XLM y el aporte es ${amount}. Cargá XLM de testnet con Friendbot.`,
+    );
+  }
+  const verifyHash = await verifyInvestorOnChain(listing, wallet);
+  const xdr = await unsignedInvocationXdr(licitacionId(listing), wallet, 'contribute', {
+    buyer: wallet,
+    payment_amount: toStroops(amount),
+  });
+  return { xdr, publicKey: wallet, verifyHash };
+}
+
+/** Relays the signed contribution and reads back what the contract recorded. */
+export async function submitContributeXdr(
+  listing: Listing,
+  accountId: string,
+  signedXdr: string,
+): Promise<{ hash: string; raised: number; tokens: number; licitacion: string }> {
+  const wallet = selfCustodyWallet(accountId);
+  const hash = await submitSignedSorobanXdr(signedXdr);
+  const client = await contractClient(licitacionId(listing));
+  const [raisedStroops, rwa] = await Promise.all([
+    read<bigint>(client, 'get_total_raised'),
+    read<bigint>(client, 'get_rwa_balance', { user: wallet }),
+  ]);
+  return {
+    hash,
+    raised: fromStroops(raisedStroops),
+    tokens: Number(rwa),
+    licitacion: listing.licitacionContract,
+  };
+}
+
+export async function prepareRefundXdr(
+  listing: Listing,
+  accountId: string,
+): Promise<{ xdr: string; publicKey: string }> {
+  const wallet = selfCustodyWallet(accountId);
+  const xdr = await unsignedInvocationXdr(licitacionId(listing), wallet, 'refund', {
+    contributor: wallet,
+  });
+  return { xdr, publicKey: wallet };
+}
+
+export async function submitRefundXdr(
+  listing: Listing,
+  accountId: string,
+  signedXdr: string,
+): Promise<{ hash: string; refunded: number; rwa: number }> {
+  const wallet = selfCustodyWallet(accountId);
+  const client = await contractClient(licitacionId(listing));
+  const [before, price] = await Promise.all([
+    read<bigint>(client, 'get_rwa_balance', { user: wallet }).catch(() => 0n),
+    read<bigint>(client, 'get_price_per_unit').catch(() => 0n),
+  ]);
+  const hash = await submitSignedSorobanXdr(signedXdr);
+  const after = await read<bigint>(client, 'get_rwa_balance', { user: wallet }).catch(() => 0n);
+  const units = Number(before);
+  return {
+    hash,
+    refunded: price && units > 0 ? fromStroops(BigInt(units) * BigInt(price)) : 0,
+    rwa: Number(after),
   };
 }
 
@@ -168,9 +259,7 @@ export async function refundOnChain(
   const account = getAccount(accountId);
   if (!account) throw new Error('Inversor no encontrado');
   if (account.custodyMode !== 'CUSTODIAL' || !account.publicKey) {
-    throw new Error(
-      'El reembolso on-chain de esta demo se firma con custodia de la plataforma. Freighter no está en el happy path.',
-    );
+    throw new Error('Wallet propia: firmá el refund con Freighter desde la ficha de la licitación');
   }
   const contributor = Keypair.fromSecret(custodialSigningKey(accountId));
   const client = await contractClient(licitacionId(listing), contributor);

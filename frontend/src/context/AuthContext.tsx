@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { API_BASE_URL } from '../lib/api';
+import { signAndRelay } from '../lib/selfCustody';
 
 export type CustodyMode = 'CUSTODIAL' | 'SELF' | null;
 export type KycStatus = 'UNREGISTERED' | 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -44,7 +45,7 @@ interface AuthContextType {
   fetchWalletSecret: () => Promise<string>;
   claimDividends: (listingId: string) => Promise<void>;
   finalizeOffering: (listingId: string) => Promise<any>;
-  refundContribution: (listingId: string) => Promise<any>;
+  refundContribution: (listingId: string, selfCustody?: boolean) => Promise<any>;
   refreshUser: () => Promise<void>;
   logout: () => void;
 }
@@ -264,6 +265,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const approveToken = useCallback(async (listingId: string) => {
     if (!token) throw new Error('Iniciá sesión');
+    if (user?.custodyMode === 'SELF') {
+      // La trustline vive en la wallet del inversor: solo su firma la puede
+      // crear. Después registramos el opt-in y el emisor la autoriza.
+      await signAndRelay({
+        prepare: `/api/sdex/${listingId}/trustline/prepare`,
+        submit: '/api/sdex/submit',
+        token,
+      }).catch((err: any) => {
+        // Sin cuenta emisora todavía no hay asset que aprobar: el opt-in queda
+        // registrado en la plataforma y la trustline se firma cuando exista.
+        if (/no cotiza en el DEX/i.test(err?.message || '')) return null;
+        throw err;
+      });
+    }
     const res = await fetch(`${API_BASE_URL}/api/listings/${listingId}/trustline`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -271,7 +286,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo aprobar el token');
     applySession(token, data.data);
-  }, [token, applySession]);
+  }, [token, user?.custodyMode, applySession]);
 
   const claimTokens = useCallback(async (listingId: string) => {
     if (!token) throw new Error('Iniciá sesión');
@@ -317,8 +332,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return data.data;
   }, [token]);
 
-  const refundContribution = useCallback(async (listingId: string) => {
+  const refundContribution = useCallback(async (listingId: string, selfCustody?: boolean) => {
     if (!token) throw new Error('Iniciá sesión');
+    if (selfCustody ?? user?.custodyMode === 'SELF') {
+      const data = await signAndRelay<{ user?: User } & Record<string, unknown>>({
+        prepare: `/api/listings/${listingId}/refund/prepare`,
+        submit: `/api/listings/${listingId}/refund/submit`,
+        token,
+      });
+      if (data?.user) applySession(token, data.user);
+      return data;
+    }
     const res = await fetch(`${API_BASE_URL}/api/listings/${listingId}/refund`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -327,7 +351,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo reembolsar');
     if (data.data?.user) applySession(token, data.data.user);
     return data.data;
-  }, [token, applySession]);
+  }, [token, user?.custodyMode, applySession]);
 
   const claimDividends = useCallback(async (listingId: string) => {
     if (!token) throw new Error('Iniciá sesión');

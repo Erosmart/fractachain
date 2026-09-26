@@ -271,6 +271,20 @@ export async function prepareCancel(params: {
   return { xdr };
 }
 
+/** Custodial counterpart of `prepareCancel`: build, sign and submit. */
+export async function cancelCustodialOrder(params: {
+  listingId: string;
+  accountId: string;
+  side: Side;
+  offerId: string;
+  price: number;
+}) {
+  const { xdr } = await prepareCancel(params);
+  const secret = custodialSigningKey(params.accountId);
+  const result = await signAndSubmitXdr(xdr, secret);
+  return { hash: (result as any).hash as string };
+}
+
 /**
  * Prepares the trustline the investor signs to opt into holding the security.
  *

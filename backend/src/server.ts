@@ -43,6 +43,7 @@ import {
   setListingSettle,
   validationPack,
   isOnChainListing,
+  Listing,
   recordOnChainContribution,
   markListingClosed,
 } from './admin/listings';
@@ -59,6 +60,7 @@ import {
   getSdexBook,
   openCustodialTrustline,
   distributeClaimedTokens,
+  cancelCustodialOrder,
   placeCustodialOrder,
   prepareCancel,
   prepareOrder,
@@ -74,8 +76,12 @@ import {
   alreadyClosedOnChain,
   closeStatusFromChain,
   contributeOnChain,
+  prepareContributeXdr,
+  prepareRefundXdr,
   refundOnChain,
   snapshotLicitacion,
+  submitContributeXdr,
+  submitRefundXdr,
   syncFiduciaryOnChain,
   withdrawProceedsOnChain,
 } from './stellar/licitacion';
@@ -502,6 +508,24 @@ async function wrapAsync(fn: () => Promise<unknown>, res: Response, code = 200) 
   }
 }
 
+function onChainListingOr404(listingId: string) {
+  const listing = getListing(listingId);
+  if (!listing) throw new Error('Listing no encontrado');
+  if (!isOnChainListing(listing)) {
+    throw new Error('Esta operación on-chain solo existe en licitaciones XLM / Soroban');
+  }
+  return listing;
+}
+
+/** `refund()` only exists once `finalize()` left the offering in Failed. */
+async function requireFailedOffering(listing: Listing, investor?: string) {
+  const live = await snapshotLicitacion(listing, investor);
+  if (live.state !== 2 && listing.status !== 'CLOSED_FAILED') {
+    throw new Error('refund() solo corre si finalize() dejó la emisión en Failed');
+  }
+  return live;
+}
+
 async function listingPayload(listingId: string, investor?: string) {
   const listing = getListing(listingId);
   if (!listing) return null;
@@ -615,15 +639,8 @@ app.post('/api/listings/:id/refund', (req: Request, res: Response) => {
   const account = getAccountByToken(req.headers.authorization);
   if (!account) return res.status(401).json({ success: false, message: 'Iniciá sesión' });
   wrapAsync(async () => {
-    const listing = getListing(req.params.id);
-    if (!listing) throw new Error('Listing no encontrado');
-    if (!isOnChainListing(listing)) {
-      throw new Error('El reembolso on-chain solo existe en licitaciones XLM / Soroban');
-    }
-    const live = await snapshotLicitacion(listing, account.publicKey);
-    if (live.state !== 2 && listing.status !== 'CLOSED_FAILED') {
-      throw new Error('refund() solo corre si finalize() dejó la emisión en Failed');
-    }
+    const listing = onChainListingOr404(req.params.id);
+    const live = await requireFailedOffering(listing, account.publicKey);
     const result = await refundOnChain(listing, account.id);
     const user = markHoldingRefunded(account.id, listing.id, { hash: result.hash });
     return {
@@ -783,6 +800,81 @@ app.post('/api/listings/:id/contribute', (req: Request, res: Response) => {
   }, res);
 });
 
+/* ---------------------------------------------------------------- *
+ * Self-custody (Freighter) path for the Soroban offering
+ *
+ * `contribute` and `refund` run `require_auth` on the investor address, so
+ * the wallet has to be the transaction source. `/prepare` returns the
+ * simulated XDR and `/submit` relays it: the backend never holds the key.
+ * ---------------------------------------------------------------- */
+
+app.post('/api/listings/:id/contribute/prepare', (req: Request, res: Response) => {
+  const account = getAccountByToken(req.headers.authorization);
+  if (!account) return res.status(401).json({ success: false, message: 'Iniciá sesión para suscribir' });
+  wrapAsync(async () => {
+    const listing = onChainListingOr404(req.params.id);
+    return prepareContributeXdr(listing, account.id, Number(req.body?.usdcAmount));
+  }, res);
+});
+
+app.post('/api/listings/:id/contribute/submit', (req: Request, res: Response) => {
+  const account = getAccountByToken(req.headers.authorization);
+  if (!account) return res.status(401).json({ success: false, message: 'Iniciá sesión para suscribir' });
+  const signedXdr = String(req.body?.xdr || '');
+  if (!signedXdr) return res.status(400).json({ success: false, message: 'Falta el XDR firmado' });
+  wrapAsync(async () => {
+    const listing = onChainListingOr404(req.params.id);
+    const amount = Number(req.body?.usdcAmount);
+    const chain = await submitContributeXdr(listing, account.id, signedXdr);
+    recordOnChainContribution(listing.id, account.id, {
+      amount,
+      tokens: chain.tokens,
+      raised: chain.raised,
+    });
+    const onChain = await receiptAfterContribute(listing.id, account.id, {
+      contributeHash: chain.hash,
+    });
+    const closed = await autoFinalizeIfDue(listing.id);
+    const updated = getListing(listing.id)!;
+    return { ...updated, onChain: { ...onChain, autoFinalized: Boolean(closed) } };
+  }, res);
+});
+
+app.post('/api/listings/:id/refund/prepare', (req: Request, res: Response) => {
+  const account = getAccountByToken(req.headers.authorization);
+  if (!account) return res.status(401).json({ success: false, message: 'Iniciá sesión' });
+  wrapAsync(async () => {
+    const listing = onChainListingOr404(req.params.id);
+    await requireFailedOffering(listing, account.publicKey);
+    return prepareRefundXdr(listing, account.id);
+  }, res);
+});
+
+app.post('/api/listings/:id/refund/submit', (req: Request, res: Response) => {
+  const account = getAccountByToken(req.headers.authorization);
+  if (!account) return res.status(401).json({ success: false, message: 'Iniciá sesión' });
+  const signedXdr = String(req.body?.xdr || '');
+  if (!signedXdr) return res.status(400).json({ success: false, message: 'Falta el XDR firmado' });
+  wrapAsync(async () => {
+    const listing = onChainListingOr404(req.params.id);
+    const live = await requireFailedOffering(listing, account.publicKey);
+    const result = await submitRefundXdr(listing, account.id, signedXdr);
+    const user = markHoldingRefunded(account.id, listing.id, { hash: result.hash });
+    return {
+      user,
+      refunded: result.refunded,
+      rwa: result.rwa,
+      onChain: {
+        ...listingChainMeta(listing),
+        ...live,
+        hash: result.hash,
+        explorer: explorerTx(result.hash),
+        note: 'refund() devolvió el XLM de testnet a tu wallet Freighter y quemó las unidades RWA en el contrato.',
+      },
+    };
+  }, res);
+});
+
 app.get('/api/onchain/status', (_req: Request, res: Response) => {
   wrapAsync(() => getOnChainStatus(), res);
 });
@@ -878,15 +970,17 @@ app.post('/api/sdex/:listingId/orders/cancel', (req: Request, res: Response) => 
   const account = getAccountByToken(req.headers.authorization);
   if (!account) return res.status(401).json({ success: false, message: 'Iniciá sesión' });
   const { side, offerId, price } = req.body as { side: 'BUY' | 'SELL'; offerId: string; price: number };
+  const params = {
+    listingId: req.params.listingId,
+    accountId: account.id,
+    side,
+    offerId: String(offerId),
+    price: Number(price),
+  };
+  // Custodial accounts get the cancel already submitted; self-custody gets the
+  // XDR back to sign in their wallet.
   wrapAsync(
-    () =>
-      prepareCancel({
-        listingId: req.params.listingId,
-        accountId: account.id,
-        side,
-        offerId: String(offerId),
-        price: Number(price),
-      }),
+    () => (account.custodyMode === 'CUSTODIAL' ? cancelCustodialOrder(params) : prepareCancel(params)),
     res,
   );
 });

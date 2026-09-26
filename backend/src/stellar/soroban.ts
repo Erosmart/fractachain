@@ -179,6 +179,56 @@ export async function invoke(
   }
 }
 
+/**
+ * Builds and simulates an invocation the investor's own wallet will sign.
+ *
+ * The backend never sees the key: the wallet is the transaction source, so
+ * its signature is what satisfies `require_auth` inside the contract — no
+ * separate authorization entry has to travel back and forth.
+ */
+export async function unsignedInvocationXdr(
+  contractId: string,
+  invoker: string,
+  method: string,
+  args: Record<string, unknown> = {},
+): Promise<string> {
+  try {
+    const client = (await contract.Client.from({
+      ...clientOptions(undefined, contractId),
+      publicKey: invoker,
+    })) as AnyClient;
+    const fn = client[method];
+    const tx =
+      Object.keys(args).length === 0 ? await fn(methodOpts()) : await fn(args, methodOpts());
+    const pending = tx.needsNonInvokerSigningBy();
+    if (pending.length) {
+      throw new Error(`La transacción necesita la firma de ${pending.join(', ')}`);
+    }
+    return tx.toXDR();
+  } catch (err) {
+    throw mapSorobanError(err);
+  }
+}
+
+/** Relays a Soroban transaction already signed by the investor's wallet. */
+export async function submitSignedSorobanXdr(signedXdr: string): Promise<string> {
+  const srv = rpcServer();
+  const tx = TransactionBuilder.fromXDR(signedXdr, networkPassphrase()) as Transaction;
+  try {
+    const sent = await srv.sendTransaction(tx);
+    if (sent.status === 'ERROR') {
+      throw new Error(`La red rechazó la transacción: ${JSON.stringify(sent.errorResult)}`);
+    }
+    const settled = await srv.pollTransaction(sent.hash, { attempts: 30, sleepStrategy: () => 1000 });
+    if (settled.status !== 'SUCCESS') {
+      throw new Error(`La transacción terminó en ${settled.status}`);
+    }
+    return sent.hash;
+  } catch (err) {
+    throw mapSorobanError(err);
+  }
+}
+
 export async function read<T>(
   client: AnyClient,
   method: string,
