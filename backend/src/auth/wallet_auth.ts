@@ -15,10 +15,11 @@ function verifySignature(publicKey: string, message: string, signature: string, 
   }
   let ok = false;
   try {
-    ok = Keypair.fromPublicKey(publicKey).verify(
-      Buffer.from(message, 'utf8'),
-      Buffer.from(signature, 'base64')
-    );
+    const kp = Keypair.fromPublicKey(publicKey);
+    const sig = Buffer.from(signature, 'base64');
+    // Freighter firma con SEP-53: SHA-256("Stellar Signed Message:\n" + msg).
+    // Se acepta también la firma cruda del mensaje para compatibilidad.
+    ok = kp.verifyMessage(message, sig) || kp.verify(Buffer.from(message, 'utf8'), sig);
   } catch {
     ok = false;
   }
