@@ -94,7 +94,7 @@ import {
   authenticateWithFirebase,
   getFirebaseUserByToken,
 } from './auth/firebase_auth';
-import { authenticateWithWallet } from './auth/wallet_auth';
+import { authenticateWithWallet, linkWalletSignature } from './auth/wallet_auth';
 import {
   addTrustline,
   claimListingTokens,
@@ -254,6 +254,18 @@ app.post('/api/auth/freighter', async (req: Request, res: Response) => {
   try {
     const result = authenticateWithWallet(req.body);
     res.status(result.success ? 200 : 400).json(result);
+  } catch (err: any) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// Vincula Freighter a una cuenta ya autenticada: firma "fractachain-link:<ts>".
+app.post('/api/auth/wallet/link', async (req: Request, res: Response) => {
+  const account = getAccountByToken(req.headers.authorization);
+  if (!account) return res.status(401).json({ success: false, message: 'No autenticado' });
+  try {
+    const result = linkWalletSignature(account.id, req.body);
+    res.json(result);
   } catch (err: any) {
     res.status(400).json({ success: false, message: err.message });
   }

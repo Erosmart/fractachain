@@ -29,9 +29,9 @@ export async function freighterAddress(): Promise<string> {
   return address;
 }
 
-export async function freighterLoginPayload(): Promise<FreighterLoginPayload> {
+async function freighterSignPayload(prefix: string): Promise<FreighterLoginPayload> {
   const address = await freighterAddress();
-  const message = `fractachain-login:${Date.now()}`;
+  const message = `${prefix}${Date.now()}`;
   const res = await signMessage(message, { address });
   if (res.error) throw new Error(res.error.message || 'Freighter no firmó el mensaje');
   const sig = res.signedMessage;
@@ -39,6 +39,15 @@ export async function freighterLoginPayload(): Promise<FreighterLoginPayload> {
 
   const signature = typeof sig === 'string' ? sig : toBase64(sig);
   return { publicKey: address, message, signature };
+}
+
+export function freighterLoginPayload(): Promise<FreighterLoginPayload> {
+  return freighterSignPayload('fractachain-login:');
+}
+
+/** Same challenge-response but for linking the wallet to an existing account. */
+export function freighterLinkPayload(): Promise<FreighterLoginPayload> {
+  return freighterSignPayload('fractachain-link:');
 }
 
 /**

@@ -12,12 +12,13 @@ import BrandLogo from '../../components/BrandLogo';
 export default function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
-  const { user, loginWithEmail, loginWithWallet, isLoading, logout } = useAuth();
+  const { user, loginWithEmail, loginWithWallet, linkFreighterWallet, isLoading, logout } = useAuth();
   const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
   const goNext = () => {
     if (!user) return;
@@ -50,10 +51,32 @@ export default function LoginInner() {
       <div className="max-w-md mx-auto py-16 space-y-6 text-center">
         <h1 className="text-2xl font-extrabold font-display">{t('auth.alreadyIn')}</h1>
         <p className="text-neutral-600">{user.email}</p>
+        {user.kycStatus !== 'APPROVED' && (
+          <div className="p-4 rounded-2xl border border-amber-300/60 bg-amber-50 text-left">
+            <p className="text-sm font-bold">{t('auth.kycNoticeTitle')}</p>
+            <p className="text-xs text-neutral-600 mt-1">{t('auth.kycNoticeBody')}</p>
+          </div>
+        )}
         <div className="p-4 rounded-2xl crystal-card text-left space-y-1">
           <p className="text-[11px] uppercase tracking-wider text-neutral-500 font-display font-bold">{t('nav.yourWallet')}</p>
           <WalletAddress address={user.publicKey} />
         </div>
+        {user.custodyMode !== 'SELF' && (
+          <button
+            type="button"
+            onClick={() =>
+              linkFreighterWallet()
+                .then(() => setNotice(t('auth.linkWalletHint')))
+                .catch((e: any) => setError(e.message))
+            }
+            disabled={isLoading}
+            className="px-6 py-3 rounded-2xl border border-black/15 bg-white font-display font-bold"
+          >
+            {t('auth.linkWallet')}
+          </button>
+        )}
+        {notice && <p className="text-sm text-green-700">{notice}</p>}
+        {error && <p className="text-sm text-red-700">{error}</p>}
         <button type="button" onClick={goNext} className="px-6 py-3 rounded-2xl bg-black text-white font-display font-bold">
           {t('auth.continue')}
         </button>
@@ -71,6 +94,11 @@ export default function LoginInner() {
         <p className="text-neutral-600">
           {t('auth.subtitle')}
         </p>
+      </div>
+
+      <div className="p-4 rounded-2xl border border-amber-300/60 bg-amber-50 text-left">
+        <p className="text-sm font-bold">{t('auth.kycNoticeTitle')}</p>
+        <p className="text-xs text-neutral-600 mt-1">{t('auth.kycNoticeBody')}</p>
       </div>
 
       <div className="p-6 rounded-3xl crystal-card space-y-5">
