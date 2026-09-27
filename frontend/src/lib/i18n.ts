@@ -91,7 +91,7 @@ const es = {
     kicker: 'Productos',
     title: 'Todo sobre un mismo riel',
     lead: 'Consumo, inversión y crédito contra producción. Todo liquida on-chain.',
-    roadmap: 'En roadmap',
+    roadmap: 'Próximamente',
     items: [
       {
         kicker: '01',
@@ -495,7 +495,7 @@ const en: Messages = {
     kicker: 'Products',
     title: 'Everything on one rail',
     lead: 'Consumption, investment and credit against production. Everything settles on-chain.',
-    roadmap: 'On the roadmap',
+    roadmap: 'Coming soon',
     items: [
       {
         kicker: '01',

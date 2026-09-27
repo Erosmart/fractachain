@@ -20,25 +20,37 @@ export default function ProductsSection() {
           {copy.lead}
         </p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 items-stretch">
         {copy.items.map((p, i) => {
           const Icon = ICONS[i];
+          const live = Boolean(HREFS[i]);
           return (
-          <article key={p.title} className="p-5 sm:p-7 rounded-2xl sm:rounded-3xl crystal-card flex flex-col space-y-4">
+          <article
+            key={p.title}
+            className={`p-5 sm:p-7 rounded-2xl sm:rounded-3xl flex flex-col space-y-4 ${
+              live
+                ? 'bg-black text-white shadow-xl ring-1 ring-black md:-translate-y-1 md:scale-[1.02]'
+                : 'crystal-card'
+            }`}
+          >
             <div className="flex items-center justify-between">
-              <span className="font-lcd text-xs text-neutral-500">{p.kicker}</span>
-              <Icon className="w-5 h-5 text-black" />
+              <span className={`font-lcd text-xs ${live ? 'text-white/60' : 'text-neutral-500'}`}>{p.kicker}</span>
+              <Icon className={`w-5 h-5 ${live ? 'text-[#4ea743]' : 'text-black'}`} />
             </div>
-            <h3 className="font-section text-xl font-extrabold text-black leading-tight">{p.title}</h3>
-            <p className="font-semibold text-black">{p.lead}</p>
-            <p className="text-neutral-600 flex-1 text-sm sm:text-base">
+            <h3 className={`font-section text-xl font-extrabold leading-tight ${live ? 'text-white' : 'text-black'}`}>{p.title}</h3>
+            <p className={`font-semibold ${live ? 'text-white/90' : 'text-black'}`}>{p.lead}</p>
+            <p className={`flex-1 text-sm sm:text-base ${live ? 'text-white/70' : 'text-neutral-600'}`}>
               {p.body}{' '}
               {p.tip && (
                 <span className="group relative inline-flex align-middle">
                   <button
                     type="button"
                     aria-label={p.tip}
-                    className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-black/20 text-neutral-500 transition-colors hover:border-black/40 hover:text-black"
+                    className={`inline-flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${
+                      live
+                        ? 'border-white/30 text-white/60 hover:border-white/60 hover:text-white'
+                        : 'border-black/20 text-neutral-500 hover:border-black/40 hover:text-black'
+                    }`}
                   >
                     <Info className="h-3 w-3" />
                   </button>
@@ -48,12 +60,12 @@ export default function ProductsSection() {
                 </span>
               )}
             </p>
-            {HREFS[i] ? (
-              <Link href={HREFS[i]!} className="inline-flex items-center gap-2 text-sm font-section font-bold text-black pt-2">
+            {live ? (
+              <Link href={HREFS[i]!} className="inline-flex items-center gap-2 text-sm font-section font-bold text-white pt-2">
                 {p.cta} <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             ) : (
-              <span className="inline-flex w-fit items-center gap-2 px-3 py-1.5 rounded-full border border-black/10 text-xs font-section font-bold uppercase tracking-wider text-neutral-500">
+              <span className="inline-flex w-fit items-center gap-2 px-3 py-1.5 rounded-full border border-black/10 bg-black/[0.04] text-xs font-section font-bold uppercase tracking-wider text-neutral-500">
                 {copy.roadmap}
               </span>
             )}
