@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
+import { useI18n } from '../../../context/I18nContext';
 
 type Deployment = {
   network?: string;
@@ -19,6 +20,7 @@ type Deployment = {
 
 export default function AdminTestnetPage() {
   const { token } = useAuth();
+  const { t } = useI18n();
   const [mode, setMode] = useState<'local' | 'faucet' | 'deploy'>('deploy');
   const [friendbot, setFriendbot] = useState(true);
   const [horizonUrl, setHorizonUrl] = useState('https://horizon-testnet.stellar.org');
@@ -71,15 +73,15 @@ export default function AdminTestnetPage() {
     });
     const json = await res.json();
     if (!res.ok) {
-      setNotice(json.message || 'No se pudo guardar');
+      setNotice(json.message || t('admTest.saveFail'));
       return;
     }
     setNotice(
       mode === 'deploy'
         ? onChain
-          ? 'Guardado: testnet completo. Factory, stock vault y licitación ya están on-chain.'
-          : 'Guardado: testnet completo. Corré scripts/testnet/03-deploy.sh para subir los WASM.'
-        : 'Configuración de testnet guardada.'
+          ? t('admTest.savedOn')
+          : t('admTest.savedOff')
+        : t('admTest.saved')
     );
   };
 
@@ -91,30 +93,30 @@ export default function AdminTestnetPage() {
     });
     const json = await res.json();
     if (!res.ok) {
-      setNotice(json.message || 'No se pudo configurar el emisor');
+      setNotice(json.message || t('admTest.authFail'));
       return;
     }
-    setNotice('Emisor con AUTH_REQUIRED + AUTH_REVOCABLE. El token no se mueve sin KYC.');
+    setNotice(t('admTest.authDone'));
   };
 
   return (
     <div className="max-w-2xl space-y-6 py-6">
       <div>
         <p className="font-lcd text-[11px] uppercase tracking-[0.2em] text-neutral-500">Stellar</p>
-        <h1 className="text-3xl font-extrabold font-display">Cómo configurar testnet</h1>
+        <h1 className="text-3xl font-extrabold font-display">{t('admTest.title')}</h1>
         <p className="text-neutral-600 mt-1">
-          Elegí el modo de red y cuándo se reparte el token de cada licitación: al alcanzar el mínimo, o recién en una fecha.
+          {t('admTest.lead')}
         </p>
       </div>
       <div className="p-6 rounded-3xl crystal-card space-y-3">
-        <p className="font-display font-extrabold">{onChain ? 'On-chain (testnet)' : 'Todavía no hay contratos en testnet'}</p>
+        <p className="font-display font-extrabold">{onChain ? t('admTest.onchain') : t('admTest.noContracts')}</p>
         {deployment?.factory ? (
           <dl className="space-y-1 font-mono text-xs break-all">
             {[
               ['Factory', deployment.factory],
               ['Stock vault', deployment.stockVault],
-              ['Licitación', deployment.licitacion],
-              ['Emisor', deployment.issuer],
+              [t('market.licitacion'), deployment.licitacion],
+              [t('admTest.issuer'), deployment.issuer],
               ['Deployer', deployment.deployer],
               ['USDC SAC', deployment.usdcSac],
             ].map(([label, value]) =>
@@ -136,18 +138,18 @@ export default function AdminTestnetPage() {
           </dl>
         ) : (
           <p className="text-sm text-neutral-600">
-            En esta máquina: <code>bash scripts/testnet/01-keys.sh && bash scripts/testnet/02-build.sh && bash scripts/testnet/03-deploy.sh</code>
+            {t('admTest.runHere')} <code>bash scripts/testnet/01-keys.sh && bash scripts/testnet/02-build.sh && bash scripts/testnet/03-deploy.sh</code>
           </p>
         )}
         <button type="button" onClick={configureIssuer} className="px-4 py-2 rounded-2xl border border-black/15 font-display font-bold text-sm">
-          Encender AUTH_REQUIRED en el emisor
+          {t('admTest.authBtn')}
         </button>
       </div>
       <div className="p-6 rounded-3xl crystal-card space-y-4">
         {[
-          { id: 'local' as const, title: 'Solo local', body: 'Licitación y orderbook en tu PC. Sin chain.' },
-          { id: 'faucet' as const, title: 'Testnet liviano', body: 'Wallet real + Friendbot. Sin desplegar contratos.' },
-          { id: 'deploy' as const, title: 'Testnet completo', body: 'Después se despliegan stock vault y licitación on-chain.' },
+          { id: 'local' as const, title: t('admTest.modeLocal'), body: t('admTest.modeLocalBody') },
+          { id: 'faucet' as const, title: t('admTest.modeFaucet'), body: t('admTest.modeFaucetBody') },
+          { id: 'deploy' as const, title: t('admTest.modeDeploy'), body: t('admTest.modeDeployBody') },
         ].map((opt) => (
           <label key={opt.id} className={`block p-4 rounded-2xl border cursor-pointer ${mode === opt.id ? 'border-black bg-black/[0.03]' : 'border-black/10'}`}>
             <input type="radio" className="mr-2" checked={mode === opt.id} onChange={() => setMode(opt.id)} />
@@ -156,20 +158,20 @@ export default function AdminTestnetPage() {
           </label>
         ))}
         <div className="pt-2 space-y-3">
-          <p className="font-display font-extrabold">¿Cuándo se reparte el token de la licitación?</p>
+          <p className="font-display font-extrabold">{t('admTest.settleQ')}</p>
           <label className={`block p-4 rounded-2xl border cursor-pointer ${settlePolicy === 'ON_MIN' ? 'border-black bg-black/[0.03]' : 'border-black/10'}`}>
             <input type="radio" className="mr-2" checked={settlePolicy === 'ON_MIN'} onChange={() => setSettlePolicy('ON_MIN')} />
-            Al alcanzar el mínimo de inversión
-            <p className="text-sm text-neutral-600 mt-1">Si llega al soft cap, cierra y los suscriptores pueden reclamar tokens.</p>
+            {t('admTest.onMin')}
+            <p className="text-sm text-neutral-600 mt-1">{t('admTest.onMinBody')}</p>
           </label>
           <label className={`block p-4 rounded-2xl border cursor-pointer ${settlePolicy === 'ON_DATE' ? 'border-black bg-black/[0.03]' : 'border-black/10'}`}>
             <input type="radio" className="mr-2" checked={settlePolicy === 'ON_DATE'} onChange={() => setSettlePolicy('ON_DATE')} />
-            Esperar a una fecha
-            <p className="text-sm text-neutral-600 mt-1">Sigue abierta aunque ya haya mínimo. En esa fecha cierra: éxito si llegó al mínimo, si no falla.</p>
+            {t('admTest.onDate')}
+            <p className="text-sm text-neutral-600 mt-1">{t('admTest.onDateBody')}</p>
           </label>
           {settlePolicy === 'ON_DATE' && (
             <label className="block text-sm space-y-1">
-              Fecha de cierre / reparto
+              {t('admTest.closeDate')}
               <input
                 type="datetime-local"
                 className="w-full px-3 py-2 rounded-xl border border-black/10"
@@ -181,7 +183,7 @@ export default function AdminTestnetPage() {
         </div>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={friendbot} onChange={(e) => setFriendbot(e.target.checked)} />
-          Pedir XLM a Friendbot al login
+          {t('admTest.friendbot')}
         </label>
         <label className="block text-sm space-y-1">
           Horizon
@@ -192,7 +194,7 @@ export default function AdminTestnetPage() {
           <input className="w-full px-3 py-2 rounded-xl border border-black/10 font-mono text-xs" value={rpcUrl} onChange={(e) => setRpcUrl(e.target.value)} />
         </label>
         <button type="button" onClick={save} className="px-5 py-3 rounded-2xl bg-black text-white font-display font-bold">
-          Guardar
+          {t('admTest.save')}
         </button>
         {notice && <p className="text-sm">{notice}</p>}
       </div>

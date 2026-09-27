@@ -81,10 +81,10 @@ export default function PoolDetailPage() {
         try {
           json = raw ? JSON.parse(raw) : {};
         } catch {
-          throw new Error('El servidor no respondió bien. ¿Está el API en el puerto 4000?');
+          throw new Error(t('misc.apiDown400'));
         }
         if (!res.ok || json.success === false) {
-          throw new Error(json.message || 'No se pudo suscribir');
+          throw new Error(json.message || t('market.subscribeFail'));
         }
         data = json.data;
       }
@@ -108,7 +108,7 @@ export default function PoolDetailPage() {
         setNotice(t('market.subscribedRaised', { n: raised }));
       }
     } catch (e: any) {
-      const msg = e?.message || 'No se pudo aportar';
+      const msg = e?.message || t('market.subscribeFail');
       setNotice(/failed to fetch/i.test(msg) ? t('market.apiDown') : msg);
     } finally {
       setBusy(false);
@@ -151,7 +151,7 @@ export default function PoolDetailPage() {
       await load();
       await refreshUser();
     } catch (e: any) {
-      setNotice(e?.message || 'No se pudo reembolsar');
+      setNotice(e?.message || t('err.refundFail'));
     } finally {
       setBusy(false);
     }
@@ -214,13 +214,13 @@ export default function PoolDetailPage() {
                 <div><dt className="text-neutral-500">CNV</dt><dd>{d.cnvRecordId}</dd></div>
                 <div><dt className="text-neutral-500">BYMA</dt><dd>{d.bymaRequestId || '—'}</dd></div>
                 <div><dt className="text-neutral-500">Caja de Valores</dt><dd className="font-mono text-xs">{d.cajaSubaccount}</dd></div>
-                <div><dt className="text-neutral-500">Custodio CUIT</dt><dd>{d.custodianCuit}</dd></div>
-                <div><dt className="text-neutral-500">Auditor</dt><dd>{d.auditor}</dd></div>
-                <div><dt className="text-neutral-500">Respaldo</dt><dd>{validation.token.backing}</dd></div>
-                <div className="sm:col-span-2"><dt className="text-neutral-500">Hash estatuto</dt><dd className="font-mono text-xs break-all">{d.estatutoHash}</dd></div>
+                <div><dt className="text-neutral-500">{t('market.custodian')}</dt><dd>{d.custodianCuit}</dd></div>
+                <div><dt className="text-neutral-500">{t('admIss.f.auditor')}</dt><dd>{d.auditor}</dd></div>
+                <div><dt className="text-neutral-500">{t('market.backing')}</dt><dd>{validation.token.backing}</dd></div>
+                <div className="sm:col-span-2"><dt className="text-neutral-500">{t('market.estatuto')}</dt><dd className="font-mono text-xs break-all">{d.estatutoHash}</dd></div>
                 <div className="sm:col-span-2"><dt className="text-neutral-500">Stock vault</dt><dd className="font-mono text-xs break-all">{listing.stockContract}</dd></div>
                 <div className="sm:col-span-2">
-                  <dt className="text-neutral-500">Licitación</dt>
+                  <dt className="text-neutral-500">{t('market.licitacion')}</dt>
                   <dd className="font-mono text-xs break-all">
                     {String(listing.licitacionContract || '').startsWith('C') ? (
                       <a
@@ -236,7 +236,7 @@ export default function PoolDetailPage() {
                     )}
                   </dd>
                 </div>
-                <div className="sm:col-span-2"><dt className="text-neutral-500">Depósito CV</dt><dd className="font-mono text-xs break-all">{listing.cvDepositHash}</dd></div>
+                <div className="sm:col-span-2"><dt className="text-neutral-500">{t('market.cvDeposit')}</dt><dd className="font-mono text-xs break-all">{listing.cvDepositHash}</dd></div>
               </dl>
               <ul className="text-sm space-y-1 pt-2">
                 {validation.checks.map((c: any) => (
@@ -252,7 +252,7 @@ export default function PoolDetailPage() {
               <h3 className="font-display font-extrabold">{t('market.subscribe')}</h3>
               <p className="text-sm font-bold">{statusLabel}</p>
               <p className="text-sm text-neutral-600">
-                {formatInt(live.raised ?? listing.raisedUsdc)} / {formatInt(d.offeringHardCapUsdc)} {unit} · mínimo {formatInt(d.minInvestmentUsdc || d.pricePerShareUsdc)} {unit}
+                {formatInt(live.raised ?? listing.raisedUsdc)} / {formatInt(d.offeringHardCapUsdc)} {unit} · {t('market.min')} {formatInt(d.minInvestmentUsdc || d.pricePerShareUsdc)} {unit}
               </p>
               {typeof live.investorRwa === 'number' && (
                 <p className="text-xs text-neutral-500 font-mono">RWA on-chain: {live.investorRwa}</p>
@@ -365,7 +365,7 @@ export default function PoolDetailPage() {
                               setNotice(t('market.claimedNotice'));
                             }
                           })
-                          .catch((e) => setNotice(e?.message || 'No se pudo enviar on-chain'))
+                          .catch((e) => setNotice(e?.message || t('err.distributeFail')))
                           .finally(() => setBusy(false));
                       }}
                       className="w-full py-3 rounded-2xl bg-black text-white font-display font-bold disabled:opacity-40"

@@ -27,7 +27,7 @@ export default function GoogleLoginButton({
       const u = await loginWithGoogle();
       if (onSuccess) onSuccess(u);
     } catch (err: any) {
-      setError(err.message || 'Google no disponible');
+      setError(err.message || t('misc.googleUnavailable'));
     }
   };
 

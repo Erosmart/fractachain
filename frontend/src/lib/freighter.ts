@@ -9,6 +9,7 @@ import {
   signMessage,
   signTransaction,
 } from '@stellar/freighter-api';
+import { tClient } from './i18n';
 
 export const TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
 
@@ -17,15 +18,15 @@ export type FreighterLoginPayload = { publicKey: string; message: string; signat
 export async function freighterAddress(): Promise<string> {
   const conn = await isConnected().catch(() => ({ isConnected: false }));
   if (!conn.isConnected) {
-    throw new Error('No encontramos Freighter. Instalá la extensión desde freighter.app y recargá.');
+    throw new Error(tClient('err.freighterMissing'));
   }
   const allowed = await isAllowed().catch(() => ({ isAllowed: false }));
   if (!allowed.isAllowed) {
     const acc = await requestAccess();
-    if (acc.error) throw new Error(acc.error.message || 'Freighter rechazó la conexión');
+    if (acc.error) throw new Error(acc.error.message || tClient('err.freighterRejected'));
   }
   const { address, error: addrErr } = await getAddress();
-  if (addrErr || !address) throw new Error(addrErr?.message || 'Freighter no devolvió tu dirección');
+  if (addrErr || !address) throw new Error(addrErr?.message || tClient('err.freighterNoAddress'));
   return address;
 }
 
@@ -33,9 +34,9 @@ async function freighterSignPayload(prefix: string): Promise<FreighterLoginPaylo
   const address = await freighterAddress();
   const message = `${prefix}${Date.now()}`;
   const res = await signMessage(message, { address });
-  if (res.error) throw new Error(res.error.message || 'Freighter no firmó el mensaje');
+  if (res.error) throw new Error(res.error.message || tClient('err.freighterNoSign'));
   const sig = res.signedMessage;
-  if (!sig) throw new Error('Freighter no firmó el mensaje');
+  if (!sig) throw new Error(tClient('err.freighterNoSign'));
 
   const signature = typeof sig === 'string' ? sig : toBase64(sig);
   return { publicKey: address, message, signature };
@@ -61,14 +62,14 @@ export async function freighterSignXdr(xdr: string): Promise<string> {
   const address = await freighterAddress();
   const net = await getNetwork().catch(() => ({ networkPassphrase: '' }));
   if (net.networkPassphrase && net.networkPassphrase !== TESTNET_PASSPHRASE) {
-    throw new Error('Freighter está en otra red. Cambiá a Testnet para operar en FractaChain.');
+    throw new Error(tClient('err.freighterWrongNet'));
   }
   const res = await signTransaction(xdr, {
     address,
     networkPassphrase: TESTNET_PASSPHRASE,
   });
-  if (res.error) throw new Error(res.error.message || 'Freighter rechazó la firma');
-  if (!res.signedTxXdr) throw new Error('Freighter no devolvió la transacción firmada');
+  if (res.error) throw new Error(res.error.message || tClient('err.freighterSignRejected'));
+  if (!res.signedTxXdr) throw new Error(tClient('err.freighterNoSignedTx'));
   return res.signedTxXdr;
 }
 

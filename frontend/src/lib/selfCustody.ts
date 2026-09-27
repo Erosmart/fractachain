@@ -2,6 +2,7 @@
 
 import { API_BASE_URL } from './api';
 import { freighterSignXdr } from './freighter';
+import { tClient } from './i18n';
 
 /**
  * Self-custody transaction flow.
@@ -29,7 +30,7 @@ export async function postJson<T>(
   });
   const json: ApiEnvelope = await res.json().catch(() => ({}));
   if (!res.ok || json.success === false) {
-    throw new Error(json.message || 'La operación falló');
+    throw new Error(json.message || tClient('err.opFailed'));
   }
   return json.data as T;
 }
@@ -42,7 +43,7 @@ export async function signAndRelay<T>(params: {
   body?: Record<string, unknown>;
 }): Promise<T> {
   const prepared = await postJson<{ xdr: string }>(params.prepare, params.token, params.body);
-  if (!prepared?.xdr) throw new Error('El backend no devolvió la transacción para firmar');
+  if (!prepared?.xdr) throw new Error(tClient('err.noXdr'));
   const signedXdr = await freighterSignXdr(prepared.xdr);
   return postJson<T>(params.submit, params.token, { ...(params.body || {}), xdr: signedXdr });
 }

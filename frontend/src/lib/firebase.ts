@@ -5,6 +5,7 @@ import {
   signInWithPopup,
   signOut as fbSignOut,
 } from 'firebase/auth';
+import { tClient } from './i18n';
 
 // Firebase Configuration from environment variables
 // (Permite usar Firebase Auth directamente sin necesidad de crear proyectos complejos en GCP)
@@ -41,12 +42,12 @@ export async function loginWithFirebaseGoogle(): Promise<{
     return {
       uid: user.uid,
       email: user.email || '',
-      displayName: user.displayName || 'Usuario Google',
+      displayName: user.displayName || tClient('err.googleUser'),
       photoURL: user.photoURL || '',
       idToken,
     };
   }
-  throw new Error('Google no está configurado. Entrá con email y contraseña, o cargá las claves de Firebase.');
+  throw new Error(tClient('err.googleNotConfigured'));
 }
 
 export async function logoutFromFirebase(): Promise<void> {

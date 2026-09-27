@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { RefreshCw, Search, UserCheck } from 'lucide-react';
 import { KycRecord, API_BASE_URL } from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
+import { useI18n } from '../../../context/I18nContext';
 import { useVisibleInterval } from '../../../lib/useVisibleInterval';
 
 export default function AdminKycPage() {
   const { token } = useAuth();
+  const { t } = useI18n();
   const [records, setRecords] = useState<KycRecord[]>([]);
   const [filterStatus, setFilterStatus] = useState('PENDING');
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,11 +39,11 @@ export default function AdminKycPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ reason: status === 'REJECTED' ? 'Documentación insuficiente' : undefined }),
+        body: JSON.stringify({ reason: status === 'REJECTED' ? t('admKyc.rejectReason') : undefined }),
       });
       const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.message || json.error || 'No se pudo actualizar');
-      setNotice(status === 'APPROVED' ? `Alta OK: ${id}` : `Rechazado: ${id}`);
+      if (!res.ok) throw new Error(json.message || json.error || t('admKyc.updateFail'));
+      setNotice(status === 'APPROVED' ? t('admKyc.approveOk', { id }) : t('admKyc.rejectOk', { id }));
       await fetchRecords();
     } catch (err: any) {
       setNotice(err.message);
@@ -67,11 +69,11 @@ export default function AdminKycPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <p className="font-lcd text-[11px] uppercase tracking-[0.2em] text-neutral-500 inline-flex items-center gap-1.5">
-            <UserCheck className="w-3.5 h-3.5" /> Altas KYC
+            <UserCheck className="w-3.5 h-3.5" /> {t('admKyc.kicker')}
           </p>
-          <h1 className="text-2xl sm:text-3xl font-extrabold font-display">Dar de alta inversores</h1>
+          <h1 className="text-2xl sm:text-3xl font-extrabold font-display">{t('admKyc.title')}</h1>
           <p className="text-neutral-600 mt-1">
-            Cuando alguien se registra y manda nombre, CUIT y foto, aparece acá. Aprobá para que pueda suscribir y operar.
+            {t('admKyc.lead')}
           </p>
         </div>
         <button
@@ -79,7 +81,7 @@ export default function AdminKycPage() {
           onClick={fetchRecords}
           className="px-4 py-2 rounded-xl border border-black/10 text-sm font-display font-bold inline-flex items-center gap-2"
         >
-          <RefreshCw className="w-4 h-4" /> Actualizar
+          <RefreshCw className="w-4 h-4" /> {t('admKyc.refresh')}
         </button>
       </div>
 
@@ -91,7 +93,7 @@ export default function AdminKycPage() {
           <input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Nombre, CUIT, email o wallet"
+            placeholder={t('admKyc.searchPh')}
             className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-black/10 text-sm"
           />
         </div>
@@ -105,7 +107,7 @@ export default function AdminKycPage() {
                 filterStatus === st ? 'bg-black text-white' : 'text-neutral-500'
               }`}
             >
-              {st === 'ALL' ? 'Todos' : st === 'PENDING' ? 'Pendientes' : st === 'APPROVED' ? 'Aprobados' : 'Rechazados'}
+              {st === 'ALL' ? t('admKyc.all') : st === 'PENDING' ? t('admKyc.pending') : st === 'APPROVED' ? t('admKyc.approved') : t('admKyc.rejected')}
             </button>
           ))}
         </div>
@@ -114,7 +116,7 @@ export default function AdminKycPage() {
       <div className="rounded-2xl sm:rounded-3xl crystal-card overflow-hidden">
         {filtered.length === 0 ? (
           <p className="p-8 text-sm text-neutral-500 text-center">
-            {filterStatus === 'PENDING' ? 'No hay solicitudes pendientes.' : 'No hay registros con ese filtro.'}
+            {filterStatus === 'PENDING' ? t('admKyc.emptyPending') : t('admKyc.emptyFilter')}
           </p>
         ) : (
           <>
@@ -144,9 +146,9 @@ export default function AdminKycPage() {
                       <span className="font-mono">{rec.docNumber || '—'}</span>
                     </div>
                     <div>
-                      <span className="text-neutral-500 block">Estado</span>
+                      <span className="text-neutral-500 block">{t('admKyc.status')}</span>
                       <span className="font-bold">
-                        {rec.status === 'PENDING' ? 'Pendiente' : rec.status === 'APPROVED' ? 'Aprobado' : rec.status}
+                        {rec.status === 'PENDING' ? t('admKyc.stPending') : rec.status === 'APPROVED' ? t('admKyc.stApproved') : rec.status}
                       </span>
                     </div>
                     <div className="col-span-2 min-w-0">
@@ -162,7 +164,7 @@ export default function AdminKycPage() {
                         onClick={() => update(rec.id, 'APPROVED')}
                         className="w-full px-3 py-2 rounded-lg bg-black text-white text-xs font-display font-bold disabled:opacity-40"
                       >
-                        Dar de alta
+                        {t('admKyc.approve')}
                       </button>
                     )}
                     {rec.status === 'PENDING' && (
@@ -172,7 +174,7 @@ export default function AdminKycPage() {
                         onClick={() => update(rec.id, 'REJECTED')}
                         className="w-full px-3 py-2 rounded-lg border border-black/10 text-xs font-display font-bold disabled:opacity-40"
                       >
-                        Rechazar
+                        {t('admKyc.reject')}
                       </button>
                     )}
                   </div>
@@ -185,11 +187,11 @@ export default function AdminKycPage() {
               <table className="w-full text-left text-sm">
                 <thead className="text-xs uppercase text-neutral-500 border-b border-black/10">
                   <tr>
-                    <th className="px-4 py-3">Solicitud</th>
+                    <th className="px-4 py-3">{t('admKyc.request')}</th>
                     <th className="px-4 py-3">CUIT</th>
                     <th className="px-4 py-3">Wallet</th>
-                    <th className="px-4 py-3">Estado</th>
-                    <th className="px-4 py-3 text-right">Alta</th>
+                    <th className="px-4 py-3">{t('admKyc.status')}</th>
+                    <th className="px-4 py-3 text-right">{t('admKyc.alta')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -216,7 +218,7 @@ export default function AdminKycPage() {
                       <td className="px-4 py-3 font-mono text-xs">{rec.docNumber || '—'}</td>
                       <td className="px-4 py-3 font-mono text-xs break-all max-w-[140px]">{rec.walletAddress || '—'}</td>
                       <td className="px-4 py-3 text-xs font-bold">
-                        {rec.status === 'PENDING' ? 'Pendiente' : rec.status === 'APPROVED' ? 'Aprobado' : rec.status}
+                        {rec.status === 'PENDING' ? t('admKyc.stPending') : rec.status === 'APPROVED' ? t('admKyc.stApproved') : rec.status}
                       </td>
                       <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
                         {rec.status !== 'APPROVED' && (
@@ -226,7 +228,7 @@ export default function AdminKycPage() {
                             onClick={() => update(rec.id, 'APPROVED')}
                             className="px-3 py-1.5 rounded-lg bg-black text-white text-xs font-display font-bold disabled:opacity-40"
                           >
-                            Dar de alta
+                            {t('admKyc.approve')}
                           </button>
                         )}
                         {rec.status === 'PENDING' && (
@@ -236,7 +238,7 @@ export default function AdminKycPage() {
                             onClick={() => update(rec.id, 'REJECTED')}
                             className="px-3 py-1.5 rounded-lg border border-black/10 text-xs font-display font-bold disabled:opacity-40"
                           >
-                            Rechazar
+                            {t('admKyc.reject')}
                           </button>
                         )}
                       </td>

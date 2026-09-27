@@ -122,7 +122,13 @@ export default function StocksPage() {
     setTradeSuccess(null);
     setTimeout(() => {
       setIsTrading(false);
-      setTradeSuccess(`Simulación: ${orderType === 'BUY' ? 'compra' : 'venta'} de ${sharesAmount} ${selectedStock.symbol}. No se envió transacción. El mercado vivo es Licitaciones / Orderbook.`);
+      setTradeSuccess(
+        t('stk.simTrade', {
+          side: orderType === 'BUY' ? t('stk.sideBuy') : t('stk.sideSell'),
+          n: sharesAmount,
+          sym: selectedStock.symbol,
+        }),
+      );
     }, 1200);
   };
 
@@ -132,13 +138,13 @@ export default function StocksPage() {
       <div className="space-y-2">
         <div className="inline-flex max-w-full flex-wrap items-center gap-1.5 px-3 py-1 rounded-full bg-leaf-100 border border-[#8fcb7a]/40 text-[#2f6f28] text-xs font-semibold uppercase tracking-wider">
           <TrendingUp className="w-3.5 h-3.5 shrink-0" />
-          Mercado Secundario Merval
+          {t('stk.kicker')}
         </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">
           {t('pages.stocksTitle')}
         </h1>
         <p className="text-neutral-600 text-xs sm:text-sm max-w-2xl">
-          Opera títulos líderes del panel principal de Bolsas y Mercados Argentinos (BYMA) con respaldo real e inmovilización en subcuenta comitente de Caja de Valores S.A.
+          {t('stk.lead')}
         </p>
         <MockDisclaimer product="Merval" />
         <LiveContractLink kind="stockVault" />
@@ -152,31 +158,31 @@ export default function StocksPage() {
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-black">Prueba de Reserva en Tiempo Real (Proof of Reserve - PoR)</h3>
-              <p className="text-[11px] text-neutral-500">Auditoría criptográfica y conciliación diaria con Caja de Valores S.A.</p>
+              <h3 className="text-sm font-bold text-black">{t('stk.porTitle')}</h3>
+              <p className="text-[11px] text-neutral-500">{t('stk.porSub')}</p>
             </div>
           </div>
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-leaf-100 text-[#2f6f28] border border-[#8fcb7a]/50 text-[11px] font-mono font-bold">
-            <CheckCircle2 className="w-3.5 h-3.5" /> 100.00% RESPALDADO 1:1
+            <CheckCircle2 className="w-3.5 h-3.5" /> {t('stk.backed')}
           </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 text-xs">
           <div className="p-3 rounded-xl bg-black/5 border border-black/8 min-w-0">
-            <span className="text-[10px] text-neutral-500 block">Subcuenta Comitente</span>
-            <span className="font-mono font-semibold text-black break-words">84920-CV (Segregada)</span>
+            <span className="text-[10px] text-neutral-500 block">{t('stk.subaccount')}</span>
+            <span className="font-mono font-semibold text-black break-words">84920-CV {t('stk.segregated')}</span>
           </div>
           <div className="p-3 rounded-xl bg-black/5 border border-black/8">
-            <span className="text-[10px] text-neutral-500 block">Auditor Externo</span>
+            <span className="text-[10px] text-neutral-500 block">{t('stk.auditor')}</span>
             <span className="font-semibold text-[#2f6f28]">PwC / CNV RG 1150</span>
           </div>
           <div className="p-3 rounded-xl bg-black/5 border border-black/8">
-            <span className="text-[10px] text-neutral-500 block">Última Conciliación</span>
+            <span className="text-[10px] text-neutral-500 block">{t('stk.lastRecon')}</span>
             <span className="font-mono text-neutral-700">{selectedStock?.lastAuditTimestamp || '—'}</span>
           </div>
           <div className="p-3 rounded-xl bg-black/5 border border-black/8">
-            <span className="text-[10px] text-neutral-500 block">Liquidación</span>
-            <span className="font-mono text-[#2f6f28] font-bold">Inmediata T+0</span>
+            <span className="text-[10px] text-neutral-500 block">{t('stk.settlement')}</span>
+            <span className="font-mono text-[#2f6f28] font-bold">{t('stk.t0')}</span>
           </div>
         </div>
       </div>
@@ -185,11 +191,11 @@ export default function StocksPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left: Stock Cards */}
         <div className="lg:col-span-7 space-y-4">
-          <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Activos Disponibles</h3>
+          <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('stk.available')}</h3>
 
           {stocks.length === 0 && (
             <div className="p-5 rounded-3xl crystal-card text-xs text-neutral-600">
-              No hay acciones activas en el mercado. El admin las emite y las activa desde Admin → Salida a bolsa.
+              {t('stk.empty')}
             </div>
           )}
           <div className="space-y-3">
@@ -214,7 +220,7 @@ export default function StocksPage() {
                         <span className="font-bold text-black text-base">{stock.symbol}</span>
                         <span className="text-xs text-neutral-500 font-mono">({stock.tickerMerval})</span>
                         <span className="px-2 py-0.5 rounded text-[9px] font-mono bg-leaf-100 text-[#2f6f28] border border-[#8fcb7a]/50">
-                          1:1 Custodia
+                          {t('stk.custody')}
                         </span>
                       </div>
                       <div className="text-xs text-neutral-600 truncate">{stock.companyName}</div>
@@ -235,7 +241,7 @@ export default function StocksPage() {
                       {isPositive ? `+${stock.change24h}%` : `${stock.change24h}%`}
                     </div>
                     <div className="text-[10px] text-neutral-500 font-mono block">
-                      En Custodia: {stock.totalSharesInCustody.toLocaleString()}
+                      {t('stk.inCustody')} {stock.totalSharesInCustody.toLocaleString()}
                     </div>
                   </div>
                 </div>
@@ -247,13 +253,13 @@ export default function StocksPage() {
           <div className="p-5 rounded-3xl crystal-card space-y-3">
             <h4 className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-2">
               <DollarSign className="w-4 h-4 text-[#2f6f28]" />
-              Distribución Automática de Dividendos en USDC
+              {t('stk.divTitle')}
             </h4>
             <p className="text-xs text-neutral-600 leading-relaxed">
-              Cuando una sociedad cotizante paga dividendos en dólares o pesos convertibles, el smart contract de Fractachain distribuye proporcionalmente USDC a cada tenedor en Stellar sin deducciones abusivas ni demoras bancarias.
+              {t('stk.divBody')}
             </p>
             <div className="p-3 rounded-xl bg-black/5 border border-black/8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 text-xs">
-              <span className="text-neutral-600">Último dividendo tYPF pagado:</span>
+              <span className="text-neutral-600">{t('stk.lastDiv')}</span>
               <span className="font-mono font-bold text-[#2f6f28]">$0.85 USDC / token</span>
             </div>
           </div>
@@ -263,9 +269,9 @@ export default function StocksPage() {
         <div className="lg:col-span-5 space-y-4">
           <div className="p-6 sm:p-8 rounded-3xl crystal-card space-y-6 sticky top-24">
             <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center">
-              <h3 className="text-base font-bold text-black">Terminal de Negociación</h3>
+              <h3 className="text-base font-bold text-black">{t('stk.terminal')}</h3>
               <span className="text-xs font-mono text-[#2f6f28] font-bold">
-                {selectedStock ? `${selectedStock.symbol} • $${selectedStock.priceUsd.toFixed(2)} USD` : 'Sin activos'}
+                {selectedStock ? `${selectedStock.symbol} • $${selectedStock.priceUsd.toFixed(2)} USD` : t('stk.noAssets')}
               </span>
             </div>
 
@@ -280,7 +286,7 @@ export default function StocksPage() {
                     : 'text-neutral-500 hover:text-black'
                 }`}
               >
-                Comprar {selectedStock?.symbol}
+                {t('ob.buy')} {selectedStock?.symbol}
               </button>
               <button
                 type="button"
@@ -291,15 +297,15 @@ export default function StocksPage() {
                     : 'text-neutral-500 hover:text-black'
                 }`}
               >
-                Vender {selectedStock?.symbol}
+                {t('ob.sell')} {selectedStock?.symbol}
               </button>
             </div>
 
             {/* Shares Input */}
             <div className="space-y-1.5">
               <div className="flex flex-col gap-0.5 sm:flex-row sm:justify-between text-xs">
-                <span className="text-neutral-600 font-medium">Cantidad de Tokens (Acciones):</span>
-                <span className="text-neutral-500 font-mono">Disponibles: 150,000</span>
+                <span className="text-neutral-600 font-medium">{t('stk.tokenQty')}</span>
+                <span className="text-neutral-500 font-mono">{t('stk.avail')} 150,000</span>
               </div>
               <input
                 type="number"
@@ -314,15 +320,15 @@ export default function StocksPage() {
             {/* Price breakdown */}
             <div className="p-4 rounded-xl bg-black/5 border border-black/8 space-y-2 text-xs">
               <div className="flex justify-between text-neutral-500">
-                <span>Precio Unitario:</span>
+                <span>{t('stk.unitPrice')}</span>
                 <span className="font-mono text-black">${(selectedStock?.priceUsd ?? 0).toFixed(2)} USDC</span>
               </div>
               <div className="flex justify-between text-neutral-500">
-                <span>Comisión Protocolo (0.1%):</span>
+                <span>{t('stk.fee')}</span>
                 <span className="font-mono text-[#2f6f28]">${(totalCostUsd * 0.001).toFixed(2)} USDC</span>
               </div>
               <div className="flex justify-between text-black font-bold pt-2 border-t border-black/10 text-sm">
-                <span>Total Estimado:</span>
+                <span>{t('stk.totalEst')}</span>
                 <span className="font-mono text-[#2f6f28]">${(totalCostUsd * 1.001).toFixed(2)} USDC</span>
               </div>
             </div>
@@ -347,11 +353,13 @@ export default function StocksPage() {
               }`}
             >
               {isTrading ? (
-                'Simulando (no on-chain)…'
+                t('stk.simulating')
               ) : (
                 <>
                   <Zap className="w-4 h-4" />
-                  {orderType === 'BUY' ? `Comprar ${sharesAmount} ${selectedStock?.symbol}` : `Vender ${sharesAmount} ${selectedStock?.symbol}`}
+                  {orderType === 'BUY'
+                    ? t('stk.buyN', { n: sharesAmount, sym: selectedStock?.symbol || '' })
+                    : t('stk.sellN', { n: sharesAmount, sym: selectedStock?.symbol || '' })}
                 </>
               )}
             </button>
@@ -363,34 +371,34 @@ export default function StocksPage() {
                 onClick={() => setDestokenizeModal(!destokenizeModal)}
                 className="text-xs text-neutral-500 hover:text-black underline transition-colors"
               >
-                Solicitar Destokenización a Cuenta ALYC Tradicional
+                {t('stk.destok')}
               </button>
             </div>
 
             {destokenizeModal && (
               <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-3 text-xs">
                 <div className="flex items-center gap-2 text-amber-800 font-semibold">
-                  <Building2 className="w-4 h-4" /> Retiro a Caja de Valores
+                  <Building2 className="w-4 h-4" /> {t('stk.withdrawCv')}
                 </div>
                 <p className="text-[11px] text-neutral-600 leading-relaxed">
-                  Tus tokens serán quemados en Soroban y las acciones físicas subyacentes serán transferidas desde la subcuenta 84920 a tu ALYC receptora autorizada.
+                  {t('stk.destokBody')}
                 </p>
                 <input
                   type="text"
                   value={alycAccount}
                   onChange={(e) => setAlycAccount(e.target.value)}
-                  placeholder="Número de Comitente y ALYC"
+                  placeholder={t('stk.alycPh')}
                   className="w-full px-3 py-1.5 rounded-lg bg-white/70 border border-black/10 text-xs text-black"
                 />
                 <button
                   type="button"
                   onClick={() => {
-                    alert('Solicitud de destokenización radicada. Proceso de liquidación CV: 24 horas hábiles.');
+                    alert(t('stk.destokDone'));
                     setDestokenizeModal(false);
                   }}
                   className="w-full py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-semibold text-xs transition-all"
                 >
-                  Enviar Orden de Destokenización
+                  {t('stk.sendDestok')}
                 </button>
               </div>
             )}
