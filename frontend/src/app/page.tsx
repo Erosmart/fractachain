@@ -20,6 +20,7 @@ import DynamicHeroText from '../components/DynamicHeroText';
 import HeroBackground from '../components/HeroBackground';
 import ProductsSection from '../components/ProductsSection';
 import RegulationSection from '../components/RegulationSection';
+import MervalLogosSection from '../components/MervalLogosSection';
 import LiquidityFirstBanner from '../components/LiquidityFirstBanner';
 import PartnersShowcase from '../components/PartnersShowcase';
 import IssuerCtaBanner from '../components/IssuerCtaBanner';
@@ -84,6 +85,7 @@ export default function HomePage() {
       <ProductsSection />
       <IssuerCtaBanner />
       <RegulationSection />
+      <MervalLogosSection />
 
       <PartnersShowcase />
 
