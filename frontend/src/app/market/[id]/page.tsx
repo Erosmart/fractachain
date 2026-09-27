@@ -337,9 +337,13 @@ export default function PoolDetailPage() {
                   <p className="text-xs text-neutral-600">
                     {t('market.walletUnits', { n: onChainUnits.toFixed(4), code: d.tokenTicker })}
                   </p>
-                  <p className="text-[11px] font-mono break-all text-neutral-500">
-                    {d.tokenTicker}:{d.issuerPublicKey}
-                  </p>
+                  {d.issuerPublicKey ? (
+                    <p className="text-[11px] font-mono break-all text-neutral-500">
+                      {d.tokenTicker}:{d.issuerPublicKey}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-neutral-500">{t('market.noIssuerYet')}</p>
+                  )}
                   <p className="text-[11px] text-neutral-500">
                     {user.custodyMode === 'SELF'
                       ? t('market.freighterHintSelf')

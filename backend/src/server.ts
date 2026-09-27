@@ -712,7 +712,9 @@ app.post('/api/listings/:id/mint', (req: Request, res: Response) => {
     // On-chain mint against the listing's own vault happens first; if it
     // fails the DB counter is left untouched and the real error surfaces.
     const chain = await mintBackedStockOnChain(listing, amount);
-    const updated = mintListingTokens(req.params.id, amount, req.body.cvDepositHash);
+    // The deposit hash is fixed at deploy time — accepting one here would let
+    // the ledger diverge from the hash the on-chain mint actually recorded.
+    const updated = mintListingTokens(req.params.id, amount);
     return {
       ...updated,
       onChain: chain ? { hash: chain.hash, explorer: explorerTx(chain.hash), to: chain.to } : null,
@@ -871,7 +873,7 @@ app.post('/api/listings/:id/distribute', (req: Request, res: Response) => {
 
 app.get('/api/admin/testnet', (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
-  wrap(() => {
+  wrapAsync(async () => {
     const deployment = loadTestnetDeployment();
     return {
       ...getTestnetConfig(),
@@ -880,9 +882,14 @@ app.get('/api/admin/testnet', (req: Request, res: Response) => {
       /**
        * The issuer account the backend can sign for right now. New listings
        * should default issuerPublicKey to this — pointing them at a wallet we
-       * cannot sign with leaves tokens permanently undistributable.
+       * cannot sign with leaves tokens permanently undistributable. Provision
+       * one on the spot when none exists so the admin UI always shows the
+       * signable issuer.
        */
-      activeIssuer: platformIssuerPublicKey(),
+      activeIssuer:
+        platformIssuerPublicKey() ||
+        (await ensurePlatformIssuer().catch(() => null))?.publicKey() ||
+        null,
     };
   }, res);
 });
