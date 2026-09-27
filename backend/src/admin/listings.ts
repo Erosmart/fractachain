@@ -559,13 +559,15 @@ function payListingProceeds(listing: Listing) {
 }
 
 export function isOnChainListing(listing: Listing): boolean {
-  return isLiveContractId(listing.licitacionContract) && listing.dossier.paymentKind === 'XLM';
+  // Any live Soroban instance counts — USDC offerings are on-chain too; the
+  // payment token was frozen inside the contract at initialize().
+  return isLiveContractId(listing.licitacionContract);
 }
 
 export function bindLicitacionForDemo(
   id: string,
   contractId: string,
-  opts?: { factoryProductId?: number | null },
+  opts?: { factoryProductId?: number | null; paymentKind?: 'XLM' | 'USDC' },
 ): Listing {
   const listing = listings.find((l) => l.id === id);
   if (!listing) throw new Error('Listing no encontrado');
@@ -573,7 +575,9 @@ export function bindLicitacionForDemo(
     throw new Error(`Contract id inválido: ${contractId}`);
   }
   listing.licitacionContract = contractId;
-  listing.dossier.paymentKind = 'XLM';
+  // Must match the token the contract was initialized with — the contract
+  // itself rejects any other asset, so a wrong label just produces bad UX.
+  listing.dossier.paymentKind = opts?.paymentKind === 'USDC' ? 'USDC' : 'XLM';
   listing.dossier.pricePerShareUsdc = 10;
   listing.dossier.minInvestmentUsdc = 100;
   listing.dossier.offeringSoftCapUsdc = 100;

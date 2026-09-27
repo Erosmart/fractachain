@@ -21,6 +21,7 @@ import {
   alreadyClosedOnChain,
   closeStatusFromChain,
   finalizeOnChain,
+  paymentUnit,
   snapshotLicitacion,
 } from '../stellar/licitacion';
 import { explorerTx, listingChainMeta } from '../stellar/onchain';
@@ -111,8 +112,8 @@ export async function finalizeListedOffering(listingId: string) {
         alreadyClosed: true,
         note:
           live.state === 1
-            ? 'La emisión ya estaba Successful. El XLM de testnet fue a la wallet fiduciaria en finalize(); no hay un segundo payout al inversor.'
-            : 'La emisión ya estaba Failed. El inversor puede llamar refund() para recuperar XLM.',
+            ? `La emisión ya estaba Successful. Los ${paymentUnit(listing)} de testnet fueron a la wallet fiduciaria en finalize(); no hay un segundo payout al inversor.`
+            : `La emisión ya estaba Failed. El inversor puede llamar refund() para recuperar ${paymentUnit(listing)}.`,
       },
     };
   }
@@ -137,8 +138,8 @@ export async function finalizeListedOffering(listingId: string) {
       explorer: explorerTx(result.hash),
       alreadyClosed: false,
       note: success
-        ? 'finalize() pagó el XLM recaudado a la wallet fiduciaria (proceeds) y las unidades quedaron acreditadas al inversor. No hace falta reclamar nada.'
-        : 'finalize() dejó Failed (no se llegó al soft cap). El inversor recupera XLM con refund().',
+        ? `finalize() pagó los ${paymentUnit(listing)} recaudados a la wallet fiduciaria (proceeds) y las unidades quedaron acreditadas al inversor. No hace falta reclamar nada.`
+        : `finalize() dejó Failed (no se llegó al soft cap). El inversor recupera ${paymentUnit(listing)} con refund().`,
     },
   };
 }

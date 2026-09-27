@@ -52,6 +52,7 @@ export default function PoolDetailPage() {
     setNotice('');
     const auth = token || (typeof window !== 'undefined' ? localStorage.getItem('fc_auth_token') : null);
     const xlm = listing?.dossier?.paymentKind === 'XLM';
+    const onChainLive = Boolean(listing?.onChain?.live);
     if (!auth) {
       setNotice(t(xlm ? 'market.loginToContributeXlm' : 'market.loginToContribute'));
       return;
@@ -59,7 +60,7 @@ export default function PoolDetailPage() {
     setBusy(true);
     try {
       let data: any;
-      if (xlm && isSelfCustody(user)) {
+      if (onChainLive && isSelfCustody(user)) {
         // Wallet propia: el contrato pide la firma del inversor, así que el
         // backend arma la invocación y Freighter la firma.
         setNotice(t('market.freighterSign'));
@@ -100,12 +101,12 @@ export default function PoolDetailPage() {
       const unit = data?.dossier?.paymentKind === 'XLM' ? 'XLM' : 'USDC';
       if (contributeHash) {
         setLastHash({ kind: 'contribute', hash: contributeHash, explorer: onChain?.contributeExplorer });
-        setNotice(t('market.subscribedContributeHash', { n: raised, hash: contributeHash }));
+        setNotice(t('market.subscribedContributeHash', { n: raised, u: unit, hash: contributeHash }));
       } else if (hash) {
         setLastHash({ kind: 'trustline', hash, explorer: onChain?.trustlineExplorer });
         setNotice(t('market.subscribedHash', { n: raised, hash }));
-      } else if (unit === 'XLM') {
-        setNotice(t('market.subscribedRaisedXlm', { n: raised }));
+      } else if (onChainLive) {
+        setNotice(t('market.subscribedRaisedXlm', { n: raised, u: unit }));
       } else {
         setNotice(t('market.subscribedRaised', { n: raised }));
       }
@@ -148,8 +149,9 @@ export default function PoolDetailPage() {
     try {
       const data = await refundContribution(poolId, isSelfCustody(user));
       const hash = data?.onChain?.hash;
+      const rUnit = listing?.dossier?.paymentKind === 'XLM' ? 'XLM' : 'USDC';
       if (hash) setLastHash({ kind: 'refund', hash, explorer: data?.onChain?.explorer });
-      setNotice(hash ? t('market.refundNotice', { hash }) : data?.onChain?.note || 'refund() OK');
+      setNotice(hash ? t('market.refundNotice', { hash, u: rUnit }) : data?.onChain?.note || 'refund() OK');
       await load();
       await refreshUser();
     } catch (e: any) {
@@ -175,7 +177,7 @@ export default function PoolDetailPage() {
       (holding?.tokensOwed || 0) > 0 &&
       !holding?.refundedAt;
     const canRefund =
-      xlm && failed && Boolean(holding) && !holding?.refundedAt;
+      Boolean(live.live) && failed && Boolean(holding) && !holding?.refundedAt;
     // Units already paid on-ledger to the user's wallet (what Freighter shows)
     // vs. units that exist only in the platform ledger and can still be sent.
     const onChainUnits = Number(holding?.tokensOnChain || 0);
@@ -202,7 +204,7 @@ export default function PoolDetailPage() {
               <p className="font-lcd text-[11px] uppercase tracking-[0.2em] text-neutral-500">{d.tokenTicker} · {d.ticker}</p>
               <h1 className="text-3xl font-extrabold font-display">{d.legalName}</h1>
               <p className="text-neutral-600">{d.useOfProceeds}</p>
-              {xlm && (
+              {live.live && (
                 <p className="text-xs text-neutral-500">{t('market.finalizeRule')}</p>
               )}
             </div>
@@ -268,30 +270,35 @@ export default function PoolDetailPage() {
                 className="w-full px-3 py-3 rounded-xl border border-black/10 font-mono"
               />
               {listing.status === 'CLOSED_SUCCESS' && (
-                <p className="text-sm text-[#2f6f28] font-bold">{xlm ? t('market.closedSuccess') : t('market.closed')}</p>
+                <p className="text-sm text-[#2f6f28] font-bold">{live.live ? t('market.closedSuccess', { u: unit }) : t('market.closed')}</p>
               )}
               {listing.status === 'CLOSED_FAILED' && (
                 <p className="text-sm text-red-800 font-bold">{t('market.closedFailed')}</p>
               )}
               {listing.status === 'LISTED' && (
                 <p className="text-sm text-neutral-600">
-                  {xlm
-                    ? t('market.closesAtXlm', { n: formatInt(d.offeringHardCapUsdc) })
+                  {live.live
+                    ? t('market.closesAtXlm', { n: formatInt(d.offeringHardCapUsdc), u: unit })
                     : t('market.closesAt', { n: formatInt(d.offeringSoftCapUsdc) })}
                 </p>
               )}
-              {xlm && (
+              {live.live && (
                 <div className="space-y-1">
-                  <p className="text-xs text-neutral-500">{t('market.payoutHint')}</p>
+                  <p className="text-xs text-neutral-500">{t('market.payoutHint', { u: unit })}</p>
                   <p className="text-xs text-neutral-500">{t('market.autoSettle')}</p>
                   {live.fiduciary && (
                     <p className="text-[11px] font-mono break-all text-neutral-500">
                       {t('market.payoutTo')} {live.fiduciary}
                     </p>
                   )}
-                  {typeof live.fiduciaryXlm === 'number' && (
+                  {typeof live.fiduciaryUsdc === 'number' && (
                     <p className="text-[11px] text-neutral-500">
-                      {t('market.payoutBalance', { n: live.fiduciaryXlm.toFixed(4) })}
+                      {t('market.payoutBalance', { n: live.fiduciaryUsdc.toFixed(4), u: 'USDC' })}
+                    </p>
+                  )}
+                  {typeof live.fiduciaryUsdc !== 'number' && typeof live.fiduciaryXlm === 'number' && (
+                    <p className="text-[11px] text-neutral-500">
+                      {t('market.payoutBalance', { n: live.fiduciaryXlm.toFixed(4), u: 'XLM' })}
                     </p>
                   )}
                   {live.fiduciaryMismatch && (
@@ -385,7 +392,7 @@ export default function PoolDetailPage() {
                   onClick={runRefund}
                   className="w-full py-3 rounded-2xl border border-black/10 font-display font-bold"
                 >
-                  {busy ? t('market.refundBusy') : t('market.refund')}
+                  {busy ? t('market.refundBusy') : t('market.refund', { u: unit })}
                 </button>
               )}
               {holding?.refundedAt && (
@@ -405,7 +412,7 @@ export default function PoolDetailPage() {
               >
                 {busy ? '…' : xlm ? t('market.contributeXlm') : t('market.contribute')}
               </button>
-              {xlm && listing.status === 'LISTED' && (
+              {live.live && listing.status === 'LISTED' && (
                 <button
                   type="button"
                   onClick={runFinalize}

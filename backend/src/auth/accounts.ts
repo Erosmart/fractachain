@@ -700,6 +700,20 @@ export async function hydrateTestnetWallet(accountId: string) {
     account.faucetFundedAt = account.faucetFundedAt || new Date().toISOString();
   }
   account.xlmBalance = await loadNativeXlm(account.publicKey);
+  // Testnet USDC faucet: Friendbot only hands out XLM, so the platform
+  // issues it itself. Custodial wallets get trustline + grant in one shot;
+  // self-custody wallets get topped up only when their trustline already
+  // exists (the wallet page offers the changeTrust flow otherwise).
+  try {
+    const { fundTestnetUsdc, payUsdcGrant } = await import('../stellar/usdc');
+    if (account.custodyMode === 'CUSTODIAL' && account.secretKey) {
+      await fundTestnetUsdc(account.publicKey, { walletSecret: openSecret(account.secretKey) });
+    } else {
+      await payUsdcGrant(account.publicKey);
+    }
+  } catch (err: any) {
+    console.warn('[usdc-faucet]', err?.message || err);
+  }
   save();
   return toPublic(account);
 }

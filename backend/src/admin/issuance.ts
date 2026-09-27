@@ -1,3 +1,5 @@
+import { loadTestnetDeployment } from '../stellar/deployment';
+
 export type ProductKind = 'LICITACION' | 'FORWARD' | 'WARRANT' | 'STOCK';
 export type PaymentKind = 'XLM' | 'USDC' | 'USDT';
 
@@ -17,15 +19,23 @@ export interface IssuanceProduct {
 const products: IssuanceProduct[] = [];
 let seq = 1;
 
-/** Testnet defaults. Native XLM SAC is derived per-network; USDC SAC is Circle's testnet contract. USDT is set from admin. */
+/**
+ * Testnet defaults. Native XLM SAC is derived per-network; the USDC SAC is
+ * read from deployments/testnet.json (the platform-issued faucet asset), so
+ * this map always points at the same contract the licitaciones bill in.
+ * USDT is set from admin.
+ */
 const DEFAULT_TESTNET_ASSETS: Record<PaymentKind, string> = {
   XLM: 'native',
-  USDC: 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA',
+  USDC: '',
   USDT: '',
 };
 
 export function getPaymentAssets(): Record<PaymentKind, string> {
-  return { ...DEFAULT_TESTNET_ASSETS };
+  return {
+    ...DEFAULT_TESTNET_ASSETS,
+    USDC: DEFAULT_TESTNET_ASSETS.USDC || loadTestnetDeployment()?.usdcSac || '',
+  };
 }
 
 export function setPaymentAsset(kind: PaymentKind, address: string) {
