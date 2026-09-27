@@ -13,13 +13,13 @@ import {
   Droplets,
   DollarSign,
   KeyRound,
-  CreditCard,
+  Sprout,
+  FileText,
 } from 'lucide-react';
 import DynamicHeroText from '../components/DynamicHeroText';
 import HeroBackground from '../components/HeroBackground';
 import ProductsSection from '../components/ProductsSection';
 import RegulationSection from '../components/RegulationSection';
-import MervalLogosSection from '../components/MervalLogosSection';
 import LiquidityFirstBanner from '../components/LiquidityFirstBanner';
 import PartnersShowcase from '../components/PartnersShowcase';
 import IssuerCtaBanner from '../components/IssuerCtaBanner';
@@ -29,7 +29,7 @@ import { getServerMessages } from '../lib/i18n-server';
 export default function HomePage() {
   const messages = getServerMessages();
 
-  const soonIcons: LucideIcon[] = [Landmark, Layers, Globe2, CreditCard];
+  const soonIcons: LucideIcon[] = [TrendingUp, Sprout, FileText, Landmark];
   const badgeIcons: LucideIcon[] = [ShieldCheck, Lock, Zap, CheckCircle2];
   const stellarIcons: LucideIcon[] = [Zap, DollarSign, Globe2, ShieldCheck, KeyRound];
 
@@ -68,13 +68,6 @@ export default function HomePage() {
               {messages.home.ctaMarket}
             </Link>
             <Link
-              href="/stocks"
-              className="w-full sm:w-auto justify-center px-7 py-3.5 rounded-2xl bg-white/80 border border-black/10 text-black font-display font-bold text-[0.95rem] flex items-center gap-2"
-            >
-              <TrendingUp className="w-4 h-4 shrink-0" />
-              {messages.home.ctaStocks}
-            </Link>
-            <Link
               href="/orderbook"
               className="w-full sm:w-auto justify-center px-7 py-3.5 rounded-2xl bg-white/60 border border-black/10 text-black font-display font-semibold text-[0.95rem] flex items-center gap-2"
             >
@@ -91,7 +84,6 @@ export default function HomePage() {
       <ProductsSection />
       <IssuerCtaBanner />
       <RegulationSection />
-      <MervalLogosSection />
 
       <PartnersShowcase />
 

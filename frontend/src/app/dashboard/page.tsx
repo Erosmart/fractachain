@@ -283,9 +283,6 @@ export default function DashboardPage() {
             <Link href="/market" className="px-5 py-3 rounded-2xl bg-black text-white font-display font-bold text-sm inline-flex items-center gap-2">
               <Layers className="w-4 h-4" /> {t('nav.market')} <ArrowRight className="w-4 h-4" />
             </Link>
-            <Link href="/stocks" className="px-5 py-3 rounded-2xl border border-black/10 font-display font-bold text-sm inline-flex items-center gap-2">
-              <TrendingUp className="w-4 h-4" /> {t('footer.stocks')}
-            </Link>
           </div>
         </div>
       ) : (

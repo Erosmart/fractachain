@@ -3,7 +3,7 @@ import { ArrowRight, ShoppingBasket, LineChart, Landmark, Info } from 'lucide-re
 import { getServerMessages } from '../lib/i18n-server';
 
 const ICONS = [ShoppingBasket, LineChart, Landmark];
-const HREFS = ['/forwards', '/market', '/warrants'];
+const HREFS: (string | null)[] = [null, '/market', null];
 
 export default function ProductsSection() {
   const messages = getServerMessages();
@@ -48,9 +48,15 @@ export default function ProductsSection() {
                 </span>
               )}
             </p>
-            <Link href={HREFS[i]} className="inline-flex items-center gap-2 text-sm font-section font-bold text-black pt-2">
-              {p.cta} <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            {HREFS[i] ? (
+              <Link href={HREFS[i]!} className="inline-flex items-center gap-2 text-sm font-section font-bold text-black pt-2">
+                {p.cta} <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            ) : (
+              <span className="inline-flex w-fit items-center gap-2 px-3 py-1.5 rounded-full border border-black/10 text-xs font-section font-bold uppercase tracking-wider text-neutral-500">
+                {copy.roadmap}
+              </span>
+            )}
           </article>
           );
         })}

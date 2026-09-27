@@ -54,12 +54,12 @@ const es = {
     ctaMarket: 'Explorar licitaciones',
     ctaStocks: 'Acciones Merval',
     ctaOrderbook: 'Mercado secundario',
-    soon: 'Próximamente',
+    soon: 'Roadmap',
     soonItems: [
+      ['Acciones Merval', 'tYPF, tGGAL y panel líder: 1 token = 1 acción en Caja de Valores.'],
+      ['Forwards de producción', 'Contratos de consumo a futuro tokenizados bajo el CCC.'],
+      ['Warrants y burst loans', 'Warrants Ley 9643: liquidez contra tu producción sin venderla.'],
       ['Bonos soberanos', 'Bopreal / AL30 con cupón on-chain.'],
-      ['ETFs sectoriales', 'Agro, energía y bancos.'],
-      ['Carbono agro', 'Siembra directa verificada.'],
-      ['Tarjeta Mastercard', 'Pagá con Mastercard gastando el saldo de tus acciones.'],
     ],
     badges: [
       ['Sandbox CNV', 'RG 1150'],
@@ -91,6 +91,7 @@ const es = {
     kicker: 'Productos',
     title: 'Todo sobre un mismo riel',
     lead: 'Consumo, inversión y crédito contra producción. Todo liquida on-chain.',
+    roadmap: 'En roadmap',
     items: [
       {
         kicker: '01',
@@ -457,12 +458,12 @@ const en: Messages = {
     ctaMarket: 'Explore offerings',
     ctaStocks: 'Merval stocks',
     ctaOrderbook: 'Secondary market',
-    soon: 'Coming soon',
+    soon: 'Roadmap',
     soonItems: [
+      ['Merval stocks', 'tYPF, tGGAL and the leading panel: 1 token = 1 share at Caja de Valores.'],
+      ['Production forwards', 'Tokenized forward consumption contracts under the Civil Code.'],
+      ['Warrants & burst loans', 'Law 9643 warrants: liquidity against your production without selling it.'],
       ['Sovereign bonds', 'Bopreal / AL30 with on-chain coupon.'],
-      ['Sector ETFs', 'Agri, energy and banks.'],
-      ['Agro carbon', 'Verified no-till.'],
-      ['Mastercard card', 'Pay with Mastercard, spending from your stocks.'],
     ],
     badges: [
       ['CNV sandbox', 'RG 1150'],
@@ -494,6 +495,7 @@ const en: Messages = {
     kicker: 'Products',
     title: 'Everything on one rail',
     lead: 'Consumption, investment and credit against production. Everything settles on-chain.',
+    roadmap: 'On the roadmap',
     items: [
       {
         kicker: '01',

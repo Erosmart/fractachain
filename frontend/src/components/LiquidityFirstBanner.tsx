@@ -47,9 +47,7 @@ export default function LiquidityFirstBanner() {
             <Link href="/orderbook" className="flex-1 sm:flex-none justify-center px-5 py-2.5 btn-lcd btn-lcd-solid text-xs">
               {messages.nav.orderbook} <ArrowRight className="w-3.5 h-3.5" />
             </Link>
-            <Link href="/warrants" className="flex-1 sm:flex-none justify-center px-5 py-2.5 btn-lcd btn-lcd-ghost text-xs">
-              {messages.liquidity.burst}
-            </Link>
+
           </div>
         </div>
       </div>
