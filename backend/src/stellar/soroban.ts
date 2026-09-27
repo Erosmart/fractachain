@@ -177,7 +177,33 @@ export async function invoke(
       }
     }
     const sent = await tx.signAndSend();
-    return { hash: sentHash(sent), result: sent.result };
+    const resp = sent.getTransactionResponse as { status?: string; diagnosticEventsXdr?: string[] } | undefined;
+    if (resp?.status === 'FAILED') {
+      // `sent.result` throws a bare "reading 'type'" TypeError on a failed tx —
+      // surface the contract's own diagnostic events instead. Diagnostic XDRs
+      // embed the panic/error strings, which survive an ascii sweep even
+      // across SDK/xdr schema changes.
+      const diag = (resp.diagnosticEventsXdr || [])
+        .map((e) =>
+          Buffer.from(e, 'base64')
+            .toString('latin1')
+            .replace(/[^\x20-\x7e]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim(),
+        )
+        .filter((s) => s.length > 10)
+        .join(' | ');
+      throw new Error(`La transacción falló en la red.${diag ? ` Eventos: ${diag}` : ''}`);
+    }
+    // Reading `.result` on a failed/void call crashes inside the SDK's
+    // result parser — guard it so callers always get a usable hash.
+    let result: unknown = null;
+    try {
+      result = sent.result;
+    } catch {
+      result = null;
+    }
+    return { hash: sentHash(sent), result };
   } catch (err) {
     throw mapSorobanError(err);
   }

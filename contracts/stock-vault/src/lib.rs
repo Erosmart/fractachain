@@ -58,8 +58,13 @@ pub enum StockKey {
     /// Per-mint attestation: `(recipient, amount, cv_deposit_hash)`.
     MintProof(u64),
     MintSeq,
-    /// Audit report hash per proof-of-reserve update, keyed by timestamp.
+    /// Audit report hash per proof-of-reserve update, keyed by sequence.
+    ///
+    /// Keyed by a counter, not the ledger timestamp: a timestamp key depends
+    /// on the execution ledger, so the simulated footprint never contains the
+    /// key that actually gets written and the transaction always fails.
     PorProof(u64),
+    PorSeq,
 }
 
 #[contract]
@@ -427,13 +432,20 @@ impl StockVaultContract {
         m.last_audit_timestamp = now;
         set_meta(&env, &m);
 
+        let seq: u64 = env
+            .storage()
+            .persistent()
+            .get(&StockKey::PorSeq)
+            .unwrap_or(0)
+            + 1;
+        env.storage().persistent().set(&StockKey::PorSeq, &seq);
         env.storage()
             .persistent()
-            .set(&StockKey::PorProof(now), &audit_hash);
-        bump_persistent(&env, &StockKey::PorProof(now));
+            .set(&StockKey::PorProof(seq), &audit_hash);
+        bump_persistent(&env, &StockKey::PorProof(seq));
         env.events().publish(
             (Symbol::new(&env, "por"), oracle),
-            (shares_in_cv, m.total_tokens_minted, audit_hash),
+            (seq, now, shares_in_cv, m.total_tokens_minted, audit_hash),
         );
     }
 

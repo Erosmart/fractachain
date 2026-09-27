@@ -321,6 +321,15 @@ const es = {
     subscribedContributeHash: 'Aporte on-chain. Recaudado {n} XLM. Hash: {hash}',
     approvedNotice: 'Token aprobado. Ya podés recibirlo al cierre.',
     claimedNotice: 'Unidades anotadas en tu portfolio. No hubo un segundo transfer on-chain.',
+    claimedOnChain: 'Unidades acreditadas y enviadas a tu wallet. Hash: {hash}',
+    walletUnits: 'En tu wallet on-chain: {n} {code}',
+    freighterHintSelf:
+      'En Freighter se ve como el asset de arriba (código:emisor). Firmás la trustline vos; el emisor te envía las unidades.',
+    freighterHintCustodial:
+      'En Freighter: importá tu clave custodial (Panel → Ver clave secreta) y el asset de arriba aparece solo.',
+    receiveInWallet: 'Recibir en mi wallet (on-chain)',
+    receivedOnChain: 'Se enviaron {n} {code} a tu wallet on-chain.',
+    distributeTx: 'Hash pago on-chain testnet',
     apiDown: 'No se pudo conectar al API (puerto 4000).',
     finalizeTx: 'Hash finalize() testnet',
     refundTx: 'Hash refund() testnet',
@@ -713,6 +722,15 @@ const en: Messages = {
     subscribedContributeHash: 'On-chain contribution. Raised {n} XLM. Hash: {hash}',
     approvedNotice: 'Token approved. You can receive it at close.',
     claimedNotice: 'Units recorded in your portfolio. There was no second on-chain transfer.',
+    claimedOnChain: 'Units credited and sent to your wallet. Hash: {hash}',
+    walletUnits: 'In your on-chain wallet: {n} {code}',
+    freighterHintSelf:
+      'In Freighter it shows up as the asset above (code:issuer). You sign the trustline; the issuer sends the units.',
+    freighterHintCustodial:
+      'In Freighter: import your custodial key (Dashboard → Show secret key) and the asset above appears on its own.',
+    receiveInWallet: 'Send to my wallet (on-chain)',
+    receivedOnChain: '{n} {code} were sent to your on-chain wallet.',
+    distributeTx: 'Testnet on-chain payment hash',
     apiDown: 'Could not reach the API (port 4000).',
     finalizeTx: 'Testnet finalize() hash',
     refundTx: 'Testnet refund() hash',

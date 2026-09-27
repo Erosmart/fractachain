@@ -52,6 +52,7 @@ export default function AdminIssuancePage() {
   const [stocks, setStocks] = useState<any[]>([]);
   const [stockForm, setStockForm] = useState(emptyStock);
   const [notice, setNotice] = useState('');
+  const [busy, setBusy] = useState<string | null>(null);
   const [mintAmount, setMintAmount] = useState(1000);
   const [settlePolicy, setSettlePolicy] = useState<'ON_MIN' | 'ON_DATE'>('ON_MIN');
   const [settleAt, setSettleAt] = useState('');
@@ -88,7 +89,9 @@ export default function AdminIssuancePage() {
           const pad = (n: number) => String(n).padStart(2, '0');
           setSettleAt(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
         }
-        const issuer = json.data.deployment?.issuer;
+        // Prefer the issuer the backend can actually sign for: a listing
+        // issued by an account we cannot sign can never reach holders' wallets.
+        const issuer = json.data.activeIssuer || json.data.deployment?.issuer;
         if (issuer) {
           setForm((f) => (f.issuerPublicKey ? f : { ...f, issuerPublicKey: issuer }));
         }
@@ -107,9 +110,32 @@ export default function AdminIssuancePage() {
       headers: authHeaders(),
       body: body ? JSON.stringify(body) : '{}',
     });
-    const json = await res.json();
+    const raw = await res.text();
+    let json: any = {};
+    try {
+      json = raw ? JSON.parse(raw) : {};
+    } catch {
+      throw new Error('El servidor no respondió bien. ¿Está el API en el puerto 4000?');
+    }
     if (!res.ok || !json.success) throw new Error(json.message || 'Error');
     return json.data;
+  };
+
+  /** One-click demo dossier: backend fills every field with valid dummy data. */
+  const fillDemo = async () => {
+    setBusy('demo');
+    try {
+      const data = await call('/api/admin/demo-dossier', {});
+      setForm((f) => ({ ...f, ...data.dossier }));
+      flash(
+        `Datos de prueba cargados — tesorería demo ${data.treasury.publicKey.slice(0, 8)}… ` +
+          `${data.treasury.funded ? 'fondeada' : '(friendbot no respondió; aún podés cambiar la wallet)'}`,
+      );
+    } catch (e: any) {
+      flash(e.message);
+    } finally {
+      setBusy(null);
+    }
   };
 
   const create = async () => {
@@ -118,6 +144,7 @@ export default function AdminIssuancePage() {
       flash('La wallet que cobra la licitación es obligatoria (dirección G… de Stellar)');
       return;
     }
+    setBusy('create');
     try {
       const data = await call('/api/listings', {
         ...form,
@@ -128,10 +155,13 @@ export default function AdminIssuancePage() {
       load();
     } catch (e: any) {
       flash(e.message);
+    } finally {
+      setBusy(null);
     }
   };
 
   const act = async (id: string, path: string, body?: unknown) => {
+    setBusy(`${id}:${path}`);
     try {
       const data = await call(`/api/listings/${id}/${path}`, body);
       const hash = data.onChain?.hash;
@@ -139,6 +169,8 @@ export default function AdminIssuancePage() {
       load();
     } catch (e: any) {
       flash(e.message);
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -272,9 +304,24 @@ export default function AdminIssuancePage() {
             <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={form.offeringDays} onChange={(e) => set('offeringDays', Number(e.target.value))} />
           </label>
         </div>
-        <button type="button" onClick={create} className="px-5 py-3 rounded-2xl bg-black text-white font-display font-bold">
-          Guardar expediente
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={create}
+            disabled={Boolean(busy)}
+            className="px-5 py-3 rounded-2xl bg-black text-white font-display font-bold disabled:opacity-40"
+          >
+            {busy === 'create' ? 'Guardando…' : 'Guardar expediente'}
+          </button>
+          <button
+            type="button"
+            onClick={fillDemo}
+            disabled={Boolean(busy)}
+            className="px-5 py-3 rounded-2xl border border-black/20 font-display font-bold disabled:opacity-40"
+          >
+            {busy === 'demo' ? 'Generando…' : 'Autocompletar datos de prueba'}
+          </button>
+        </div>
       </section>
 
       <section className="space-y-4">
@@ -358,8 +405,13 @@ export default function AdminIssuancePage() {
               <input type="hidden" id={`proceeds-${l.id}`} defaultValue={l.dossier.proceedsWallet || ''} />
             )}
             <div className="flex flex-wrap gap-2 items-center">
-              <button type="button" onClick={() => act(l.id, 'deploy')} className="px-3 py-2 rounded-xl bg-black text-white text-xs font-bold">
-                Deploy contrato
+              <button
+                type="button"
+                onClick={() => act(l.id, 'deploy')}
+                disabled={Boolean(busy)}
+                className="px-3 py-2 rounded-xl bg-black text-white text-xs font-bold disabled:opacity-40"
+              >
+                {busy === `${l.id}:deploy` ? 'Deployando en testnet…' : 'Deploy contrato'}
               </button>
               <input
                 type="number"
@@ -367,26 +419,38 @@ export default function AdminIssuancePage() {
                 value={mintAmount}
                 onChange={(e) => setMintAmount(Number(e.target.value))}
               />
-              <button type="button" onClick={() => act(l.id, 'mint', { amount: mintAmount })} className="px-3 py-2 rounded-xl border border-black/10 text-xs font-bold">
-                Mintear tokens
+              <button
+                type="button"
+                onClick={() => act(l.id, 'mint', { amount: mintAmount })}
+                disabled={Boolean(busy)}
+                className="px-3 py-2 rounded-xl border border-black/10 text-xs font-bold disabled:opacity-40"
+              >
+                {busy === `${l.id}:mint` ? 'Minteando on-chain…' : 'Mintear tokens'}
               </button>
               <button
                 type="button"
                 onClick={() => openLicitacion(l.id)}
-                className="px-3 py-2 rounded-xl border border-black/10 text-xs font-bold"
+                disabled={Boolean(busy)}
+                className="px-3 py-2 rounded-xl border border-black/10 text-xs font-bold disabled:opacity-40"
               >
-                Abrir licitación
+                {busy === `${l.id}:licitacion` ? 'Abriendo on-chain…' : 'Abrir licitación'}
               </button>
               {l.status === 'LISTED' && (
                 <>
                   <button
                     type="button"
                     onClick={() => act(l.id, 'settle', { settlePolicy, settleAt: settlePolicy === 'ON_DATE' ? settleAt : undefined })}
-                    className="px-3 py-2 rounded-xl border border-black/10 text-xs font-bold"
+                    disabled={Boolean(busy)}
+                    className="px-3 py-2 rounded-xl border border-black/10 text-xs font-bold disabled:opacity-40"
                   >
                     Guardar cuándo se reparte
                   </button>
-                  <button type="button" onClick={() => act(l.id, l.dossier.paymentKind === 'XLM' ? 'finalize' : 'close')} className="px-3 py-2 rounded-xl border border-black/10 text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={() => act(l.id, l.dossier.paymentKind === 'XLM' ? 'finalize' : 'close')}
+                    disabled={Boolean(busy)}
+                    className="px-3 py-2 rounded-xl border border-black/10 text-xs font-bold disabled:opacity-40"
+                  >
                     {l.dossier.paymentKind === 'XLM'
                       ? 'Finalizar on-chain (hard cap o deadline)'
                       : `Cerrar ahora (mínimo ${l.dossier.offeringSoftCapUsdc} USDC)`}
@@ -428,7 +492,27 @@ export default function AdminIssuancePage() {
         </p>
 
         <div className="p-5 rounded-3xl crystal-card space-y-3">
-          <h3 className="text-sm font-bold">Emitir acción nueva</h3>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-bold">Emitir acción nueva</h3>
+            <button
+              type="button"
+              onClick={() => {
+                const n = Math.floor(1000 + Math.random() * 9000);
+                setStockForm({
+                  ticker: `DEMO${n}`,
+                  tokenTicker: `tDEMO${n}`,
+                  companyName: `Empresa Demo ${n} S.A.`,
+                  isin: `AR${Math.random().toString(36).slice(2, 11).toUpperCase()}0`,
+                  sector: 'General',
+                  priceUsdc: 10,
+                  custodiedShares: 10000,
+                });
+              }}
+              className="px-3 py-1.5 rounded-xl border border-black/20 text-xs font-bold"
+            >
+              Autocompletar prueba
+            </button>
+          </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {[
               ['ticker', 'Ticker BYMA (ej. TECO)'],

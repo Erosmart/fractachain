@@ -28,6 +28,7 @@ import {
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
 import { getTestnetConfig } from '../admin/testnet';
+import { ensurePlatformIssuer, issuerKeypairFor } from './keys';
 
 /** Stellar amounts carry at most 7 decimals. */
 const STROOP_DECIMALS = 7;
@@ -102,14 +103,15 @@ export function securityAsset(code: string, issuer: string): Asset {
   return new Asset(trimmed, issuer);
 }
 
-function issuerKeypair(): Keypair {
-  const secret = process.env.STELLAR_ISSUER_SECRET;
-  if (!secret) {
-    throw new Error(
-      'Falta STELLAR_ISSUER_SECRET. La clave del emisor se inyecta por entorno y nunca se guarda en el repo.',
-    );
-  }
-  return Keypair.fromSecret(secret);
+/**
+ * Resolves the secret that signs for a given asset issuer.
+ *
+ * The asset code + issuer pair is what shows in Freighter, so the secret must
+ * belong to `asset.getIssuer()` exactly: paying with any other account mints
+ * nothing and Horizon rejects it.
+ */
+function issuerKeypair(asset: Asset): Keypair {
+  return issuerKeypairFor(asset.getIssuer() || '');
 }
 
 async function buildAndSubmit(
@@ -180,7 +182,7 @@ export function describeHorizonError(err: any): string {
  * retroactively deauthorize trustlines that already exist.
  */
 export async function configureIssuerForRegulatedAsset(opts?: { clawback?: boolean }) {
-  const issuer = issuerKeypair();
+  const issuer = await ensurePlatformIssuer();
   let flags = AuthRequiredFlag | AuthRevocableFlag;
   if (opts?.clawback) flags |= AuthClawbackEnabledFlag;
 
@@ -198,7 +200,7 @@ export async function configureIssuerForRegulatedAsset(opts?: { clawback?: boole
  * investor's trustline exists but is inert.
  */
 export async function authorizeHolder(asset: Asset, trustor: string) {
-  const issuer = issuerKeypair();
+  const issuer = issuerKeypair(asset);
   return buildAndSubmit(
     issuer.publicKey(),
     (b) =>
@@ -227,7 +229,7 @@ export async function deauthorizeHolder(
   trustor: string,
   opts?: { allowUnwind?: boolean },
 ) {
-  const issuer = issuerKeypair();
+  const issuer = issuerKeypair(asset);
   const flags = opts?.allowUnwind
     ? { authorized: false, authorizedToMaintainLiabilities: true }
     : { authorized: false, authorizedToMaintainLiabilities: false };
@@ -248,7 +250,7 @@ export async function deauthorizeHolder(
  * `AUTH_REQUIRED` the ledger rejects payments into inert lines.
  */
 export async function distributeTokens(destination: string, asset: Asset, amount: number) {
-  const issuer = issuerKeypair();
+  const issuer = issuerKeypair(asset);
   return buildAndSubmit(
     issuer.publicKey(),
     (b) =>

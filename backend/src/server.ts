@@ -40,6 +40,8 @@ import {
   contributeListing,
   createListing,
   deployListing,
+  assertDeployable,
+  assertMintable,
   getListing,
   listListings,
   listedPools,
@@ -54,7 +56,15 @@ import {
   Listing,
   recordOnChainContribution,
   markListingClosed,
+  listingCvDepositHash,
 } from './admin/listings';
+import { buildDemoDossier } from './admin/demo';
+import { ensurePlatformIssuer, platformIssuerPublicKey } from './stellar/keys';
+import {
+  canDeployStockVault,
+  deployStockVaultForListing,
+  mintBackedStockOnChain,
+} from './stellar/stockvault';
 import { cancelOrder, getBook, listMarkets, placeOrder } from './market/orderbook';
 import {
   autoFinalizeIfDue,
@@ -647,19 +657,67 @@ app.get('/api/listings/:id/validation', (req: Request, res: Response) => {
   res.json({ success: true, data: validationPack(listing) });
 });
 
+/**
+ * Fully-filled demo dossier for the issuance form. Generates a friendbot-
+ * funded treasury wallet so the licitación payout lands on a real account.
+ */
+app.post('/api/admin/demo-dossier', (req: Request, res: Response) => {
+  if (!requireAdmin(req, res)) return;
+  wrapAsync(() => buildDemoDossier(), res);
+});
+
 app.post('/api/listings', (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
-  wrap(() => createListing(req.body), res, 201);
+  wrapAsync(async () => {
+    const body = { ...(req.body || {}) };
+    // Without an issuer the platform can sign for, the token can never be
+    // distributed to holders — default the field to whichever issuer key is
+    // configured (or provision a friendbot-funded one on the spot).
+    if (!String(body.issuerPublicKey || '').trim()) {
+      body.issuerPublicKey = (await ensurePlatformIssuer().catch(() => null))?.publicKey()
+        || platformIssuerPublicKey()
+        || '';
+    }
+    return createListing(body);
+  }, res, 201);
 });
 
 app.post('/api/listings/:id/deploy', (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
-  wrap(() => deployListing(req.params.id), res);
+  wrapAsync(async () => {
+    const listing = assertDeployable(req.params.id);
+    // The CdV slip hash must exist *before* the vault deploy so the PoR
+    // attestation and every mint proof reference the same deposit.
+    listing.cvDepositHash = listingCvDepositHash(listing);
+    // Each listing gets its own vault instance + fresh PoR attestation; a
+    // failed on-chain deploy leaves the listing in DRAFT with the real error.
+    const vault = canDeployStockVault()
+      ? await deployStockVaultForListing(listing)
+      : null;
+    const updated = deployListing(req.params.id, vault ? { contractId: vault.contractId } : undefined);
+    return {
+      ...updated,
+      onChain: vault
+        ? { hash: vault.hash, contractId: vault.contractId, explorer: explorerTx(vault.hash) }
+        : null,
+    };
+  }, res);
 });
 
 app.post('/api/listings/:id/mint', (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
-  wrap(() => mintListingTokens(req.params.id, Number(req.body.amount), req.body.cvDepositHash), res);
+  wrapAsync(async () => {
+    const amount = Number(req.body.amount);
+    const listing = assertMintable(req.params.id, amount);
+    // On-chain mint against the listing's own vault happens first; if it
+    // fails the DB counter is left untouched and the real error surfaces.
+    const chain = await mintBackedStockOnChain(listing, amount);
+    const updated = mintListingTokens(req.params.id, amount, req.body.cvDepositHash);
+    return {
+      ...updated,
+      onChain: chain ? { hash: chain.hash, explorer: explorerTx(chain.hash), to: chain.to } : null,
+    };
+  }, res);
 });
 
 app.post('/api/listings/:id/licitacion', (req: Request, res: Response) => {
@@ -819,6 +877,12 @@ app.get('/api/admin/testnet', (req: Request, res: Response) => {
       ...getTestnetConfig(),
       onChain: isOnChainDeployed(),
       deployment,
+      /**
+       * The issuer account the backend can sign for right now. New listings
+       * should default issuerPublicKey to this — pointing them at a wallet we
+       * cannot sign with leaves tokens permanently undistributable.
+       */
+      activeIssuer: platformIssuerPublicKey(),
     };
   }, res);
 });
