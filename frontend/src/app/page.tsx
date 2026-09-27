@@ -85,7 +85,7 @@ export default function HomePage() {
       <ProductsSection />
       <IssuerCtaBanner />
       <RegulationSection />
-      <MervalLogosSection />
+      <LiquidityFirstBanner />
 
       <PartnersShowcase />
 
@@ -118,7 +118,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <LiquidityFirstBanner />
+      <MervalLogosSection />
 
       <section className="space-y-5 sm:space-y-6">
         <h2 className="font-section text-2xl sm:text-3xl font-extrabold">{messages.home.soon}</h2>
