@@ -273,6 +273,10 @@ app.get('/api/kyc/selfie/:id', (req: Request, res: Response) => {
 app.post('/api/auth/freighter', async (req: Request, res: Response) => {
   try {
     const result = authenticateWithWallet(req.body);
+    if (result.success && result.user?.id) {
+      const hydrated = await hydrateTestnetWallet(result.user.id).catch(() => undefined);
+      if (hydrated) result.user = hydrated;
+    }
     res.status(result.success ? 200 : 400).json(result);
   } catch (err: any) {
     res.status(400).json({ success: false, message: err.message });
@@ -285,7 +289,8 @@ app.post('/api/auth/wallet/link', async (req: Request, res: Response) => {
   if (!account) return res.status(401).json({ success: false, message: 'No autenticado' });
   try {
     const result = linkWalletSignature(account.id, req.body);
-    res.json(result);
+    const hydrated = await hydrateTestnetWallet(account.id).catch(() => undefined);
+    res.json({ ...result, user: hydrated || result.user });
   } catch (err: any) {
     res.status(400).json({ success: false, message: err.message });
   }
