@@ -18,7 +18,9 @@ export default function PoolDetailPage() {
   const [listing, setListing] = useState<any>(null);
   const [validation, setValidation] = useState<any>(null);
   const [loaded, setLoaded] = useState(false);
-  const [amount, setAmount] = useState(100);
+  // String state so the field can be emptied while typing; `amount` is the parsed number.
+  const [amountStr, setAmountStr] = useState('100');
+  const amount = Number(amountStr) || 0;
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [lastHash, setLastHash] = useState<{ kind: string; hash: string; explorer?: string | null } | null>(null);
@@ -34,7 +36,7 @@ export default function PoolDetailPage() {
           setListing(json.data);
           setValidation(json.validation);
           const min = json.data.dossier?.minInvestmentUsdc || json.data.dossier?.pricePerShareUsdc || 100;
-          setAmount((prev) => prev || min);
+          setAmountStr((prev) => prev || String(min));
         }
         return json;
       });
@@ -260,8 +262,9 @@ export default function PoolDetailPage() {
               <input
                 type="number"
                 min={d.minInvestmentUsdc || d.pricePerShareUsdc}
-                value={amount}
-                onChange={(e) => setAmount(Number(e.target.value))}
+                value={amountStr}
+                onChange={(e) => setAmountStr(e.target.value)}
+                onFocus={(e) => e.target.select()}
                 className="w-full px-3 py-3 rounded-xl border border-black/10 font-mono"
               />
               {listing.status === 'CLOSED_SUCCESS' && (

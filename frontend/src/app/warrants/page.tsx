@@ -200,6 +200,7 @@ export default function WarrantsPage() {
                 step="50"
                 value={calcTons}
                 onChange={(e) => setCalcTons(Math.max(50, Number(e.target.value)))}
+                onFocus={(e) => e.target.select()}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-white/70 border border-black/10 focus:border-[#7ed86a] focus:outline-none text-black text-xs font-mono font-bold"
               />
             </div>

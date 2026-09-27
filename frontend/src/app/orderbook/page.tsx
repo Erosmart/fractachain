@@ -135,8 +135,14 @@ function OrderbookInner() {
   const [listingId, setListingId] = useState(params.get('listing') || '');
   const [book, setBook] = useState<Book | null>(null);
   const [side, setSide] = useState<'BUY' | 'SELL'>('BUY');
-  const [price, setPrice] = useState(10);
-  const [amount, setAmount] = useState(1);
+  // Inputs keep the raw string so the field can be emptied while typing;
+  // price/amount are the parsed numbers the rest of the form uses.
+  const [priceStr, setPriceStr] = useState('10');
+  const [amountStr, setAmountStr] = useState('1');
+  const price = Number(priceStr) || 0;
+  const amount = Number(amountStr) || 0;
+  const setPrice = (v: number) => setPriceStr(String(v));
+  const setAmount = (v: number) => setAmountStr(String(v));
   const [taken, setTaken] = useState<TakenLevel | null>(null);
   const [notice, setNotice] = useState('');
   const amountInput = useRef<HTMLInputElement>(null);
@@ -549,8 +555,9 @@ function OrderbookInner() {
                   type="number"
                   step="0.01"
                   min={0.01}
-                  value={price}
-                  onChange={(e) => { setPrice(Number(e.target.value)); setTaken(null); }}
+                  value={priceStr}
+                  onChange={(e) => { setPriceStr(e.target.value); setTaken(null); }}
+                  onFocus={(e) => e.target.select()}
                   className="w-full px-3 py-2.5 rounded-xl border border-black/10 font-mono"
                 />
               </label>
@@ -580,8 +587,9 @@ function OrderbookInner() {
                   type="number"
                   step="0.0001"
                   min={0.0001}
-                  value={amount}
-                  onChange={(e) => setAmount(Number(e.target.value))}
+                  value={amountStr}
+                  onChange={(e) => setAmountStr(e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   className="w-full px-3 py-2.5 rounded-xl border border-black/10 font-mono"
                 />
               </label>
@@ -641,7 +649,7 @@ function OrderbookInner() {
               )}
               <button
                 type="submit"
-                disabled={!approved || needsTrustline}
+                disabled={!approved || needsTrustline || price <= 0 || amount <= 0}
                 className={`w-full py-3 rounded-2xl font-display font-bold text-sm inline-flex items-center justify-center gap-2 disabled:opacity-40 ${
                   side === 'BUY' ? 'bg-black text-white' : 'bg-red-600 text-white'
                 }`}

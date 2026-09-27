@@ -280,27 +280,27 @@ export default function AdminIssuancePage() {
           </label>
           <label className="text-sm space-y-1">
             <span className="font-bold">{t('admIss.shares')}</span>
-            <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={form.sharesToTokenize} onChange={(e) => set('sharesToTokenize', Number(e.target.value))} />
+            <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={form.sharesToTokenize} onChange={(e) => set('sharesToTokenize', Number(e.target.value))} onFocus={(e) => e.target.select()} />
           </label>
           <label className="text-sm space-y-1">
             <span className="font-bold">{t('admIss.priceShare')}</span>
-            <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={form.pricePerShareUsdc} onChange={(e) => set('pricePerShareUsdc', Number(e.target.value))} />
+            <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={form.pricePerShareUsdc} onChange={(e) => set('pricePerShareUsdc', Number(e.target.value))} onFocus={(e) => e.target.select()} />
           </label>
           <label className="text-sm space-y-1">
             <span className="font-bold">{t('admIss.minInvest')}</span>
-            <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={form.minInvestmentUsdc} onChange={(e) => set('minInvestmentUsdc', Number(e.target.value))} />
+            <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={form.minInvestmentUsdc} onChange={(e) => set('minInvestmentUsdc', Number(e.target.value))} onFocus={(e) => e.target.select()} />
           </label>
           <label className="text-sm space-y-1">
             <span className="font-bold">Soft cap USDC</span>
-            <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={form.offeringSoftCapUsdc} onChange={(e) => set('offeringSoftCapUsdc', Number(e.target.value))} />
+            <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={form.offeringSoftCapUsdc} onChange={(e) => set('offeringSoftCapUsdc', Number(e.target.value))} onFocus={(e) => e.target.select()} />
           </label>
           <label className="text-sm space-y-1">
             <span className="font-bold">Hard cap USDC</span>
-            <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={form.offeringHardCapUsdc} onChange={(e) => set('offeringHardCapUsdc', Number(e.target.value))} />
+            <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={form.offeringHardCapUsdc} onChange={(e) => set('offeringHardCapUsdc', Number(e.target.value))} onFocus={(e) => e.target.select()} />
           </label>
           <label className="text-sm space-y-1">
             <span className="font-bold">{t('admIss.days')}</span>
-            <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={form.offeringDays} onChange={(e) => set('offeringDays', Number(e.target.value))} />
+            <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={form.offeringDays} onChange={(e) => set('offeringDays', Number(e.target.value))} onFocus={(e) => e.target.select()} />
           </label>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -416,7 +416,7 @@ export default function AdminIssuancePage() {
                 type="number"
                 className="w-28 px-2 py-2 rounded-xl border border-black/10 text-sm"
                 value={mintAmount}
-                onChange={(e) => setMintAmount(Number(e.target.value))}
+                onChange={(e) => setMintAmount(Number(e.target.value))} onFocus={(e) => e.target.select()}
               />
               <button
                 type="button"
@@ -467,7 +467,7 @@ export default function AdminIssuancePage() {
                   type="number"
                   className="w-32 px-2 py-2 rounded-xl border border-black/10 text-sm"
                   value={dividendAmount}
-                  onChange={(e) => setDividendAmount(Number(e.target.value))}
+                  onChange={(e) => setDividendAmount(Number(e.target.value))} onFocus={(e) => e.target.select()}
                 />
                 <span className="text-xs text-neutral-500">{t('admIss.proRata')}</span>
                 <button
@@ -524,11 +524,11 @@ export default function AdminIssuancePage() {
             ))}
             <label className="text-xs space-y-1">
               <span className="font-bold">{t('admIss.sf.priceUsdc')}</span>
-              <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={stockForm.priceUsdc} onChange={(e) => setStockForm((f) => ({ ...f, priceUsdc: Number(e.target.value) }))} />
+              <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={stockForm.priceUsdc} onChange={(e) => setStockForm((f) => ({ ...f, priceUsdc: Number(e.target.value) }))} onFocus={(e) => e.target.select()} />
             </label>
             <label className="text-xs space-y-1">
               <span className="font-bold">{t('admIss.sf.custodiedShares')}</span>
-              <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={stockForm.custodiedShares} onChange={(e) => setStockForm((f) => ({ ...f, custodiedShares: Number(e.target.value) }))} />
+              <input type="number" className="w-full px-3 py-2 rounded-xl border border-black/10" value={stockForm.custodiedShares} onChange={(e) => setStockForm((f) => ({ ...f, custodiedShares: Number(e.target.value) }))} onFocus={(e) => e.target.select()} />
             </label>
           </div>
           <button type="button" onClick={emitStock} className="px-5 py-3 rounded-2xl bg-black text-white font-display font-bold text-sm">

@@ -313,6 +313,7 @@ export default function StocksPage() {
                 max="10000"
                 value={sharesAmount}
                 onChange={(e) => setSharesAmount(Math.max(1, Number(e.target.value)))}
+                onFocus={(e) => e.target.select()}
                 className="w-full px-4 py-3 rounded-xl bg-white/70 border border-black/10 focus:border-[#7ed86a] focus:outline-none text-black font-mono font-bold text-base"
               />
             </div>
