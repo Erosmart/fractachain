@@ -24,6 +24,7 @@ export interface TestnetDeployment {
   xlmSac?: string;
   licitacionLegacy?: string;
   licitacionWasmHash?: string;
+  stockVaultWasmHash?: string;
   forward?: string;
   warrant?: string;
   warrantFactory?: string;

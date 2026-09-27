@@ -25,9 +25,6 @@ export default function Footer() {
               <h4 className="font-display font-extrabold text-black text-xs tracking-wider uppercase mb-3">{t('footer.markets')}</h4>
               <ul className="space-y-2 text-sm">
                 <li><Link href="/market" className="hover:text-black">{t('nav.market')}</Link></li>
-                <li><Link href="/stocks" className="hover:text-black">{t('footer.stocks')}</Link></li>
-                <li><Link href="/forwards" className="hover:text-black">{t('nav.forwards')}</Link></li>
-                <li><Link href="/warrants" className="hover:text-black">{t('nav.warrants')}</Link></li>
                 <li><Link href="/orderbook" className="hover:text-black">{t('nav.orderbook')}</Link></li>
               </ul>
             </div>

@@ -89,7 +89,7 @@ function normalizeStock(raw: any): StockCustody | null {
 export default function StocksPage() {
   const { t } = useI18n();
   const [stocks, setStocks] = useState<StockCustody[]>(DEFAULT_STOCKS);
-  const [selectedStock, setSelectedStock] = useState<StockCustody>(DEFAULT_STOCKS[0]);
+  const [selectedStock, setSelectedStock] = useState<StockCustody | null>(DEFAULT_STOCKS[0]);
   const [orderType, setOrderType] = useState<'BUY' | 'SELL'>('BUY');
   const [sharesAmount, setSharesAmount] = useState<number>(10);
   const [isTrading, setIsTrading] = useState<boolean>(false);
@@ -103,10 +103,10 @@ export default function StocksPage() {
       .then((data) => {
         if (data?.data && Array.isArray(data.data)) {
           const mapped = data.data.map(normalizeStock).filter((s: StockCustody | null): s is StockCustody => Boolean(s));
-          if (mapped.length) {
-            setStocks(mapped);
-            setSelectedStock(mapped[0]);
-          }
+          // An empty list is a real answer: the admin deactivated everything.
+          // Only the catch below falls back to the hardcoded catalog.
+          setStocks(mapped);
+          setSelectedStock(mapped[0] ?? null);
         }
       })
       .catch(() => {
@@ -114,9 +114,10 @@ export default function StocksPage() {
       });
   }, []);
 
-  const totalCostUsd = sharesAmount * selectedStock.priceUsd;
+  const totalCostUsd = sharesAmount * (selectedStock?.priceUsd ?? 0);
 
   const handleExecuteTrade = () => {
+    if (!selectedStock) return;
     setIsTrading(true);
     setTradeSuccess(null);
     setTimeout(() => {
@@ -171,7 +172,7 @@ export default function StocksPage() {
           </div>
           <div className="p-3 rounded-xl bg-black/5 border border-black/8">
             <span className="text-[10px] text-neutral-500 block">Última Conciliación</span>
-            <span className="font-mono text-neutral-700">{selectedStock.lastAuditTimestamp || '—'}</span>
+            <span className="font-mono text-neutral-700">{selectedStock?.lastAuditTimestamp || '—'}</span>
           </div>
           <div className="p-3 rounded-xl bg-black/5 border border-black/8">
             <span className="text-[10px] text-neutral-500 block">Liquidación</span>
@@ -185,10 +186,15 @@ export default function StocksPage() {
         {/* Left: Stock Cards */}
         <div className="lg:col-span-7 space-y-4">
           <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Activos Disponibles</h3>
-          
+
+          {stocks.length === 0 && (
+            <div className="p-5 rounded-3xl crystal-card text-xs text-neutral-600">
+              No hay acciones activas en el mercado. El admin las emite y las activa desde Admin → Salida a bolsa.
+            </div>
+          )}
           <div className="space-y-3">
             {stocks.map((stock) => {
-              const isSelected = selectedStock.symbol === stock.symbol;
+              const isSelected = selectedStock?.symbol === stock.symbol;
               const isPositive = stock.change24h >= 0;
 
               return (
@@ -259,7 +265,7 @@ export default function StocksPage() {
             <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center">
               <h3 className="text-base font-bold text-black">Terminal de Negociación</h3>
               <span className="text-xs font-mono text-[#2f6f28] font-bold">
-                {selectedStock.symbol} • ${selectedStock.priceUsd.toFixed(2)} USD
+                {selectedStock ? `${selectedStock.symbol} • $${selectedStock.priceUsd.toFixed(2)} USD` : 'Sin activos'}
               </span>
             </div>
 
@@ -274,7 +280,7 @@ export default function StocksPage() {
                     : 'text-neutral-500 hover:text-black'
                 }`}
               >
-                Comprar {selectedStock.symbol}
+                Comprar {selectedStock?.symbol}
               </button>
               <button
                 type="button"
@@ -285,7 +291,7 @@ export default function StocksPage() {
                     : 'text-neutral-500 hover:text-black'
                 }`}
               >
-                Vender {selectedStock.symbol}
+                Vender {selectedStock?.symbol}
               </button>
             </div>
 
@@ -309,7 +315,7 @@ export default function StocksPage() {
             <div className="p-4 rounded-xl bg-black/5 border border-black/8 space-y-2 text-xs">
               <div className="flex justify-between text-neutral-500">
                 <span>Precio Unitario:</span>
-                <span className="font-mono text-black">${selectedStock.priceUsd.toFixed(2)} USDC</span>
+                <span className="font-mono text-black">${(selectedStock?.priceUsd ?? 0).toFixed(2)} USDC</span>
               </div>
               <div className="flex justify-between text-neutral-500">
                 <span>Comisión Protocolo (0.1%):</span>
@@ -332,7 +338,7 @@ export default function StocksPage() {
             {/* Action button */}
             <button
               type="button"
-              disabled={isTrading}
+              disabled={isTrading || !selectedStock}
               onClick={handleExecuteTrade}
               className={`w-full py-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all ${
                 orderType === 'BUY'
@@ -345,7 +351,7 @@ export default function StocksPage() {
               ) : (
                 <>
                   <Zap className="w-4 h-4" />
-                  {orderType === 'BUY' ? `Comprar ${sharesAmount} ${selectedStock.symbol}` : `Vender ${sharesAmount} ${selectedStock.symbol}`}
+                  {orderType === 'BUY' ? `Comprar ${sharesAmount} ${selectedStock?.symbol}` : `Vender ${sharesAmount} ${selectedStock?.symbol}`}
                 </>
               )}
             </button>

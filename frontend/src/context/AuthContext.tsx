@@ -41,7 +41,7 @@ interface AuthContextType {
   linkFreighterWallet: () => Promise<void>;
   submitKyc: (payload: { legalName: string; cuit: string; selfieDataUrl?: string; email?: string }) => Promise<void>;
   approveToken: (listingId: string) => Promise<void>;
-  claimTokens: (listingId: string) => Promise<void>;
+  claimTokens: (listingId: string) => Promise<any>;
   distributeTokens: (listingId: string) => Promise<any>;
   fetchWalletSecret: () => Promise<string>;
   claimDividends: (listingId: string) => Promise<void>;
@@ -313,6 +313,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.message || 'No se pudieron reclamar los tokens');
     applySession(token, data.data);
+    return data.data;
   }, [token, applySession]);
 
   const distributeTokens = useCallback(async (listingId: string) => {

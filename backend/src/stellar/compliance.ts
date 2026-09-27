@@ -41,7 +41,7 @@ export interface ComplianceSyncReport {
  * instead of silently pretending the authorization happened.
  */
 export function onChainEnforcementEnabled(): boolean {
-  return Boolean(process.env.STELLAR_ISSUER_SECRET);
+  return Boolean(process.env.STELLAR_ISSUER_SECRET || process.env.STELLAR_PLATFORM_ISSUER_SECRET);
 }
 
 /** Listings that have a real issuer account and a token code to authorize. */

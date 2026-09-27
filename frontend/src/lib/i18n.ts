@@ -54,12 +54,12 @@ const es = {
     ctaMarket: 'Explorar licitaciones',
     ctaStocks: 'Acciones Merval',
     ctaOrderbook: 'Mercado secundario',
-    soon: 'Próximamente',
+    soon: 'Roadmap',
     soonItems: [
+      ['Acciones Merval', 'tYPF, tGGAL y panel líder: 1 token = 1 acción en Caja de Valores.'],
+      ['Forwards de producción', 'Contratos de consumo a futuro tokenizados bajo el CCC.'],
+      ['Warrants y burst loans', 'Warrants Ley 9643: liquidez contra tu producción sin venderla.'],
       ['Bonos soberanos', 'Bopreal / AL30 con cupón on-chain.'],
-      ['ETFs sectoriales', 'Agro, energía y bancos.'],
-      ['Carbono agro', 'Siembra directa verificada.'],
-      ['Tarjeta Mastercard', 'Pagá con Mastercard gastando el saldo de tus acciones.'],
     ],
     badges: [
       ['Sandbox CNV', 'RG 1150'],
@@ -91,6 +91,7 @@ const es = {
     kicker: 'Productos',
     title: 'Todo sobre un mismo riel',
     lead: 'Consumo, inversión y crédito contra producción. Todo liquida on-chain.',
+    roadmap: 'Próximamente',
     items: [
       {
         kicker: '01',
@@ -321,6 +322,16 @@ const es = {
     subscribedContributeHash: 'Aporte on-chain. Recaudado {n} XLM. Hash: {hash}',
     approvedNotice: 'Token aprobado. Ya podés recibirlo al cierre.',
     claimedNotice: 'Unidades anotadas en tu portfolio. No hubo un segundo transfer on-chain.',
+    claimedOnChain: 'Unidades acreditadas y enviadas a tu wallet. Hash: {hash}',
+    walletUnits: 'En tu wallet on-chain: {n} {code}',
+    freighterHintSelf:
+      'En Freighter se ve como el asset de arriba (código:emisor). Firmás la trustline vos; el emisor te envía las unidades.',
+    freighterHintCustodial:
+      'En Freighter: importá tu clave custodial (Panel → Ver clave secreta) y el asset de arriba aparece solo.',
+    receiveInWallet: 'Recibir en mi wallet (on-chain)',
+    receivedOnChain: 'Se enviaron {n} {code} a tu wallet on-chain.',
+    distributeTx: 'Hash pago on-chain testnet',
+    noIssuerYet: 'El emisor del token todavía no está configurado.',
     apiDown: 'No se pudo conectar al API (puerto 4000).',
     finalizeTx: 'Hash finalize() testnet',
     refundTx: 'Hash refund() testnet',
@@ -447,12 +458,12 @@ const en: Messages = {
     ctaMarket: 'Explore offerings',
     ctaStocks: 'Merval stocks',
     ctaOrderbook: 'Secondary market',
-    soon: 'Coming soon',
+    soon: 'Roadmap',
     soonItems: [
+      ['Merval stocks', 'tYPF, tGGAL and the leading panel: 1 token = 1 share at Caja de Valores.'],
+      ['Production forwards', 'Tokenized forward consumption contracts under the Civil Code.'],
+      ['Warrants & burst loans', 'Law 9643 warrants: liquidity against your production without selling it.'],
       ['Sovereign bonds', 'Bopreal / AL30 with on-chain coupon.'],
-      ['Sector ETFs', 'Agri, energy and banks.'],
-      ['Agro carbon', 'Verified no-till.'],
-      ['Mastercard card', 'Pay with Mastercard, spending from your stocks.'],
     ],
     badges: [
       ['CNV sandbox', 'RG 1150'],
@@ -484,6 +495,7 @@ const en: Messages = {
     kicker: 'Products',
     title: 'Everything on one rail',
     lead: 'Consumption, investment and credit against production. Everything settles on-chain.',
+    roadmap: 'Coming soon',
     items: [
       {
         kicker: '01',
@@ -713,6 +725,16 @@ const en: Messages = {
     subscribedContributeHash: 'On-chain contribution. Raised {n} XLM. Hash: {hash}',
     approvedNotice: 'Token approved. You can receive it at close.',
     claimedNotice: 'Units recorded in your portfolio. There was no second on-chain transfer.',
+    claimedOnChain: 'Units credited and sent to your wallet. Hash: {hash}',
+    walletUnits: 'In your on-chain wallet: {n} {code}',
+    freighterHintSelf:
+      'In Freighter it shows up as the asset above (code:issuer). You sign the trustline; the issuer sends the units.',
+    freighterHintCustodial:
+      'In Freighter: import your custodial key (Dashboard → Show secret key) and the asset above appears on its own.',
+    receiveInWallet: 'Send to my wallet (on-chain)',
+    receivedOnChain: '{n} {code} were sent to your on-chain wallet.',
+    distributeTx: 'Testnet on-chain payment hash',
+    noIssuerYet: 'The token issuer is not configured yet.',
     apiDown: 'Could not reach the API (port 4000).',
     finalizeTx: 'Testnet finalize() hash',
     refundTx: 'Testnet refund() hash',

@@ -13,7 +13,7 @@ import { isSelfCustody, signAndRelay } from '../../../lib/selfCustody';
 export default function PoolDetailPage() {
   const params = useParams();
   const poolId = params.id as string;
-  const { user, token, refreshUser, approveToken, claimTokens, finalizeOffering, refundContribution } = useAuth();
+  const { user, token, refreshUser, approveToken, claimTokens, distributeTokens, finalizeOffering, refundContribution } = useAuth();
   const { t } = useI18n();
   const [listing, setListing] = useState<any>(null);
   const [validation, setValidation] = useState<any>(null);
@@ -174,6 +174,10 @@ export default function PoolDetailPage() {
       !holding?.refundedAt;
     const canRefund =
       xlm && failed && Boolean(holding) && !holding?.refundedAt;
+    // Units already paid on-ledger to the user's wallet (what Freighter shows)
+    // vs. units that exist only in the platform ledger and can still be sent.
+    const onChainUnits = Number(holding?.tokensOnChain || 0);
+    const pendingOnChain = Math.max(0, Number(holding?.tokens || 0) - onChainUnits);
     const statusLabel = failed
       ? t('market.stateFailed')
       : success
@@ -307,11 +311,68 @@ export default function PoolDetailPage() {
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => claimTokens(listing.id).then(() => setNotice(t('market.claimedNotice'))).catch((e) => setNotice(e.message))}
+                    onClick={() =>
+                      claimTokens(listing.id)
+                        .then((data: any) => {
+                          const dist = data?.distribution;
+                          if (dist?.hash) {
+                            setLastHash({ kind: 'distribute', hash: dist.hash, explorer: `https://stellar.expert/explorer/testnet/tx/${dist.hash}` });
+                            setNotice(t('market.claimedOnChain', { hash: dist.hash }));
+                          } else if (dist?.error) {
+                            setNotice(`${t('market.claimedNotice')} ${dist.error}`);
+                          } else {
+                            setNotice(t('market.claimedNotice'));
+                          }
+                        })
+                        .catch((e) => setNotice(e.message))
+                    }
                     className="w-full py-3 rounded-2xl border border-black/10 font-display font-bold"
                   >
                     {t('market.claim')}
                   </button>
+                </div>
+              )}
+              {user && holding && (Number(holding.tokens) > 0 || onChainUnits > 0) && (
+                <div className="space-y-2 border-t border-black/10 pt-3">
+                  <p className="text-xs text-neutral-600">
+                    {t('market.walletUnits', { n: onChainUnits.toFixed(4), code: d.tokenTicker })}
+                  </p>
+                  {d.issuerPublicKey ? (
+                    <p className="text-[11px] font-mono break-all text-neutral-500">
+                      {d.tokenTicker}:{d.issuerPublicKey}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-neutral-500">{t('market.noIssuerYet')}</p>
+                  )}
+                  <p className="text-[11px] text-neutral-500">
+                    {user.custodyMode === 'SELF'
+                      ? t('market.freighterHintSelf')
+                      : t('market.freighterHintCustodial')}
+                  </p>
+                  {pendingOnChain > 0 && (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        setBusy(true);
+                        setNotice('');
+                        distributeTokens(listing.id)
+                          .then((data: any) => {
+                            if (data?.hash) {
+                              setLastHash({ kind: 'distribute', hash: data.hash, explorer: `https://stellar.expert/explorer/testnet/tx/${data.hash}` });
+                              setNotice(t('market.receivedOnChain', { n: Number(data.amount).toFixed(4), code: d.tokenTicker }));
+                            } else {
+                              setNotice(t('market.claimedNotice'));
+                            }
+                          })
+                          .catch((e) => setNotice(e?.message || 'No se pudo enviar on-chain'))
+                          .finally(() => setBusy(false));
+                      }}
+                      className="w-full py-3 rounded-2xl bg-black text-white font-display font-bold disabled:opacity-40"
+                    >
+                      {t('market.receiveInWallet')}
+                    </button>
+                  )}
                 </div>
               )}
               {canRefund && (
@@ -393,9 +454,11 @@ export default function PoolDetailPage() {
                     ? t('market.finalizeTx')
                     : lastHash.kind === 'refund'
                       ? t('market.refundTx')
-                      : lastHash.kind === 'contribute'
-                        ? t('market.contributeTx')
-                        : t('market.trustline')}
+                      : lastHash.kind === 'distribute'
+                        ? t('market.distributeTx')
+                        : lastHash.kind === 'contribute'
+                          ? t('market.contributeTx')
+                          : t('market.trustline')}
                   {': '}
                   {lastHash.hash}
                 </a>

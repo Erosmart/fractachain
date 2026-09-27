@@ -5,10 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Coins,
-  TrendingUp,
   Layers,
-  Sprout,
-  FileText,
   UserCheck,
   Building2,
   Menu,
@@ -32,10 +29,7 @@ export default function Navbar() {
 
   const primaryLinks = [
     { href: '/market', label: t('nav.market'), icon: Layers },
-    { href: '/stocks', label: t('nav.stocks'), icon: TrendingUp },
     { href: '/orderbook', label: t('nav.orderbook'), icon: Coins },
-    { href: '/forwards', label: t('nav.forwards'), icon: Sprout },
-    { href: '/warrants', label: t('nav.warrants'), icon: FileText },
     { href: '/dashboard', label: t('nav.portfolio'), icon: Building2 },
   ];
 

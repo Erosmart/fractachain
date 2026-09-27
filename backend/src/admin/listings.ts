@@ -9,6 +9,7 @@ import { StrKey } from '@stellar/stellar-sdk';
 import { isStellarPublicKey } from '../auth/stellar_testnet';
 import { loadTestnetDeployment } from '../stellar/deployment';
 import { isLiveContractId } from '../stellar/soroban';
+import { platformIssuerPublicKey } from '../stellar/keys';
 
 export type ListingStatus =
   | 'DRAFT'
@@ -176,8 +177,13 @@ export function createListing(dossier: CompanyDossier): Listing {
     throw new Error(`Ya existe un listing para ${ticker}`);
   }
   const chain = loadTestnetDeployment();
+  // Default to the issuer account the backend can actually sign with — the
+  // deployments issuer belongs to a wallet we may not control, and issuing
+  // under it would leave tokens undistributable (invisible in holders'
+  // wallets) unless STELLAR_ISSUER_SECRET is configured for it.
   const issuer =
     dossier.issuerPublicKey.trim() ||
+    platformIssuerPublicKey() ||
     chain?.issuer ||
     '';
   const listing: Listing = {
@@ -210,26 +216,51 @@ export function createListing(dossier: CompanyDossier): Listing {
   return listing;
 }
 
-export function deployListing(id: string): Listing {
+/**
+ * Pre-deploy validation, kept separate so the route can run it *before*
+ * paying for the on-chain vault deploy: a failed Soroban call must not burn
+ * the listing's DRAFT state nor its ledger entry.
+ */
+export function assertDeployable(id: string): Listing {
   const listing = getListing(id);
   if (!listing) throw new Error('Listing no encontrado');
   requireDossier(listing.dossier);
   if (listing.status !== 'DRAFT') throw new Error('Ya está deployado');
+  return listing;
+}
+
+/**
+ * The Caja de Valores deposit hash for this dossier, derived the same way at
+ * deploy time and at mint time so the vault's PoR audit hash and the mint
+ * proof tie to the same slip.
+ */
+export function listingCvDepositHash(listing: Listing): string {
+  return hexHash(`${listing.dossier.cajaSubaccount}:${listing.dossier.isin}`);
+}
+
+export function deployListing(id: string, onChain?: { contractId: string }): Listing {
+  const listing = assertDeployable(id);
   const chain = loadTestnetDeployment();
-  listing.stockContract = chain?.stockVault || contractId(`${listing.id}:stock`);
-  listing.licitacionContract = chain?.licitacion || listing.licitacionContract;
+  listing.stockContract = onChain?.contractId || chain?.stockVault || contractId(`${listing.id}:stock`);
+  // The licitación gets its own instance when the offering opens; pointing at
+  // the shared one here made every listing inherit its payout wallet.
+  listing.licitacionContract = '';
   listing.factoryProductId = listings.filter((l) => l.factoryProductId).length + 1;
   listing.deployedAt = new Date().toISOString();
   listing.status = 'DEPLOYED';
-  listing.cvDepositHash = hexHash(`${listing.dossier.cajaSubaccount}:${listing.dossier.isin}`);
-  if (chain?.issuer && !isStellarPublicKey(listing.dossier.issuerPublicKey)) {
-    listing.dossier.issuerPublicKey = chain.issuer;
+  listing.cvDepositHash = listingCvDepositHash(listing);
+  if (!isStellarPublicKey(listing.dossier.issuerPublicKey)) {
+    listing.dossier.issuerPublicKey = platformIssuerPublicKey() || chain?.issuer || '';
   }
   save();
   return listing;
 }
 
-export function mintListingTokens(id: string, amount: number, cvDepositHash?: string): Listing {
+/**
+ * Mint pre-checks run before the on-chain `mint_backed_stock` call so a
+ * rejected mint never leaves an orphaned balance on the vault.
+ */
+export function assertMintable(id: string, amount: number): Listing {
   const listing = getListing(id);
   if (!listing) throw new Error('Listing no encontrado');
   if (listing.status === 'DRAFT') throw new Error('Primero deployá el contrato');
@@ -238,6 +269,12 @@ export function mintListingTokens(id: string, amount: number, cvDepositHash?: st
   if (next > listing.dossier.sharesToTokenize) {
     throw new Error('No se puede mintear más que las acciones a tokenizar');
   }
+  return listing;
+}
+
+export function mintListingTokens(id: string, amount: number, cvDepositHash?: string): Listing {
+  const listing = assertMintable(id, amount);
+  const next = listing.tokensMinted + amount;
   listing.tokensMinted = next;
   listing.sharesCustodied = next;
   if (cvDepositHash) listing.cvDepositHash = cvDepositHash;
@@ -247,7 +284,13 @@ export function mintListingTokens(id: string, amount: number, cvDepositHash?: st
   return listing;
 }
 
-export function openLicitacion(id: string, opts?: { settlePolicy?: 'ON_MIN' | 'ON_DATE'; settleAt?: string }): Listing {
+type SettleOpts = { settlePolicy?: 'ON_MIN' | 'ON_DATE'; settleAt?: string };
+
+/**
+ * Checks a listing can open and returns when its offering will close, so the
+ * contract can be initialized with that deadline before anything is saved.
+ */
+export function prepareOpenLicitacion(id: string, opts?: SettleOpts): { listing: Listing; deadlineMs: number } {
   const listing = listings.find((l) => l.id === id);
   if (!listing) throw new Error('Listing no encontrado');
   if (listing.tokensMinted <= 0) throw new Error('Primero minteá los tokens respaldados 1:1');
@@ -255,8 +298,23 @@ export function openLicitacion(id: string, opts?: { settlePolicy?: 'ON_MIN' | 'O
   if (!isStellarPublicKey(listing.dossier.proceedsWallet)) {
     throw new Error('Configurá la wallet de cobro de la empresa antes de abrir la licitación');
   }
-  const chain = loadTestnetDeployment();
-  listing.licitacionContract = chain?.licitacion || contractId(`${listing.id}:licitacion`);
+  const { settleAt } = resolveSettleChoice(opts);
+  const days = listing.dossier.offeringDays > 0 ? listing.dossier.offeringDays : 30;
+  const deadlineMs = settleAt ? new Date(settleAt).getTime() : Date.now() + days * 86_400_000;
+  if (!Number.isFinite(deadlineMs) || deadlineMs <= Date.now()) {
+    throw new Error('La fecha de cierre tiene que ser futura');
+  }
+  return { listing, deadlineMs };
+}
+
+export function openLicitacion(
+  id: string,
+  opts?: SettleOpts,
+  onChain?: { contractId: string; factoryProductId?: number | null },
+): Listing {
+  const { listing } = prepareOpenLicitacion(id, opts);
+  listing.licitacionContract = onChain?.contractId || contractId(`${listing.id}:licitacion`);
+  if (onChain?.factoryProductId != null) listing.factoryProductId = onChain.factoryProductId;
   listing.status = 'LISTED';
   listing.listedAt = new Date().toISOString();
   applySettleChoice(listing, opts);
@@ -299,17 +357,19 @@ export function setListingSettle(id: string, opts?: { settlePolicy?: 'ON_MIN' | 
   return listing;
 }
 
-function applySettleChoice(listing: Listing, opts?: { settlePolicy?: 'ON_MIN' | 'ON_DATE'; settleAt?: string }) {
+function resolveSettleChoice(opts?: SettleOpts): { settlePolicy: 'ON_MIN' | 'ON_DATE'; settleAt?: string } {
   const cfg = getTestnetConfig();
   const policy = opts?.settlePolicy || cfg.settlePolicy || 'ON_MIN';
-  listing.settlePolicy = policy === 'ON_DATE' ? 'ON_DATE' : 'ON_MIN';
+  if (policy !== 'ON_DATE') return { settlePolicy: 'ON_MIN' };
   const at = opts?.settleAt || cfg.settleAt;
-  if (listing.settlePolicy === 'ON_DATE') {
-    if (!at) throw new Error('Indicá la fecha hasta la que esperás para repartir tokens');
-    listing.settleAt = new Date(at).toISOString();
-  } else {
-    listing.settleAt = undefined;
-  }
+  if (!at) throw new Error('Indicá la fecha hasta la que esperás para repartir tokens');
+  return { settlePolicy: 'ON_DATE', settleAt: new Date(at).toISOString() };
+}
+
+function applySettleChoice(listing: Listing, opts?: SettleOpts) {
+  const { settlePolicy, settleAt } = resolveSettleChoice(opts);
+  listing.settlePolicy = settlePolicy;
+  listing.settleAt = settleAt;
 }
 
 export function validationPack(listing: Listing) {

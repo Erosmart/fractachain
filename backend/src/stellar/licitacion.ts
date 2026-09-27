@@ -1,11 +1,15 @@
+import { createHash } from 'crypto';
 import { Keypair } from '@stellar/stellar-sdk';
 import { custodialSigningKey, getAccount } from '../auth/accounts';
 import { isStellarPublicKey, loadNativeXlm } from '../auth/stellar_testnet';
 import { Listing } from '../admin/listings';
-import { licitacionAdminKeypair } from './keys';
+import { loadTestnetDeployment } from './deployment';
+import { hasDeployerSecret, licitacionAdminKeypair } from './keys';
 import {
   AnyClient,
   contractClient,
+  deployFromWasmHash,
+  factoryId,
   fromStroops,
   invoke,
   isLiveContractId,
@@ -13,6 +17,8 @@ import {
   submitSignedSorobanXdr,
   toStroops,
   unsignedInvocationXdr,
+  wasmHashOf,
+  xlmSac,
 } from './soroban';
 import {
   canFinalizeFromSnapshot,
@@ -68,6 +74,76 @@ export async function verifyInvestorOnChain(listing: Listing, investor: string):
     expiry,
   });
   return hash;
+}
+
+/** True when there is a licitación WASM on testnet to instantiate from. */
+export function canDeployLicitacion(): boolean {
+  const d = loadTestnetDeployment();
+  return Boolean(d?.licitacionWasmHash || isLiveContractId(d?.licitacion));
+}
+
+/**
+ * Deploys a fresh licitación instance for this listing and initializes it.
+ *
+ * Every offering needs its own contract: `Fiduciary`, caps and price freeze
+ * after the first contribution, so sharing one instance across listings made
+ * the second offering inherit the first one's payout wallet.
+ */
+export async function deployLicitacionForListing(
+  listing: Listing,
+  deadlineMs: number,
+): Promise<{ contractId: string; hash: string | null; factoryProductId: number | null }> {
+  const d = listing.dossier;
+  const fiduciary = d.proceedsWallet?.trim().toUpperCase();
+  if (!isStellarPublicKey(fiduciary)) {
+    throw new Error('Configurá la wallet de cobro de la empresa antes de abrir la licitación');
+  }
+  const deployment = loadTestnetDeployment();
+  const wasmHash = deployment?.licitacionWasmHash
+    || (isLiveContractId(deployment?.licitacion) ? await wasmHashOf(deployment!.licitacion!) : '');
+  if (!wasmHash) throw new Error('deployments/testnet.json no tiene el WASM de la licitación');
+
+  const isXlm = d.paymentKind === 'XLM';
+  const paymentToken = isXlm ? xlmSac() : deployment?.usdcSac;
+  if (!isLiveContractId(paymentToken)) throw new Error('Falta usdcSac en deployments/testnet.json');
+
+  const admin = await licitacionAdminKeypair();
+  const deployed = await deployFromWasmHash(wasmHash, admin);
+  const client = await contractClient(deployed.contractId, admin);
+  const price = toStroops(d.pricePerShareUsdc);
+  const { hash } = await invoke(client, 'initialize', {
+    admin: admin.publicKey(),
+    fiduciary,
+    payment_token: paymentToken,
+    soft_cap: toStroops(d.offeringSoftCapUsdc),
+    hard_cap: toStroops(d.offeringHardCapUsdc),
+    deadline: BigInt(Math.floor(deadlineMs / 1000)),
+    price_per_unit: price,
+    legal_info: {
+      fideicomiso_hash: createHash('sha256').update(`${listing.id}:${d.estatutoHash || ''}`).digest(),
+      cnv_record_id: d.cnvRecordId || '',
+      legal_terms_uri: d.legalTermsUri || '',
+    },
+  });
+
+  let factoryProductId: number | null = null;
+  if (hasDeployerSecret()) {
+    try {
+      const factory = await contractClient(factoryId(), admin);
+      const { result } = await invoke(factory, 'register_product', {
+        admin: admin.publicKey(),
+        kind: 0,
+        contract_address: deployed.contractId,
+        payment_kind: isXlm ? 0 : 1,
+        price_per_unit: price,
+        name: `${d.tokenTicker} · ${d.legalName}`,
+      });
+      factoryProductId = Number(result);
+    } catch (err: any) {
+      console.warn('factory.register_product skipped:', err?.message || err);
+    }
+  }
+  return { contractId: deployed.contractId, hash: hash || deployed.hash, factoryProductId };
 }
 
 /**

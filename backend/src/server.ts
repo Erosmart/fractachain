@@ -18,7 +18,14 @@ import {
 } from './mocks/payment_gateway';
 import { getAllCommodityPrices, getCommodityPrice } from './mocks/fiat_oracle';
 import { getAllWeatherData, getWeatherData } from './mocks/weather_oracle';
-import { getMervalStocks, getProofOfReserveAudit } from './custody/stocks';
+import {
+  createStock,
+  getMervalStocks,
+  getProofOfReserveAudit,
+  listStocksAdmin,
+  setStockActive,
+  updateStockPrice,
+} from './custody/stocks';
 import {
   bindContract,
   createProduct,
@@ -33,11 +40,14 @@ import {
   contributeListing,
   createListing,
   deployListing,
+  assertDeployable,
+  assertMintable,
   getListing,
   listListings,
   listedPools,
   mintListingTokens,
   openLicitacion,
+  prepareOpenLicitacion,
   closeListing,
   setListingProceedsWallet,
   setListingSettle,
@@ -46,7 +56,15 @@ import {
   Listing,
   recordOnChainContribution,
   markListingClosed,
+  listingCvDepositHash,
 } from './admin/listings';
+import { buildDemoDossier } from './admin/demo';
+import { ensurePlatformIssuer, platformIssuerPublicKey } from './stellar/keys';
+import {
+  canDeployStockVault,
+  deployStockVaultForListing,
+  mintBackedStockOnChain,
+} from './stellar/stockvault';
 import { cancelOrder, getBook, listMarkets, placeOrder } from './market/orderbook';
 import {
   autoFinalizeIfDue,
@@ -84,6 +102,8 @@ import {
   submitRefundXdr,
   syncFiduciaryOnChain,
   withdrawProceedsOnChain,
+  canDeployLicitacion,
+  deployLicitacionForListing,
 } from './stellar/licitacion';
 import {
   authenticateWithGoogle,
@@ -442,6 +462,52 @@ app.get('/api/custody/por', (_req: Request, res: Response) => {
   res.json({ success: true, data: getProofOfReserveAudit() });
 });
 
+/** Admin sees the whole catalog, including stocks hidden from the market. */
+app.get('/api/admin/stocks', (req: Request, res: Response) => {
+  if (!requireAdmin(req, res)) return;
+  wrap(() => listStocksAdmin(), res);
+});
+
+/** "Emitir acción": a new tokenized stock appears in the market right away. */
+app.post('/api/admin/stocks', (req: Request, res: Response) => {
+  if (!requireAdmin(req, res)) return;
+  wrap(
+    () =>
+      createStock({
+        ticker: String(req.body?.ticker || ''),
+        tokenTicker: req.body?.tokenTicker ? String(req.body.tokenTicker) : undefined,
+        companyName: String(req.body?.companyName || ''),
+        isin: String(req.body?.isin || ''),
+        sector: req.body?.sector ? String(req.body.sector) : undefined,
+        priceUsdc: Number(req.body?.priceUsdc),
+        custodiedShares: Number(req.body?.custodiedShares),
+        custodianCuit: req.body?.custodianCuit ? String(req.body.custodianCuit) : undefined,
+      }),
+    res,
+    201,
+  );
+});
+
+/** Toggle whether a stock trades in the public market. */
+app.post('/api/admin/stocks/:ticker/active', (req: Request, res: Response) => {
+  if (!requireAdmin(req, res)) return;
+  wrap(() => setStockActive(req.params.ticker, Boolean(req.body?.active)), res);
+});
+
+/** Admin-set quote for the demo market. */
+app.post('/api/admin/stocks/:ticker/price', (req: Request, res: Response) => {
+  if (!requireAdmin(req, res)) return;
+  wrap(
+    () =>
+      updateStockPrice(
+        req.params.ticker,
+        Number(req.body?.priceUsdc),
+        req.body?.change24hPct !== undefined ? Number(req.body.change24hPct) : undefined,
+      ),
+    res,
+  );
+});
+
 app.get('/api/admin/issuance/assets', (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
   res.json({ success: true, data: getPaymentAssets() });
@@ -591,32 +657,81 @@ app.get('/api/listings/:id/validation', (req: Request, res: Response) => {
   res.json({ success: true, data: validationPack(listing) });
 });
 
+/**
+ * Fully-filled demo dossier for the issuance form. Generates a friendbot-
+ * funded treasury wallet so the licitación payout lands on a real account.
+ */
+app.post('/api/admin/demo-dossier', (req: Request, res: Response) => {
+  if (!requireAdmin(req, res)) return;
+  wrapAsync(() => buildDemoDossier(), res);
+});
+
 app.post('/api/listings', (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
-  wrap(() => createListing(req.body), res, 201);
+  wrapAsync(async () => {
+    const body = { ...(req.body || {}) };
+    // Without an issuer the platform can sign for, the token can never be
+    // distributed to holders — default the field to whichever issuer key is
+    // configured (or provision a friendbot-funded one on the spot).
+    if (!String(body.issuerPublicKey || '').trim()) {
+      body.issuerPublicKey = (await ensurePlatformIssuer().catch(() => null))?.publicKey()
+        || platformIssuerPublicKey()
+        || '';
+    }
+    return createListing(body);
+  }, res, 201);
 });
 
 app.post('/api/listings/:id/deploy', (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
-  wrap(() => deployListing(req.params.id), res);
+  wrapAsync(async () => {
+    const listing = assertDeployable(req.params.id);
+    // The CdV slip hash must exist *before* the vault deploy so the PoR
+    // attestation and every mint proof reference the same deposit.
+    listing.cvDepositHash = listingCvDepositHash(listing);
+    // Each listing gets its own vault instance + fresh PoR attestation; a
+    // failed on-chain deploy leaves the listing in DRAFT with the real error.
+    const vault = canDeployStockVault()
+      ? await deployStockVaultForListing(listing)
+      : null;
+    const updated = deployListing(req.params.id, vault ? { contractId: vault.contractId } : undefined);
+    return {
+      ...updated,
+      onChain: vault
+        ? { hash: vault.hash, contractId: vault.contractId, explorer: explorerTx(vault.hash) }
+        : null,
+    };
+  }, res);
 });
 
 app.post('/api/listings/:id/mint', (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
-  wrap(() => mintListingTokens(req.params.id, Number(req.body.amount), req.body.cvDepositHash), res);
+  wrapAsync(async () => {
+    const amount = Number(req.body.amount);
+    const listing = assertMintable(req.params.id, amount);
+    // On-chain mint against the listing's own vault happens first; if it
+    // fails the DB counter is left untouched and the real error surfaces.
+    const chain = await mintBackedStockOnChain(listing, amount);
+    // The deposit hash is fixed at deploy time — accepting one here would let
+    // the ledger diverge from the hash the on-chain mint actually recorded.
+    const updated = mintListingTokens(req.params.id, amount);
+    return {
+      ...updated,
+      onChain: chain ? { hash: chain.hash, explorer: explorerTx(chain.hash), to: chain.to } : null,
+    };
+  }, res);
 });
 
 app.post('/api/listings/:id/licitacion', (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
   wrapAsync(async () => {
-    const listing = openLicitacion(req.params.id, req.body || {});
-    // The instance is deployed before the dossier exists, so it still pays
-    // the platform deployer until we repoint it. Opening the offering is the
-    // last moment where the contract still accepts the change.
-    const fiduciary = await syncFiduciaryOnChain(listing).catch((err: any) => ({
-      error: err?.message || String(err),
-    }));
-    return { ...listing, fiduciary };
+    const opts = req.body || {};
+    const { listing: draft, deadlineMs } = prepareOpenLicitacion(req.params.id, opts);
+    // Each offering gets its own instance, initialized with the company wallet
+    // as fiduciary, so there is nothing left to repoint afterwards.
+    const onChain = canDeployLicitacion() ? await deployLicitacionForListing(draft, deadlineMs) : undefined;
+    const listing = openLicitacion(req.params.id, opts, onChain);
+    return { ...listing, fiduciary: onChain ? { hash: onChain.hash, fiduciary: listing.dossier.proceedsWallet } : null };
   }, res);
 });
 
@@ -758,12 +873,23 @@ app.post('/api/listings/:id/distribute', (req: Request, res: Response) => {
 
 app.get('/api/admin/testnet', (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
-  wrap(() => {
+  wrapAsync(async () => {
     const deployment = loadTestnetDeployment();
     return {
       ...getTestnetConfig(),
       onChain: isOnChainDeployed(),
       deployment,
+      /**
+       * The issuer account the backend can sign for right now. New listings
+       * should default issuerPublicKey to this — pointing them at a wallet we
+       * cannot sign with leaves tokens permanently undistributable. Provision
+       * one on the spot when none exists so the admin UI always shows the
+       * signable issuer.
+       */
+      activeIssuer:
+        platformIssuerPublicKey() ||
+        (await ensurePlatformIssuer().catch(() => null))?.publicKey() ||
+        null,
     };
   }, res);
 });
@@ -1024,7 +1150,9 @@ app.post('/api/listings/:id/proceeds-wallet', (req: Request, res: Response) => {
   if (!requireAdmin(req, res)) return;
   wrapAsync(async () => {
     const listing = setListingProceedsWallet(req.params.id, String(req.body?.wallet || ''));
-    const fiduciary = await syncFiduciaryOnChain(listing);
+    // Before the offering opens there is no instance of its own yet: the
+    // wallet goes straight into `initialize` when it is deployed.
+    const fiduciary = listing.status === 'LISTED' ? await syncFiduciaryOnChain(listing) : null;
     return { ...listing, fiduciary };
   }, res);
 });
