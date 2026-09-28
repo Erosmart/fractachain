@@ -99,7 +99,10 @@ export interface SdexBookView extends OrderBook {
   /** Whether the caller is cleared by the issuer to trade this security. */
   authorized: boolean;
   needsTrustline: boolean;
+  /** Sellable units: trustline balance net of what open sell offers already locked. */
   tokenBalance: number;
+  /** Spendable counter balance: net of USDC already locked by open buy offers. */
+  usdcBalance: number;
   sandbox: false;
 }
 
@@ -232,13 +235,15 @@ async function loadSdexBook(listingId: string, accountId?: string): Promise<Sdex
   let authorized = false;
   let needsTrustline = true;
   let tokenBalance = 0;
+  let usdcBalance = 0;
 
   const account = accountId ? getAccount(accountId) : undefined;
   if (account?.publicKey) {
-    const [offers, line] = await Promise.all([
+    const [offers, lines] = await Promise.all([
       getAccountOffers(account.publicKey).catch(() => []),
-      getTrustlineState(account.publicKey, security),
+      getTrustlineStates(account.publicKey, [security, counter]),
     ]);
+    const [line, counterLine] = lines;
     // Horizon returns every offer on the account; keep only this market's and
     // flag the ones still quoting the superseded counter asset — the holder
     // sees them marked legacy and can cancel them like any other order.
@@ -258,7 +263,10 @@ async function loadSdexBook(listingId: string, accountId?: string): Promise<Sdex
       }));
     authorized = line.authorized;
     needsTrustline = !line.exists;
-    tokenBalance = line.balance;
+    // Stellar counts resting-offer amounts inside `balance`; liabilities are
+    // the part already locked, so what the trader can still use is the rest.
+    tokenBalance = Math.max(0, line.balance - line.sellingLiabilities);
+    usdcBalance = Math.max(0, (counterLine?.balance ?? 0) - (counterLine?.buyingLiabilities ?? 0));
   }
 
   return {
@@ -275,6 +283,7 @@ async function loadSdexBook(listingId: string, accountId?: string): Promise<Sdex
     authorized,
     needsTrustline,
     tokenBalance,
+    usdcBalance,
     sandbox: false,
   };
 }

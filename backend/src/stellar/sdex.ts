@@ -64,6 +64,10 @@ export interface TrustlineState {
   /** Limited approval: can close out existing offers, cannot take on more. */
   maintainingLiabilitiesOnly: boolean;
   balance: number;
+  /** Locked by open buy offers — spendable is `balance - buyingLiabilities`. */
+  buyingLiabilities: number;
+  /** Locked by open sell offers — spendable is `balance - sellingLiabilities`. */
+  sellingLiabilities: number;
   limit: number;
 }
 
@@ -273,6 +277,8 @@ function emptyTrustline(): TrustlineState {
     authorized: false,
     maintainingLiabilitiesOnly: false,
     balance: 0,
+    buyingLiabilities: 0,
+    sellingLiabilities: 0,
     limit: 0,
   };
 }
@@ -292,6 +298,8 @@ function trustlineFromAccount(account: Horizon.AccountResponse, asset: Asset): T
     maintainingLiabilitiesOnly:
       !line.is_authorized && Boolean(line.is_authorized_to_maintain_liabilities),
     balance: Number(line.balance),
+    buyingLiabilities: Number(line.buying_liabilities || 0),
+    sellingLiabilities: Number(line.selling_liabilities || 0),
     limit: Number(line.limit),
   };
 }

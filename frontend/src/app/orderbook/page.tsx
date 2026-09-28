@@ -51,6 +51,7 @@ type Book = {
   authorized?: boolean;
   needsTrustline?: boolean;
   tokenBalance?: number;
+  usdcBalance?: number;
 };
 
 /** Shape returned by /api/sdex/:id, before we fold it into `Book`. */
@@ -230,9 +231,12 @@ function OrderbookInner() {
   const reservedCash = book?.reservedCash ?? 0;
   const reservedTokens = book?.reservedTokens ?? 0;
 
-  const freeCash = Math.max(0, Number(user?.cashUsdc || 0) - reservedCash);
-  // On SDEX the balance comes from the trustline, and Stellar already nets out
-  // what resting offers have locked, so there is nothing to subtract.
+  // On SDEX the spendable balance lives on-chain: the backend already nets out
+  // what resting offers have locked (liabilities), so use it as-is. Sandbox
+  // books keep using the platform ledger minus reserved cash.
+  const freeCash = onSdex
+    ? Number(book?.usdcBalance || 0)
+    : Math.max(0, Number(user?.cashUsdc || 0) - reservedCash);
   const freeTokens = onSdex
     ? Number(book?.tokenBalance || 0)
     : Math.max(0, Number(holding?.tokens || 0) - reservedTokens);
