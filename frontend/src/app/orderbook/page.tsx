@@ -52,6 +52,8 @@ type Book = {
   needsTrustline?: boolean;
   tokenBalance?: number;
   usdcBalance?: number;
+  usdcTotal?: number;
+  tokenTotal?: number;
 };
 
 /** Shape returned by /api/sdex/:id, before we fold it into `Book`. */
@@ -537,9 +539,12 @@ function OrderbookInner() {
           <div className="lg:col-span-4 p-6 rounded-3xl crystal-card space-y-5">
             <h3 className="font-display font-extrabold">{t('ob.limitOrder')}</h3>
             <p className="text-xs text-neutral-500">
-              {t('ob.balance')} ${freeCash.toLocaleString('es-AR', { maximumFractionDigits: 2 })} USDC
-              {holding ? ` · ${fmtQty(freeTokens)} ${book.tokenTicker}` : ''}
-              {reservedCash + reservedTokens > 0 ? ` ${t('ob.freeNote')}` : ''}
+              {t('ob.balance')} ${(onSdex ? Number(book?.usdcTotal ?? 0) : freeCash).toLocaleString('es-AR', { maximumFractionDigits: 2 })} USDC
+              {(onSdex ? (book?.tokenTotal ?? 0) > 0 : !!holding) ? ` · ${fmtQty(onSdex ? Number(book?.tokenTotal || 0) : Number(holding?.tokens || 0))} ${book.tokenTicker}` : ''}
+              {onSdex
+                ? (Number(book?.usdcTotal || 0) - freeCash > 0.005 || Number(book?.tokenTotal || 0) - freeTokens > 0.005) &&
+                  ` · ${t('ob.lockedOrders', { u: (Number(book?.usdcTotal || 0) - freeCash).toLocaleString('es-AR', { maximumFractionDigits: 2 }), tk: fmtQty(Math.max(0, Number(book?.tokenTotal || 0) - freeTokens)) })}`
+                : reservedCash + reservedTokens > 0 ? ` ${t('ob.freeNote')}` : ''}
             </p>
             <div className="p-1 rounded-xl bg-black/[0.04] flex gap-1">
               <button
