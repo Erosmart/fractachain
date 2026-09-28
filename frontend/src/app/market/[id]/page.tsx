@@ -221,34 +221,41 @@ export default function PoolDetailPage() {
                 <div><dt className="text-neutral-500">{t('market.custodian')}</dt><dd>{d.custodianCuit}</dd></div>
                 <div><dt className="text-neutral-500">{t('admIss.f.auditor')}</dt><dd>{d.auditor}</dd></div>
                 <div><dt className="text-neutral-500">{t('market.backing')}</dt><dd>{validation.token.backing}</dd></div>
-                <div className="sm:col-span-2"><dt className="text-neutral-500">{t('market.estatuto')}</dt><dd className="font-mono text-xs break-all">{d.estatutoHash}</dd></div>
-                <div className="sm:col-span-2"><dt className="text-neutral-500">Stock vault</dt><dd className="font-mono text-xs break-all">{listing.stockContract}</dd></div>
-                <div className="sm:col-span-2">
-                  <dt className="text-neutral-500">{t('market.licitacion')}</dt>
-                  <dd className="font-mono text-xs break-all">
-                    {String(listing.licitacionContract || '').startsWith('C') ? (
-                      <a
-                        href={`https://stellar.expert/explorer/testnet/contract/${listing.licitacionContract}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline"
-                      >
-                        {listing.licitacionContract}
-                      </a>
-                    ) : (
-                      listing.licitacionContract
-                    )}
-                  </dd>
-                </div>
-                <div className="sm:col-span-2"><dt className="text-neutral-500">{t('market.cvDeposit')}</dt><dd className="font-mono text-xs break-all">{listing.cvDepositHash}</dd></div>
               </dl>
-              <ul className="text-sm space-y-1 pt-2">
-                {validation.checks.map((c: any) => (
-                  <li key={c.key} className={c.ok ? 'text-[#2f6f28]' : 'text-red-700'}>
-                    {c.ok ? '✓' : '×'} {c.label}
-                  </li>
-                ))}
-              </ul>
+              <details className="pt-2">
+                <summary className="text-xs text-neutral-500 cursor-pointer select-none">
+                  {t('market.techDetails')}
+                </summary>
+                <dl className="grid sm:grid-cols-2 gap-3 text-sm pt-3">
+                  <div className="sm:col-span-2"><dt className="text-neutral-500">{t('market.estatuto')}</dt><dd className="font-mono text-xs break-all">{d.estatutoHash}</dd></div>
+                  <div className="sm:col-span-2"><dt className="text-neutral-500">Stock vault</dt><dd className="font-mono text-xs break-all">{listing.stockContract}</dd></div>
+                  <div className="sm:col-span-2">
+                    <dt className="text-neutral-500">{t('market.licitacion')}</dt>
+                    <dd className="font-mono text-xs break-all">
+                      {String(listing.licitacionContract || '').startsWith('C') ? (
+                        <a
+                          href={`https://stellar.expert/explorer/testnet/contract/${listing.licitacionContract}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="underline"
+                        >
+                          {listing.licitacionContract}
+                        </a>
+                      ) : (
+                        listing.licitacionContract
+                      )}
+                    </dd>
+                  </div>
+                  <div className="sm:col-span-2"><dt className="text-neutral-500">{t('market.cvDeposit')}</dt><dd className="font-mono text-xs break-all">{listing.cvDepositHash}</dd></div>
+                </dl>
+                <ul className="text-sm space-y-1 pt-2">
+                  {validation.checks.map((c: any) => (
+                    <li key={c.key} className={c.ok ? 'text-[#2f6f28]' : 'text-red-700'}>
+                      {c.ok ? '✓' : '×'} {c.label}
+                    </li>
+                  ))}
+                </ul>
+              </details>
             </div>
           </div>
           <div className="lg:col-span-5">

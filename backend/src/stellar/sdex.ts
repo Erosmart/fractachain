@@ -41,6 +41,8 @@ export interface OrderBookLevel {
   amount: number;
   /** Cumulative amount from the top of the book down to this level. */
   total: number;
+  /** Level lives on the superseded counter-asset pair, not the canonical one. */
+  legacy?: boolean;
 }
 
 export interface OrderBook {
@@ -456,8 +458,59 @@ export async function getAccountOffers(accountId: string) {
     buying: o.buying,
     amount: Number(o.amount),
     price: Number(o.price),
+    priceR: o.price_r ? { n: Number(o.price_r.n), d: Number(o.price_r.d) } : undefined,
     lastModified: o.last_modified_time,
   }));
+}
+
+/**
+ * Raw Horizon offers on one exact asset pair, both directions. Used to find
+ * orders stranded on a superseded counter asset (the pre-platform Circle
+ * USDC) — the canonical book cannot see them, but they still hold reserves.
+ * `side` is tagged from the security's point of view: 'SELL' offers the
+ * security for the counter, 'BUY' offers the counter for the security.
+ */
+export async function getPairOffers(security: Asset, counter: Asset) {
+  const query = (selling: Asset, buying: Asset, side: 'BUY' | 'SELL') =>
+    server()
+      .offers()
+      .selling(selling)
+      .buying(buying)
+      .limit(100)
+      .call()
+      .then((p: any) =>
+        (p.records || []).map((o: any) => ({
+          id: String(o.id),
+          seller: String(o.seller),
+          amount: String(o.amount),
+          priceR: { n: Number(o.price_r?.n ?? 0), d: Number(o.price_r?.d ?? 1) },
+          side,
+        })),
+      )
+      .catch(() => [] as any[]);
+  const [asks, bids] = await Promise.all([
+    query(security, counter, 'SELL'),
+    query(counter, security, 'BUY'),
+  ]);
+  return [...asks, ...bids];
+}
+
+/**
+ * Builds an unsigned tx out of arbitrary offer ops for one account. The
+ * legacy-pair migration needs cancel+replace inside a single transaction;
+ * the per-side builders above intentionally stay single-purpose.
+ */
+export async function buildOfferOpsXdr(
+  accountId: string,
+  ops: ReturnType<typeof Operation.manageSellOffer>[],
+): Promise<string> {
+  const account = await server().loadAccount(accountId);
+  const tx = new TransactionBuilder(account, {
+    fee: FEE,
+    networkPassphrase: networkPassphrase(),
+  });
+  for (const op of ops) tx.addOperation(op);
+  return tx.setTimeout(TX_TIMEOUT_SECONDS).build().toXDR();
 }
 
 /* ------------------------------------------------------------------ *

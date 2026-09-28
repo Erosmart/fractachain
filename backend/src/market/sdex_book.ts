@@ -5,19 +5,22 @@
  * with no funded testnet accounts. Once a listing has a real issuer account,
  * this module takes over and the book the UI renders is the ledger's, not ours.
  */
-import { Asset } from '@stellar/stellar-sdk';
+import { Asset, Operation } from '@stellar/stellar-sdk';
 import { getListing, Listing } from '../admin/listings';
-import { custodialSigningKey, getAccount, markTokensOnChain } from '../auth/accounts';
+import { getTestnetConfig } from '../admin/testnet';
+import { custodialSigningKey, findAccountByPublicKey, getAccount, markTokensOnChain } from '../auth/accounts';
 import { isStellarPublicKey } from '../auth/stellar_testnet';
 import { syncHolderAuthorization } from '../stellar/compliance';
 import { usdcIssuerPublicKey } from '../stellar/keys';
 import {
   buildBuyOfferXdr,
+  buildOfferOpsXdr,
   buildSellOfferXdr,
   buildTrustlineXdr,
   distributeTokens,
   getAccountOffers,
   getOrderBook,
+  getPairOffers,
   getRecentTrades,
   getTrustlineState,
   getTrustlineStates,
@@ -41,6 +44,22 @@ export function counterAsset(): Asset {
   const issuer = usdcIssuerPublicKey();
   if (!issuer) throw new Error('Falta el emisor USDC configurado (STELLAR_USDC_ISSUER_SECRET / deployments)');
   return new Asset(USDC_CODE, issuer);
+}
+
+/**
+ * Circle's faucet USDC — what testnet books quoted against before the
+ * platform issuer (GCASKV…) existed. Offers left on that pair are zombies:
+ * unreachable by new orders and invisible to the book. Testnet-only concern,
+ * so this returns null anywhere else (and when the platform issuer itself is
+ * the legacy one, which would make the pair identical anyway).
+ */
+const LEGACY_USDC_ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
+
+export function legacyCounterAsset(): Asset | null {
+  const issuer = usdcIssuerPublicKey();
+  if (!issuer || issuer === LEGACY_USDC_ISSUER) return null;
+  if (!getTestnetConfig().networkPassphrase.includes('Test SDF')) return null;
+  return new Asset(USDC_CODE, LEGACY_USDC_ISSUER);
 }
 
 export function listingAsset(listing: Listing): Asset {
@@ -74,7 +93,9 @@ export interface SdexBookView extends OrderBook {
   lastPrice: number;
   trades: Awaited<ReturnType<typeof getRecentTrades>>;
   /** Open offers belonging to the caller, so they can cancel them. */
-  myOffers: Awaited<ReturnType<typeof getAccountOffers>>;
+  myOffers: (Awaited<ReturnType<typeof getAccountOffers>>[number] & { legacy?: boolean })[];
+  /** Open offers still stranded on the superseded counter asset (all owners). */
+  legacyOffers: number;
   /** Whether the caller is cleared by the issuer to trade this security. */
   authorized: boolean;
   needsTrustline: boolean;
@@ -101,17 +122,113 @@ export async function getSdexBook(listingId: string, accountId?: string): Promis
   return next;
 }
 
+/**
+ * Manual maintenance tool — not run automatically. Rebooks stranded
+ * legacy-pair offers onto the canonical pair in one cancel+replace tx.
+ * Only custodial accounts can be migrated (the platform holds their keys);
+ * the book already displays legacy levels merged in, so nothing here is
+ * required for visibility — this exists in case we ever want to clean up
+ * the old pair rather than just quote it.
+ */
+export async function migrateLegacyPair(security: Asset, counter: Asset, legacy: Asset) {
+  const offers = await getPairOffers(security, legacy);
+  for (const offer of offers) {
+    const account = findAccountByPublicKey(offer.seller);
+    if (!account?.publicKey || account.custodyMode !== 'CUSTODIAL') continue;
+    try {
+      await migrateLegacyOffer(account.id, offer, security, counter, legacy);
+    } catch (err: any) {
+      console.warn('[legacy-sdex] offer', offer.id, err?.message || err);
+    }
+  }
+}
+
+async function migrateLegacyOffer(
+  accountId: string,
+  offer: { id: string; side: 'BUY' | 'SELL'; amount: string; priceR: { n: number; d: number } },
+  security: Asset,
+  counter: Asset,
+  legacy: Asset,
+) {
+  const account = getAccount(accountId);
+  if (!account?.publicKey) return;
+  const secret = custodialSigningKey(accountId);
+
+  // The replacement bid spends the new USDC — make sure the wallet has the
+  // trustline and a funded balance before placing it.
+  const { fundTestnetUsdc } = await import('../stellar/usdc');
+  await fundTestnetUsdc(account.publicKey, { walletSecret: secret });
+
+  const stroops = (decimal: string) => BigInt(Math.round(Number(decimal) * 1e7));
+  const toAmount = (s: bigint) => `${s / 10_000_000n}.${String(s % 10_000_000n).padStart(7, '0')}`;
+  const { n, d } = offer.priceR;
+
+  let ops;
+  if (offer.side === 'SELL') {
+    // Asks already price counter-per-security — reuse the fraction verbatim.
+    ops = [
+      Operation.manageSellOffer({ selling: security, buying: legacy, amount: '0', price: { n, d }, offerId: offer.id }),
+      Operation.manageSellOffer({ selling: security, buying: counter, amount: offer.amount, price: { n, d }, offerId: '0' }),
+    ];
+  } else {
+    // The record stores buying-per-selling; manageBuyOffer wants the inverse
+    // (counter per security) and a buyAmount denominated in the security.
+    const buyStroops = (stroops(offer.amount) * BigInt(n)) / BigInt(d);
+    if (buyStroops <= 0n) return;
+    ops = [
+      Operation.manageBuyOffer({ buying: security, selling: legacy, buyAmount: '0', price: { n: d, d: n }, offerId: offer.id }),
+      Operation.manageBuyOffer({ buying: security, selling: counter, buyAmount: toAmount(buyStroops), price: { n: d, d: n }, offerId: '0' }),
+    ];
+  }
+  const xdr = await buildOfferOpsXdr(account.publicKey, ops);
+  await signAndSubmitXdr(xdr, secret);
+}
+
 async function loadSdexBook(listingId: string, accountId?: string): Promise<SdexBookView> {
   const listing = requireSdexListing(listingId);
   const security = listingAsset(listing);
   const counter = counterAsset();
+  const legacy = legacyCounterAsset();
 
   const [book, trades] = await Promise.all([
     getOrderBook(security, counter),
     getRecentTrades(security, counter).catch(() => []),
   ]);
 
-  let myOffers: Awaited<ReturnType<typeof getAccountOffers>> = [];
+  // Orders resting on the old counter asset are still real orders: merge them
+  // into the book flagged `legacy` so nothing disappears. New orders always
+  // post to the canonical pair — prepareOrder only ever builds against
+  // counterAsset(), so the legacy side can only shrink from here.
+  let mergedBook = book;
+  let mergedTrades = trades;
+  let legacyOffers = 0;
+  if (legacy) {
+    const [legacyBook, legacyTrades] = await Promise.all([
+      getOrderBook(security, legacy).catch(() => null),
+      getRecentTrades(security, legacy).catch(() => []),
+    ]);
+    if (legacyBook) {
+      const bids = [...book.bids, ...legacyBook.bids.map((b) => ({ ...b, legacy: true }))]
+        .sort((a, b) => b.price - a.price);
+      const asks = [...book.asks, ...legacyBook.asks.map((a) => ({ ...a, legacy: true }))]
+        .sort((a, b) => a.price - b.price);
+      const bestBid = bids[0]?.price ?? null;
+      const bestAsk = asks[0]?.price ?? null;
+      mergedBook = {
+        ...book,
+        bids,
+        asks,
+        spread: bestBid != null && bestAsk != null ? bestAsk - bestBid : null,
+        midPrice: bestBid != null && bestAsk != null ? (bestAsk + bestBid) / 2 : bestBid ?? bestAsk,
+      };
+      mergedTrades = [...trades, ...legacyTrades.map((t: any) => ({ ...t, legacy: true }))]
+        .sort((a: any, b: any) => String(b.createdAt).localeCompare(String(a.createdAt)))
+        .slice(0, trades.length || 20);
+      legacyOffers = legacyBook.bids.length + legacyBook.asks.length;
+    }
+  }
+
+  let myOffers: SdexBookView['myOffers'] = [];
   let authorized = false;
   let needsTrustline = true;
   let tokenBalance = 0;
@@ -122,27 +239,39 @@ async function loadSdexBook(listingId: string, accountId?: string): Promise<Sdex
       getAccountOffers(account.publicKey).catch(() => []),
       getTrustlineState(account.publicKey, security),
     ]);
-    // Horizon returns every offer on the account; keep only this market's.
-    myOffers = offers.filter(
-      (o: any) =>
-        o.selling?.asset_code === security.getCode() ||
-        o.buying?.asset_code === security.getCode(),
-    );
+    // Horizon returns every offer on the account; keep only this market's and
+    // flag the ones still quoting the superseded counter asset — the holder
+    // sees them marked legacy and can cancel them like any other order.
+    const legacyIssuer = legacy?.getIssuer();
+    myOffers = offers
+      .filter(
+        (o: any) =>
+          o.selling?.asset_code === security.getCode() ||
+          o.buying?.asset_code === security.getCode(),
+      )
+      .map((o: any) => ({
+        ...o,
+        legacy: Boolean(
+          legacyIssuer &&
+            (o.selling?.asset_issuer === legacyIssuer || o.buying?.asset_issuer === legacyIssuer),
+        ),
+      }));
     authorized = line.authorized;
     needsTrustline = !line.exists;
     tokenBalance = line.balance;
   }
 
   return {
-    ...book,
+    ...mergedBook,
     listingId,
     tokenTicker: listing.dossier.tokenTicker,
     legalName: listing.dossier.legalName,
     refPrice: listing.dossier.pricePerShareUsdc,
     // Falls back to the primary-offering price until the pair has traded.
-    lastPrice: trades[0]?.price ?? book.midPrice ?? listing.dossier.pricePerShareUsdc,
-    trades,
+    lastPrice: mergedTrades[0]?.price ?? mergedBook.midPrice ?? listing.dossier.pricePerShareUsdc,
+    trades: mergedTrades,
     myOffers,
+    legacyOffers,
     authorized,
     needsTrustline,
     tokenBalance,
@@ -245,19 +374,25 @@ export async function placeCustodialOrder(params: {
   return { summary, hash: (result as any).hash, book: await getSdexBook(params.listingId, params.accountId) };
 }
 
-/** Cancelling is an order for zero at the same price, keyed by offer id. */
+/**
+ * Cancelling is an order for zero at the same price, keyed by offer id.
+ * `legacy` targets the superseded counter-asset pair — Horizon matches an
+ * offer id against the exact pair it was posted on, so a stranded order can
+ * only be cancelled with the legacy asset in the op.
+ */
 export async function prepareCancel(params: {
   listingId: string;
   accountId: string;
   side: Side;
   offerId: string;
   price: number;
+  legacy?: boolean;
 }): Promise<{ xdr: string }> {
   const listing = requireSdexListing(params.listingId);
   const account = getAccount(params.accountId);
   if (!account?.publicKey) throw new Error('La cuenta no tiene wallet de Stellar asociada');
 
-  const counter = counterAsset();
+  const counter = (params.legacy && legacyCounterAsset()) || counterAsset();
   const counterLine = await getTrustlineState(account.publicKey, counter);
   const req = {
     accountId: account.publicKey,
@@ -280,6 +415,7 @@ export async function cancelCustodialOrder(params: {
   side: Side;
   offerId: string;
   price: number;
+  legacy?: boolean;
 }) {
   const { xdr } = await prepareCancel(params);
   const secret = custodialSigningKey(params.accountId);

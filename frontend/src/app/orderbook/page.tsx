@@ -21,7 +21,7 @@ type Market = {
   status: string;
 };
 
-type Level = { price: number; amount: number; total: number; depthPercent: number };
+type Level = { price: number; amount: number; total: number; depthPercent: number; legacy?: boolean };
 type MyOrder = {
   id: string;
   side: 'BUY' | 'SELL';
@@ -29,6 +29,8 @@ type MyOrder = {
   amount: number;
   remaining: number;
   status: string;
+  /** Posted against the superseded counter asset — stranded on a dead pair. */
+  legacy?: boolean;
 };
 type Book = {
   listingId: string;
@@ -52,13 +54,14 @@ type Book = {
 };
 
 /** Shape returned by /api/sdex/:id, before we fold it into `Book`. */
-type SdexLevel = { price: number; amount: number; total: number };
+type SdexLevel = { price: number; amount: number; total: number; legacy?: boolean };
 type SdexOffer = {
   id: string;
   selling: { asset_code?: string; asset_type: string };
   buying: { asset_code?: string; asset_type: string };
   amount: number;
   price: number;
+  legacy?: boolean;
 };
 
 /**
@@ -76,6 +79,7 @@ function fromSdex(d: any): Book {
       amount: r.amount,
       total: r.price * r.amount,
       depthPercent: Math.round((r.amount / max) * 100),
+      legacy: r.legacy,
     }));
   };
 
@@ -91,6 +95,7 @@ function fromSdex(d: any): Book {
       amount: o.amount,
       remaining: o.amount,
       status: 'OPEN',
+      legacy: o.legacy,
     };
   });
 
@@ -326,7 +331,7 @@ function OrderbookInner() {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ side: mine.side, offerId: id, price: mine.price }),
+        body: JSON.stringify({ side: mine.side, offerId: id, price: mine.price, legacy: mine.legacy }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
@@ -458,7 +463,7 @@ function OrderbookInner() {
                   {book.bids.length === 0 && <p className="text-neutral-400">{t('ob.noBids')}</p>}
                   {book.bids.map((bid) => (
                     <button
-                      key={`b-${bid.price}`}
+                      key={`b-${bid.price}-${bid.legacy ? 'l' : 'c'}`}
                       type="button"
                       onClick={() => takeLevel('bid', bid)}
                       title={t('ob.takeBid', { p: bid.price.toFixed(2), n: fmtQty(bid.amount) })}
@@ -467,7 +472,7 @@ function OrderbookInner() {
                       }`}
                     >
                       <div className="absolute right-0 top-0 bottom-0 bg-emerald-100 pointer-events-none" style={{ width: `${bid.depthPercent}%` }} />
-                      <span className="font-bold relative z-10">${bid.price.toFixed(2)}</span>
+                      <span className="font-bold relative z-10">${bid.price.toFixed(2)}{bid.legacy && <span className="ml-1 text-[8px] text-amber-600 font-bold uppercase">{t('ob.legacy')}</span>}</span>
                       <span className="text-right relative z-10">{fmtQty(bid.amount)}</span>
                       <span className="text-right relative z-10 text-neutral-500">${bid.total.toLocaleString()}</span>
                     </button>
@@ -486,7 +491,7 @@ function OrderbookInner() {
                   {asksDisplay.length === 0 && <p className="text-neutral-400">{t('ob.noAsks')}</p>}
                   {asksDisplay.map((ask) => (
                     <button
-                      key={`a-${ask.price}`}
+                      key={`a-${ask.price}-${ask.legacy ? 'l' : 'c'}`}
                       type="button"
                       onClick={() => takeLevel('ask', ask)}
                       title={t('ob.takeAsk', { p: ask.price.toFixed(2), n: fmtQty(ask.amount) })}
@@ -495,7 +500,7 @@ function OrderbookInner() {
                       }`}
                     >
                       <div className="absolute right-0 top-0 bottom-0 bg-red-100 pointer-events-none" style={{ width: `${ask.depthPercent}%` }} />
-                      <span className="font-bold relative z-10">${ask.price.toFixed(2)}</span>
+                      <span className="font-bold relative z-10">${ask.price.toFixed(2)}{ask.legacy && <span className="ml-1 text-[8px] text-amber-600 font-bold uppercase">{t('ob.legacy')}</span>}</span>
                       <span className="text-right relative z-10">{fmtQty(ask.amount)}</span>
                       <span className="text-right relative z-10 text-neutral-500">${ask.total.toLocaleString()}</span>
                     </button>
@@ -662,8 +667,15 @@ function OrderbookInner() {
               <div className="space-y-2 pt-2 border-t border-black/10">
                 <p className="text-xs font-bold">{t('ob.myOrders')}</p>
                 {openOrders.map((o) => (
-                  <div key={o.id} className="flex justify-between items-center text-xs">
-                    <span>{o.side} {fmtQty(o.remaining)} @ ${o.price}</span>
+                  <div key={o.id} className="flex justify-between items-center text-xs gap-2">
+                    <span className="flex items-center gap-1.5">
+                      {o.side} {fmtQty(o.remaining)} @ ${o.price}
+                      {o.legacy && (
+                        <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[9px] font-bold uppercase">
+                          {t('ob.legacy')}
+                        </span>
+                      )}
+                    </span>
                     <button type="button" onClick={() => cancel(o.id)} className="underline">{t('ob.cancel')}</button>
                   </div>
                 ))}
