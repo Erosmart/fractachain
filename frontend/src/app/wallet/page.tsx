@@ -156,14 +156,16 @@ export default function WalletPage() {
                 {t('wallet.usdcIssuer')}: USDC:{usdcIssuer}
               </p>
             )}
-            <button
-              type="button"
-              onClick={fundUsdc}
-              disabled={funding}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-[#2f6f28] text-white font-display font-bold text-sm disabled:opacity-40"
-            >
-              <Wallet className="w-4 h-4" /> {funding ? t('wallet.usdcFunding') : t('wallet.usdcFund')}
-            </button>
+            {user?.custodyMode === 'SELF' && (
+              <button
+                type="button"
+                onClick={fundUsdc}
+                disabled={funding}
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-[#2f6f28] text-white font-display font-bold text-sm disabled:opacity-40"
+              >
+                <Wallet className="w-4 h-4" /> {funding ? t('wallet.usdcFunding') : t('wallet.usdcFund')}
+              </button>
+            )}
             {fundNotice && <p className="text-sm text-neutral-700">{fundNotice}</p>}
             <a
               href={`https://stellar.expert/explorer/testnet/account/${publicKey}`}

@@ -19,7 +19,7 @@ import {
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
 import { getTestnetConfig } from '../admin/testnet';
-import { fundFriendbot, isStellarPublicKey, loadAssetBalance, loadNativeXlm } from '../auth/stellar_testnet';
+import { fundFriendbot, isStellarPublicKey, loadAssetBalance, loadNativeXlm, topUpXlm } from '../auth/stellar_testnet';
 import { usdcIssuerKeypair, usdcIssuerPublicKey } from './keys';
 import { loadTestnetDeployment } from './deployment';
 import {
@@ -282,6 +282,30 @@ export async function ensureFiduciaryUsdcTrustline(
   await submitTx(issuer.publicKey(), ops, signers);
   const after = await getTrustlineState(wallet, asset);
   return after.exists && after.authorized;
+}
+
+/**
+ * One-stop wallet funding check used by hydrate + the read endpoints:
+ *
+ * 1. Friendbot creates the account when missing (10k XLM).
+ * 2. `topUpXlm` refills live-but-broke wallets from the deployer — plain
+ *    payments need no recipient signature, so even self-custody gets it.
+ * 3. USDC trustline + grant: signed by the backend only when `walletSecret`
+ *    exists (custodial). Self-custody without a trustline is skipped — the
+ *    holder signs `changeTrust` once via the UI flow, nothing else works.
+ */
+export async function ensureWalletFunded(
+  wallet: string,
+  opts?: { walletSecret?: string | null },
+): Promise<unknown> {
+  await fundFriendbot(wallet).catch(() => undefined);
+  await topUpXlm(wallet).catch(() => undefined);
+  if (opts?.walletSecret) {
+    return fundTestnetUsdc(wallet, { walletSecret: opts.walletSecret });
+  }
+  const line = await getTrustlineState(wallet, usdcAsset());
+  if (line.exists) return payUsdcGrant(wallet);
+  return { funded: false, trustline: false };
 }
 
 /** Snapshot for the wallet page: XLM + USDC under the platform issuer. */
