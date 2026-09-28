@@ -3,9 +3,11 @@
 import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
+import { useI18n } from '../context/I18nContext';
 
 export default function AdminGate({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -21,11 +23,11 @@ export default function AdminGate({ children }: { children: React.ReactNode }) {
   }, [user, isLoading, pathname, router]);
 
   if (isLoading) {
-    return <p className="py-16 text-center text-neutral-500">Cargando sesión…</p>;
+    return <p className="py-16 text-center text-neutral-500">{t('misc.loadingSession')}</p>;
   }
   if (!user) return null;
   if (!user.isAdmin) {
-    return <p className="py-16 text-center text-neutral-500">Esta sección es solo para el admin.</p>;
+    return <p className="py-16 text-center text-neutral-500">{t('misc.adminOnly')}</p>;
   }
   return <>{children}</>;
 }

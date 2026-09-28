@@ -85,7 +85,14 @@ import {
   prepareTrustline,
   sdexAvailable,
 } from './market/sdex_book';
-import { configureIssuerForRegulatedAsset, submitSignedXdr } from './stellar/sdex';
+import { buildTrustlineXdr, configureIssuerForRegulatedAsset, submitSignedXdr } from './stellar/sdex';
+import {
+  fundTestnetUsdc,
+  payUsdcGrant,
+  usdcAsset,
+  USDC_NEEDS_TRUSTLINE,
+  walletFunds,
+} from './stellar/usdc';
 import { syncHolderAuthorization } from './stellar/compliance';
 import { getTestnetConfig, setTestnetConfig } from './admin/testnet';
 import { isOnChainDeployed, loadTestnetDeployment } from './stellar/deployment';
@@ -98,6 +105,7 @@ import {
   prepareRefundXdr,
   refundOnChain,
   snapshotLicitacion,
+  paymentUnit,
   submitContributeXdr,
   submitRefundXdr,
   syncFiduciaryOnChain,
@@ -273,6 +281,10 @@ app.get('/api/kyc/selfie/:id', (req: Request, res: Response) => {
 app.post('/api/auth/freighter', async (req: Request, res: Response) => {
   try {
     const result = authenticateWithWallet(req.body);
+    if (result.success && result.user?.id) {
+      const hydrated = await hydrateTestnetWallet(result.user.id).catch(() => undefined);
+      if (hydrated) result.user = hydrated;
+    }
     res.status(result.success ? 200 : 400).json(result);
   } catch (err: any) {
     res.status(400).json({ success: false, message: err.message });
@@ -285,7 +297,90 @@ app.post('/api/auth/wallet/link', async (req: Request, res: Response) => {
   if (!account) return res.status(401).json({ success: false, message: 'No autenticado' });
   try {
     const result = linkWalletSignature(account.id, req.body);
-    res.json(result);
+    const hydrated = await hydrateTestnetWallet(account.id).catch(() => undefined);
+    res.json({ ...result, user: hydrated || result.user });
+  } catch (err: any) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// --- Wallet balances + testnet USDC faucet ---
+
+/** Balances the wallet page shows: native XLM plus platform-issued testnet USDC. */
+app.get('/api/wallet/state', async (req: Request, res: Response) => {
+  try {
+    const publicKey = String(req.query.account || '').trim();
+    if (!publicKey) return res.status(400).json({ success: false, message: 'Falta account' });
+    res.json({ success: true, data: await walletFunds(publicKey) });
+  } catch (err: any) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+/**
+ * "Friendbot de USDC": the platform's own testnet issuer tops up the wallet.
+ *
+ * Custodial accounts are funded inline (the backend signs their changeTrust).
+ * Self-custody wallets get an unsigned changeTrust XDR for Freighter, then
+ * call /submit so the issuer can pay the grant.
+ */
+app.post('/api/wallet/usdc/fund', async (req: Request, res: Response) => {
+  const account = getAccountByToken(req.headers.authorization);
+  if (!account) return res.status(401).json({ success: false, message: 'Iniciá sesión' });
+  try {
+    if (!account.publicKey) throw new Error('La cuenta no tiene wallet de Stellar asociada');
+    if (account.custodyMode === 'CUSTODIAL') {
+      const result = await fundTestnetUsdc(account.publicKey, {
+        walletSecret: custodialSigningKey(account.id),
+      });
+      return res.json({ success: true, data: { status: 'FUNDED', ...result } });
+    }
+    // Self-custody: trustline needs their signature; the grant itself doesn't.
+    try {
+      const result = await payUsdcGrant(account.publicKey);
+      return res.json({ success: true, data: { status: 'FUNDED', ...result } });
+    } catch (err: any) {
+      if (!String(err?.message || '').includes('trustline')) throw err;
+      const xdr = await buildTrustlineXdr(account.publicKey, usdcAsset());
+      return res.json({
+        success: true,
+        data: { status: 'NEED_TRUSTLINE', xdr, publicKey: account.publicKey },
+      });
+    }
+  } catch (err: any) {
+    if (String(err?.message || '').includes(USDC_NEEDS_TRUSTLINE)) {
+      try {
+        const xdr = await buildTrustlineXdr(account.publicKey!, usdcAsset());
+        return res.json({
+          success: true,
+          data: { status: 'NEED_TRUSTLINE', xdr, publicKey: account.publicKey },
+        });
+      } catch (inner: any) {
+        return res.status(400).json({ success: false, message: inner?.message || String(inner) });
+      }
+    }
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+/** Relays the wallet-signed USDC trustline, then pays the testnet grant. */
+app.post('/api/wallet/usdc/submit', async (req: Request, res: Response) => {
+  const account = getAccountByToken(req.headers.authorization);
+  if (!account) return res.status(401).json({ success: false, message: 'Iniciá sesión' });
+  try {
+    if (!account.publicKey) throw new Error('La cuenta no tiene wallet de Stellar asociada');
+    const xdr = String(req.body?.xdr || '');
+    if (!xdr) throw new Error('Falta el XDR firmado');
+    const relayed = await submitSignedXdr(xdr);
+    const result = await payUsdcGrant(account.publicKey);
+    res.json({
+      success: true,
+      data: {
+        status: 'FUNDED',
+        trustlineHash: (relayed as any)?.hash || null,
+        ...result,
+      },
+    });
   } catch (err: any) {
     res.status(400).json({ success: false, message: err.message });
   }
@@ -590,7 +685,7 @@ function onChainListingOr404(listingId: string) {
   const listing = getListing(listingId);
   if (!listing) throw new Error('Listing no encontrado');
   if (!isOnChainListing(listing)) {
-    throw new Error('Esta operación on-chain solo existe en licitaciones XLM / Soroban');
+    throw new Error('Esta operación on-chain solo existe en licitaciones con contrato Soroban');
   }
   return listing;
 }
@@ -731,7 +826,21 @@ app.post('/api/listings/:id/licitacion', (req: Request, res: Response) => {
     // as fiduciary, so there is nothing left to repoint afterwards.
     const onChain = canDeployLicitacion() ? await deployLicitacionForListing(draft, deadlineMs) : undefined;
     const listing = openLicitacion(req.params.id, opts, onChain);
-    return { ...listing, fiduciary: onChain ? { hash: onChain.hash, fiduciary: listing.dossier.proceedsWallet } : null };
+    return {
+      ...listing,
+      fiduciary: onChain
+        ? {
+            hash: onChain.hash,
+            fiduciary: listing.dossier.proceedsWallet,
+            paymentUnit: paymentUnit(listing),
+            usdcTrustlineReady: onChain.fiduciaryUsdcReady,
+            note:
+              onChain.fiduciaryUsdcReady === false
+                ? 'La wallet de cobro todavía no tiene trustline USDC: tiene que crearla antes del finalize o el pago falla on-chain.'
+                : null,
+          }
+        : null,
+    };
   }, res);
 });
 
@@ -770,6 +879,7 @@ app.post('/api/listings/:id/refund', (req: Request, res: Response) => {
     const live = await requireFailedOffering(listing, account.publicKey);
     const result = await refundOnChain(listing, account.id);
     const user = markHoldingRefunded(account.id, listing.id, { hash: result.hash });
+    const unit = paymentUnit(listing);
     return {
       user,
       refunded: result.refunded,
@@ -779,7 +889,7 @@ app.post('/api/listings/:id/refund', (req: Request, res: Response) => {
         ...live,
         hash: result.hash,
         explorer: explorerTx(result.hash),
-        note: 'refund() devolvió el XLM de testnet a tu wallet custodial y quemó las unidades RWA en el contrato.',
+        note: `refund() devolvió tus ${unit} de testnet a tu wallet y quemó las unidades RWA en el contrato.`,
       },
     };
   }, res);
@@ -791,7 +901,7 @@ app.post('/api/listings/:id/withdraw-proceeds', (req: Request, res: Response) =>
     const listing = getListing(req.params.id);
     if (!listing) throw new Error('Listing no encontrado');
     if (!isOnChainListing(listing)) {
-      throw new Error('withdraw_proceeds es el reintento on-chain; esta listing no es XLM/Soroban');
+      throw new Error('withdraw_proceeds es el reintento on-chain; esta licitación no tiene contrato Soroban');
     }
     const result = await withdrawProceedsOnChain(listing);
     return {

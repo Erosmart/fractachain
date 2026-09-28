@@ -6,6 +6,7 @@ import Footer from '../components/Footer';
 import CrystalBackdrop from '../components/CrystalBackdrop';
 import AppProviders from '../components/AppProviders';
 import AppGate from '../components/AppGate';
+import { getServerLocale, getServerMessages } from '../lib/i18n-server';
 
 const lato = Lato({
   subsets: ['latin'],
@@ -30,16 +31,18 @@ const sourceSerif = Source_Serif_4({
   variable: '--font-serif',
 });
 
-export const metadata: Metadata = {
-  title: 'Fractachain | RWA y Merval en Stellar',
-  description:
-    'Financiamiento productivo argentino y acciones tokenizadas sobre Stellar / Soroban.',
-};
+export function generateMetadata(): Metadata {
+  const m = getServerMessages();
+  return {
+    title: m.meta.title,
+    description: m.meta.description,
+  };
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
-      lang="es"
+      lang={getServerLocale()}
       className={`${lato.variable} ${shareTechMono.variable} ${sourceSerif.variable} scroll-smooth`}
       suppressHydrationWarning
     >

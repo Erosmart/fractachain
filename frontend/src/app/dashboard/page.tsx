@@ -124,7 +124,7 @@ export default function DashboardPage() {
         marketValue: h.usdcAmount,
         pnl: 0,
         pnlPct: 0,
-        priceSourceLabel: 'Cargando cotización…',
+        priceSourceLabel: t('misc.loadingQuote'),
         pendingDividendUsdc: h.pendingDividendUsdc || 0,
         listingStatus: undefined,
         paymentKind: null,

@@ -18,7 +18,9 @@ export default function PoolDetailPage() {
   const [listing, setListing] = useState<any>(null);
   const [validation, setValidation] = useState<any>(null);
   const [loaded, setLoaded] = useState(false);
-  const [amount, setAmount] = useState(100);
+  // String state so the field can be emptied while typing; `amount` is the parsed number.
+  const [amountStr, setAmountStr] = useState('100');
+  const amount = Number(amountStr) || 0;
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [lastHash, setLastHash] = useState<{ kind: string; hash: string; explorer?: string | null } | null>(null);
@@ -34,7 +36,7 @@ export default function PoolDetailPage() {
           setListing(json.data);
           setValidation(json.validation);
           const min = json.data.dossier?.minInvestmentUsdc || json.data.dossier?.pricePerShareUsdc || 100;
-          setAmount((prev) => prev || min);
+          setAmountStr((prev) => prev || String(min));
         }
         return json;
       });
@@ -50,6 +52,7 @@ export default function PoolDetailPage() {
     setNotice('');
     const auth = token || (typeof window !== 'undefined' ? localStorage.getItem('fc_auth_token') : null);
     const xlm = listing?.dossier?.paymentKind === 'XLM';
+    const onChainLive = Boolean(listing?.onChain?.live);
     if (!auth) {
       setNotice(t(xlm ? 'market.loginToContributeXlm' : 'market.loginToContribute'));
       return;
@@ -57,7 +60,7 @@ export default function PoolDetailPage() {
     setBusy(true);
     try {
       let data: any;
-      if (xlm && isSelfCustody(user)) {
+      if (onChainLive && isSelfCustody(user)) {
         // Wallet propia: el contrato pide la firma del inversor, así que el
         // backend arma la invocación y Freighter la firma.
         setNotice(t('market.freighterSign'));
@@ -81,10 +84,10 @@ export default function PoolDetailPage() {
         try {
           json = raw ? JSON.parse(raw) : {};
         } catch {
-          throw new Error('El servidor no respondió bien. ¿Está el API en el puerto 4000?');
+          throw new Error(t('misc.apiDown400'));
         }
         if (!res.ok || json.success === false) {
-          throw new Error(json.message || 'No se pudo suscribir');
+          throw new Error(json.message || t('market.subscribeFail'));
         }
         data = json.data;
       }
@@ -98,17 +101,17 @@ export default function PoolDetailPage() {
       const unit = data?.dossier?.paymentKind === 'XLM' ? 'XLM' : 'USDC';
       if (contributeHash) {
         setLastHash({ kind: 'contribute', hash: contributeHash, explorer: onChain?.contributeExplorer });
-        setNotice(t('market.subscribedContributeHash', { n: raised, hash: contributeHash }));
+        setNotice(t('market.subscribedContributeHash', { n: raised, u: unit, hash: contributeHash }));
       } else if (hash) {
         setLastHash({ kind: 'trustline', hash, explorer: onChain?.trustlineExplorer });
         setNotice(t('market.subscribedHash', { n: raised, hash }));
-      } else if (unit === 'XLM') {
-        setNotice(t('market.subscribedRaisedXlm', { n: raised }));
+      } else if (onChainLive) {
+        setNotice(t('market.subscribedRaisedXlm', { n: raised, u: unit }));
       } else {
         setNotice(t('market.subscribedRaised', { n: raised }));
       }
     } catch (e: any) {
-      const msg = e?.message || 'No se pudo aportar';
+      const msg = e?.message || t('market.subscribeFail');
       setNotice(/failed to fetch/i.test(msg) ? t('market.apiDown') : msg);
     } finally {
       setBusy(false);
@@ -146,12 +149,13 @@ export default function PoolDetailPage() {
     try {
       const data = await refundContribution(poolId, isSelfCustody(user));
       const hash = data?.onChain?.hash;
+      const rUnit = listing?.dossier?.paymentKind === 'XLM' ? 'XLM' : 'USDC';
       if (hash) setLastHash({ kind: 'refund', hash, explorer: data?.onChain?.explorer });
-      setNotice(hash ? t('market.refundNotice', { hash }) : data?.onChain?.note || 'refund() OK');
+      setNotice(hash ? t('market.refundNotice', { hash, u: rUnit }) : data?.onChain?.note || 'refund() OK');
       await load();
       await refreshUser();
     } catch (e: any) {
-      setNotice(e?.message || 'No se pudo reembolsar');
+      setNotice(e?.message || t('err.refundFail'));
     } finally {
       setBusy(false);
     }
@@ -173,7 +177,7 @@ export default function PoolDetailPage() {
       (holding?.tokensOwed || 0) > 0 &&
       !holding?.refundedAt;
     const canRefund =
-      xlm && failed && Boolean(holding) && !holding?.refundedAt;
+      Boolean(live.live) && failed && Boolean(holding) && !holding?.refundedAt;
     // Units already paid on-ledger to the user's wallet (what Freighter shows)
     // vs. units that exist only in the platform ledger and can still be sent.
     const onChainUnits = Number(holding?.tokensOnChain || 0);
@@ -200,7 +204,7 @@ export default function PoolDetailPage() {
               <p className="font-lcd text-[11px] uppercase tracking-[0.2em] text-neutral-500">{d.tokenTicker} · {d.ticker}</p>
               <h1 className="text-3xl font-extrabold font-display">{d.legalName}</h1>
               <p className="text-neutral-600">{d.useOfProceeds}</p>
-              {xlm && (
+              {live.live && (
                 <p className="text-xs text-neutral-500">{t('market.finalizeRule')}</p>
               )}
             </div>
@@ -214,13 +218,13 @@ export default function PoolDetailPage() {
                 <div><dt className="text-neutral-500">CNV</dt><dd>{d.cnvRecordId}</dd></div>
                 <div><dt className="text-neutral-500">BYMA</dt><dd>{d.bymaRequestId || '—'}</dd></div>
                 <div><dt className="text-neutral-500">Caja de Valores</dt><dd className="font-mono text-xs">{d.cajaSubaccount}</dd></div>
-                <div><dt className="text-neutral-500">Custodio CUIT</dt><dd>{d.custodianCuit}</dd></div>
-                <div><dt className="text-neutral-500">Auditor</dt><dd>{d.auditor}</dd></div>
-                <div><dt className="text-neutral-500">Respaldo</dt><dd>{validation.token.backing}</dd></div>
-                <div className="sm:col-span-2"><dt className="text-neutral-500">Hash estatuto</dt><dd className="font-mono text-xs break-all">{d.estatutoHash}</dd></div>
+                <div><dt className="text-neutral-500">{t('market.custodian')}</dt><dd>{d.custodianCuit}</dd></div>
+                <div><dt className="text-neutral-500">{t('admIss.f.auditor')}</dt><dd>{d.auditor}</dd></div>
+                <div><dt className="text-neutral-500">{t('market.backing')}</dt><dd>{validation.token.backing}</dd></div>
+                <div className="sm:col-span-2"><dt className="text-neutral-500">{t('market.estatuto')}</dt><dd className="font-mono text-xs break-all">{d.estatutoHash}</dd></div>
                 <div className="sm:col-span-2"><dt className="text-neutral-500">Stock vault</dt><dd className="font-mono text-xs break-all">{listing.stockContract}</dd></div>
                 <div className="sm:col-span-2">
-                  <dt className="text-neutral-500">Licitación</dt>
+                  <dt className="text-neutral-500">{t('market.licitacion')}</dt>
                   <dd className="font-mono text-xs break-all">
                     {String(listing.licitacionContract || '').startsWith('C') ? (
                       <a
@@ -236,7 +240,7 @@ export default function PoolDetailPage() {
                     )}
                   </dd>
                 </div>
-                <div className="sm:col-span-2"><dt className="text-neutral-500">Depósito CV</dt><dd className="font-mono text-xs break-all">{listing.cvDepositHash}</dd></div>
+                <div className="sm:col-span-2"><dt className="text-neutral-500">{t('market.cvDeposit')}</dt><dd className="font-mono text-xs break-all">{listing.cvDepositHash}</dd></div>
               </dl>
               <ul className="text-sm space-y-1 pt-2">
                 {validation.checks.map((c: any) => (
@@ -252,7 +256,7 @@ export default function PoolDetailPage() {
               <h3 className="font-display font-extrabold">{t('market.subscribe')}</h3>
               <p className="text-sm font-bold">{statusLabel}</p>
               <p className="text-sm text-neutral-600">
-                {formatInt(live.raised ?? listing.raisedUsdc)} / {formatInt(d.offeringHardCapUsdc)} {unit} · mínimo {formatInt(d.minInvestmentUsdc || d.pricePerShareUsdc)} {unit}
+                {formatInt(live.raised ?? listing.raisedUsdc)} / {formatInt(d.offeringHardCapUsdc)} {unit} · {t('market.min')} {formatInt(d.minInvestmentUsdc || d.pricePerShareUsdc)} {unit}
               </p>
               {typeof live.investorRwa === 'number' && (
                 <p className="text-xs text-neutral-500 font-mono">RWA on-chain: {live.investorRwa}</p>
@@ -260,35 +264,41 @@ export default function PoolDetailPage() {
               <input
                 type="number"
                 min={d.minInvestmentUsdc || d.pricePerShareUsdc}
-                value={amount}
-                onChange={(e) => setAmount(Number(e.target.value))}
+                value={amountStr}
+                onChange={(e) => setAmountStr(e.target.value)}
+                onFocus={(e) => e.target.select()}
                 className="w-full px-3 py-3 rounded-xl border border-black/10 font-mono"
               />
               {listing.status === 'CLOSED_SUCCESS' && (
-                <p className="text-sm text-[#2f6f28] font-bold">{xlm ? t('market.closedSuccess') : t('market.closed')}</p>
+                <p className="text-sm text-[#2f6f28] font-bold">{live.live ? t('market.closedSuccess', { u: unit }) : t('market.closed')}</p>
               )}
               {listing.status === 'CLOSED_FAILED' && (
                 <p className="text-sm text-red-800 font-bold">{t('market.closedFailed')}</p>
               )}
               {listing.status === 'LISTED' && (
                 <p className="text-sm text-neutral-600">
-                  {xlm
-                    ? t('market.closesAtXlm', { n: formatInt(d.offeringHardCapUsdc) })
+                  {live.live
+                    ? t('market.closesAtXlm', { n: formatInt(d.offeringHardCapUsdc), u: unit })
                     : t('market.closesAt', { n: formatInt(d.offeringSoftCapUsdc) })}
                 </p>
               )}
-              {xlm && (
+              {live.live && (
                 <div className="space-y-1">
-                  <p className="text-xs text-neutral-500">{t('market.payoutHint')}</p>
+                  <p className="text-xs text-neutral-500">{t('market.payoutHint', { u: unit })}</p>
                   <p className="text-xs text-neutral-500">{t('market.autoSettle')}</p>
                   {live.fiduciary && (
                     <p className="text-[11px] font-mono break-all text-neutral-500">
                       {t('market.payoutTo')} {live.fiduciary}
                     </p>
                   )}
-                  {typeof live.fiduciaryXlm === 'number' && (
+                  {typeof live.fiduciaryUsdc === 'number' && (
                     <p className="text-[11px] text-neutral-500">
-                      {t('market.payoutBalance', { n: live.fiduciaryXlm.toFixed(4) })}
+                      {t('market.payoutBalance', { n: live.fiduciaryUsdc.toFixed(4), u: 'USDC' })}
+                    </p>
+                  )}
+                  {typeof live.fiduciaryUsdc !== 'number' && typeof live.fiduciaryXlm === 'number' && (
+                    <p className="text-[11px] text-neutral-500">
+                      {t('market.payoutBalance', { n: live.fiduciaryXlm.toFixed(4), u: 'XLM' })}
                     </p>
                   )}
                   {live.fiduciaryMismatch && (
@@ -365,7 +375,7 @@ export default function PoolDetailPage() {
                               setNotice(t('market.claimedNotice'));
                             }
                           })
-                          .catch((e) => setNotice(e?.message || 'No se pudo enviar on-chain'))
+                          .catch((e) => setNotice(e?.message || t('err.distributeFail')))
                           .finally(() => setBusy(false));
                       }}
                       className="w-full py-3 rounded-2xl bg-black text-white font-display font-bold disabled:opacity-40"
@@ -382,7 +392,7 @@ export default function PoolDetailPage() {
                   onClick={runRefund}
                   className="w-full py-3 rounded-2xl border border-black/10 font-display font-bold"
                 >
-                  {busy ? t('market.refundBusy') : t('market.refund')}
+                  {busy ? t('market.refundBusy') : t('market.refund', { u: unit })}
                 </button>
               )}
               {holding?.refundedAt && (
@@ -402,7 +412,7 @@ export default function PoolDetailPage() {
               >
                 {busy ? '…' : xlm ? t('market.contributeXlm') : t('market.contribute')}
               </button>
-              {xlm && listing.status === 'LISTED' && (
+              {live.live && listing.status === 'LISTED' && (
                 <button
                   type="button"
                   onClick={runFinalize}

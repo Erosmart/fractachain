@@ -12,10 +12,13 @@ import {
   ArrowRight,
   Zap,
 } from 'lucide-react';
+import { useI18n } from '../../../context/I18nContext';
 
 interface TokenHolder {
   address: string;
   name: string;
+  /** i18n key used instead of `name` when present. */
+  nameKey?: string;
   tokensHeld: number;
   percentage: number;
   isDominant: boolean;
@@ -25,6 +28,7 @@ const INITIAL_HOLDERS: TokenHolder[] = [
   {
     address: 'GD6CGAZZY4Z2HQAIBL4RHJJWHJULLCO5F5XW6VL3CECJWLDBCDKWB7KR',
     name: 'Fondo de Inversión Agrícola Sur (Dominante)',
+    nameKey: 'admOpa.holderDominant',
     tokensHeld: 262000,
     percentage: 52.4,
     isDominant: true,
@@ -46,6 +50,7 @@ const INITIAL_HOLDERS: TokenHolder[] = [
   {
     address: 'GDK81...5520',
     name: 'Minoristas en Stellar DEX (142 cuentas)',
+    nameKey: 'admOpa.holderRetail',
     tokensHeld: 83000,
     percentage: 16.6,
     isDominant: false,
@@ -53,6 +58,7 @@ const INITIAL_HOLDERS: TokenHolder[] = [
 ];
 
 export default function AdminOpaPage() {
+  const { t } = useI18n();
   const [holders, setHolders] = useState<TokenHolder[]>(INITIAL_HOLDERS);
   const [dominantPercent, setDominantPercent] = useState<number>(52.4);
   const [opaState, setOpaState] = useState<'NORMAL' | 'OPA_ACTIVE' | 'SQUEEZE_OUT'>('OPA_ACTIVE');
@@ -60,7 +66,7 @@ export default function AdminOpaPage() {
 
   const handleTriggerOpa = () => {
     setOpaState('OPA_ACTIVE');
-    setActionMessage('OPA Obligatoria activada por superar el 50% de tenencia (Art. 86 Ley 26.831). Período de 30 días hábiles abierto para retiro de minoritarios.');
+    setActionMessage(t('admOpa.opaMsg'));
     setTimeout(() => setActionMessage(null), 5000);
   };
 
@@ -73,7 +79,7 @@ export default function AdminOpaPage() {
       { ...prev[3], percentage: 1.0, tokensHeld: 5000 },
     ]);
     setOpaState('SQUEEZE_OUT');
-    setActionMessage('Umbral del 95% alcanzado. Declaración de Cuasi-Totalidad y Squeeze-Out habilitados conforme a Ley 26.831 Art. 91.');
+    setActionMessage(t('admOpa.squeezeMsg'));
     setTimeout(() => setActionMessage(null), 5000);
   };
 
@@ -83,13 +89,13 @@ export default function AdminOpaPage() {
       <div className="space-y-2">
         <div className="inline-flex max-w-full flex-wrap items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-xs font-semibold uppercase tracking-wider">
           <Activity className="w-3.5 h-3.5 shrink-0" />
-          Control de Concentración Ley 26.831
+          {t('admOpa.kicker')}
         </div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">
-          Monitoreo de OPA Obligatoria y Squeeze-Out
+          {t('admOpa.title')}
         </h1>
         <p className="text-neutral-600 text-xs sm:text-sm max-w-2xl">
-          Supervisión algorítmica de la concentración de tenencias en los contratos de Soroban para proteger los derechos de los accionistas minoritarios bajo normas CNV.
+          {t('admOpa.lead')}
         </p>
       </div>
 
@@ -97,22 +103,22 @@ export default function AdminOpaPage() {
       <div className="p-6 rounded-3xl crystal-card space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-bold text-black">Estado de Gobernanza: Emisión Campaña Pergamino (500,000 Tokens)</h3>
-            <p className="text-xs text-neutral-600">Tenedor mayoritario actual posee el <strong className="text-black font-mono">{dominantPercent}%</strong> de la emisión.</p>
+            <h3 className="text-sm font-bold text-black">{t('admOpa.gov')}</h3>
+            <p className="text-xs text-neutral-600">{t('admOpa.dominantPre')} <strong className="text-black font-mono">{dominantPercent}%</strong> {t('admOpa.dominantPost')}</p>
           </div>
 
           <div className="flex items-center gap-2">
             {dominantPercent >= 95 ? (
               <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200 text-xs font-bold font-mono">
-                SQUEEZE-OUT HABILITADO (&gt;95%)
+                {t('admOpa.squeezeOn')}
               </span>
             ) : dominantPercent >= 50 ? (
               <span className="px-3 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 text-xs font-bold font-mono">
-                OPA OBLIGATORIA ACTIVA (&gt;50%)
+                {t('admOpa.opaOn')}
               </span>
             ) : (
               <span className="px-3 py-1 rounded-full bg-leaf-100 text-[#2f6f28] border border-[#8fcb7a]/50 text-xs font-bold font-mono">
-                DISTRIBUCIÓN NORMAL (&lt;50%)
+                {t('admOpa.normal')}
               </span>
             )}
           </div>
@@ -135,13 +141,13 @@ export default function AdminOpaPage() {
             <div
               className="absolute top-0 bottom-0 w-0.5 bg-red-500"
               style={{ left: '50%' }}
-              title="Umbral OPA 50%"
+              title={t('admOpa.opaThreshold')}
             />
             {/* 95% Squeeze-out line marker */}
             <div
               className="absolute top-0 bottom-0 w-0.5 bg-purple-500"
               style={{ left: '95%' }}
-              title="Umbral Squeeze-Out 95%"
+              title={t('admOpa.squeezeThreshold')}
             />
           </div>
 
@@ -168,24 +174,24 @@ export default function AdminOpaPage() {
           <div className="p-4 bg-black/5 border-b border-black/8 flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center">
             <span className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-2">
               <Users className="w-4 h-4 text-[#2f6f28] shrink-0" />
-              Distribución de Tenencias
+              {t('admOpa.holders')}
             </span>
-            <span className="text-[11px] text-neutral-500 font-mono">Total: 500,000 Tokens</span>
+            <span className="text-[11px] text-neutral-500 font-mono">{t('admOpa.totalTokens', { n: '500,000' })}</span>
           </div>
 
           {/* Mobile cards */}
           <div className="md:hidden divide-y divide-black/8">
             {holders.map((holder, idx) => (
               <div key={idx} className={`p-4 space-y-2 ${holder.isDominant ? 'bg-red-50' : ''}`}>
-                <div className="font-bold text-black text-xs break-words">{holder.name}</div>
+                <div className="font-bold text-black text-xs break-words">{holder.nameKey ? t(holder.nameKey) : holder.name}</div>
                 {holder.isDominant && (
                   <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-50 text-red-700 border border-red-200">
-                    SUJETO OBLIGADO OPA
+                    {t('admOpa.obliged')}
                   </span>
                 )}
                 <div className="font-mono text-[11px] text-neutral-500 break-all">{holder.address}</div>
                 <div className="flex justify-between text-xs font-mono">
-                  <span className="text-black">{holder.tokensHeld.toLocaleString()} tokens</span>
+                  <span className="text-black">{holder.tokensHeld.toLocaleString()} {t('admOpa.tokensUnit')}</span>
                   <span className={holder.percentage >= 50 ? 'text-red-700 font-bold' : 'text-neutral-700'}>
                     {holder.percentage.toFixed(1)}%
                   </span>
@@ -198,20 +204,20 @@ export default function AdminOpaPage() {
             <table className="w-full text-left text-xs min-w-[36rem]">
               <thead className="text-neutral-500 font-mono text-[11px] uppercase border-b border-black/8 bg-black/5">
                 <tr>
-                  <th className="px-4 py-3">Tenedor / Institución</th>
-                  <th className="px-4 py-3">Dirección Stellar</th>
-                  <th className="px-4 py-3 text-right">Tokens</th>
-                  <th className="px-4 py-3 text-right">Porcentaje</th>
+                  <th className="px-4 py-3">{t('admOpa.thHolder')}</th>
+                  <th className="px-4 py-3">{t('admOpa.thAddress')}</th>
+                  <th className="px-4 py-3 text-right">{t('admOpa.thTokens')}</th>
+                  <th className="px-4 py-3 text-right">{t('admOpa.thPct')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-black/8">
                 {holders.map((holder, idx) => (
                   <tr key={idx} className={holder.isDominant ? 'bg-red-50' : ''}>
                     <td className="px-4 py-3">
-                      <div className="font-bold text-black text-xs">{holder.name}</div>
+                      <div className="font-bold text-black text-xs">{holder.nameKey ? t(holder.nameKey) : holder.name}</div>
                       {holder.isDominant && (
                         <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-red-50 text-red-700 border border-red-200">
-                          SUJETO OBLIGADO OPA
+                          {t('admOpa.obliged')}
                         </span>
                       )}
                     </td>
@@ -235,7 +241,7 @@ export default function AdminOpaPage() {
 
         {/* Right: Simulation Controls (4 Cols) */}
         <div className="lg:col-span-4 p-6 rounded-3xl crystal-card space-y-5">
-          <h3 className="text-sm font-bold text-black uppercase tracking-wider">Acciones del Contrato Soroban</h3>
+          <h3 className="text-sm font-bold text-black uppercase tracking-wider">{t('admOpa.actions')}</h3>
 
           <div className="space-y-3">
             <button
@@ -244,7 +250,7 @@ export default function AdminOpaPage() {
               className="w-full py-2.5 rounded-xl bg-red-500 hover:bg-red-400 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
             >
               <Zap className="w-3.5 h-3.5" />
-              Notificar OPA Obligatoria (50%)
+              {t('admOpa.notifyOpa')}
             </button>
 
             <button
@@ -253,19 +259,19 @@ export default function AdminOpaPage() {
               className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
             >
               <Scale className="w-3.5 h-3.5" />
-              Simular Squeeze-Out (95%)
+              {t('admOpa.simSqueeze')}
             </button>
           </div>
 
           <div className="p-3.5 rounded-xl bg-black/5 border border-black/8 space-y-2 text-xs text-neutral-600">
             <div className="flex items-center gap-1.5 text-black font-semibold text-xs">
-              <Scale className="w-4 h-4 text-[#2f6f28]" /> Marco Legal CNV Ley 26.831
+              <Scale className="w-4 h-4 text-[#2f6f28]" /> {t('admOpa.legalTitle')}
             </div>
             <p className="text-[11px] leading-relaxed">
-              <strong>Art. 86 (OPA Obligatoria):</strong> Quien pretenda alcanzar una participación de control o supere el 50% de los votos debe formular una oferta pública dirigida a todos los tenedores con precio equitativo fijado por la CNV.
+              <strong>{t('admOpa.art86Label')}</strong> {t('admOpa.art86Body')}
             </p>
             <p className="text-[11px] leading-relaxed">
-              <strong>Art. 91 (Declaración de Cuasi-Totalidad):</strong> Al alcanzar el 95%, el oferente puede exigir la venta forzosa de las acciones restantes o los minoritarios exigir su compra al precio pactado.
+              <strong>{t('admOpa.art91Label')}</strong> {t('admOpa.art91Body')}
             </p>
           </div>
         </div>

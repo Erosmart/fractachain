@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
+import { useI18n } from '../context/I18nContext';
 
 export default function WalletAddress({
   address,
@@ -10,9 +11,10 @@ export default function WalletAddress({
   address?: string;
   compact?: boolean;
 }) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   if (!address) {
-    return <span className="text-neutral-400 text-xs">Todavía no hay wallet</span>;
+    return <span className="text-neutral-400 text-xs">{t('misc.noWallet')}</span>;
   }
   const short = address.length > 16 ? `${address.slice(0, 6)}…${address.slice(-6)}` : address;
   const copy = async () => {
@@ -33,7 +35,7 @@ export default function WalletAddress({
     >
       <span className={`min-w-0 ${compact ? 'truncate' : 'select-all break-all'}`}>{compact ? short : address}</span>
       {copied ? <Check className="w-3.5 h-3.5 shrink-0" /> : <Copy className="w-3.5 h-3.5 shrink-0" />}
-      <span className="font-sans text-[10px] uppercase tracking-wide shrink-0">{copied ? 'Copiada' : 'Copiar'}</span>
+      <span className="font-sans text-[10px] uppercase tracking-wide shrink-0">{copied ? t('misc.copied') : t('misc.copy')}</span>
     </button>
   );
 }

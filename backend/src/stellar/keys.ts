@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Keypair } from '@stellar/stellar-sdk';
+import { Keypair, StrKey } from '@stellar/stellar-sdk';
 import { fundFriendbot } from '../auth/stellar_testnet';
 import { loadTestnetDeployment } from './deployment';
 
@@ -93,7 +93,12 @@ export function platformIssuerPublicKey(): string | null {
 
 /** Keypair that signs as the issuer of `asset`, or throws naming the fix. */
 export function issuerKeypairFor(assetIssuer: string): Keypair {
-  for (const name of ['STELLAR_ISSUER_SECRET', 'STELLAR_PLATFORM_ISSUER_SECRET']) {
+  for (const name of [
+    'STELLAR_ISSUER_SECRET',
+    'STELLAR_PLATFORM_ISSUER_SECRET',
+    'STELLAR_USDC_ISSUER_SECRET',
+    'STELLAR_DEPLOYER_SECRET',
+  ]) {
     const secret = String(process.env[name] || '').trim();
     if (!secret.startsWith('S')) continue;
     try {
@@ -131,6 +136,73 @@ export async function ensurePlatformIssuer(): Promise<Keypair> {
     await new Promise((r) => setTimeout(r, 1500));
   }
   throw new Error(`Friendbot no fondeó el emisor de plataforma ${kp.publicKey()}`);
+}
+
+/**
+ * Testnet USDC issuer: a dedicated, flag-free account so the platform can
+ * mint faucet USDC to investor wallets. Keeping it separate from
+ * STELLAR_ISSUER_SECRET matters because that account runs AUTH_REQUIRED for
+ * the security tokens — every USDC trustline would need issuer sign-off,
+ * which defeats a demo faucet.
+ *
+ * Resolution order for the public key: the configured secret (derivable),
+ * STELLAR_USDC_ISSUER, then the classic issuer recorded in
+ * deployments/testnet.json.
+ */
+export function usdcIssuerPublicKey(): string | null {
+  const secret = String(process.env.STELLAR_USDC_ISSUER_SECRET || '').trim();
+  if (secret.startsWith('S')) {
+    try {
+      return Keypair.fromSecret(secret).publicKey();
+    } catch {
+      // malformed — keep looking
+    }
+  }
+  const configured = String(process.env.STELLAR_USDC_ISSUER || '').trim();
+  if (configured && StrKey.isValidEd25519PublicKey(configured)) return configured;
+  return loadTestnetDeployment()?.usdcClassic?.issuer || null;
+}
+
+/**
+ * Signing side of `usdcIssuerPublicKey`. Provisions a friendbot-funded issuer
+ * and persists it when nothing is configured — same pattern as
+ * `ensurePlatformIssuer`, so a fresh clone still gets a working faucet.
+ */
+export async function usdcIssuerKeypair(): Promise<Keypair> {
+  const want = usdcIssuerPublicKey();
+  for (const name of [
+    'STELLAR_USDC_ISSUER_SECRET',
+    'STELLAR_ISSUER_SECRET',
+    'STELLAR_PLATFORM_ISSUER_SECRET',
+    'STELLAR_DEPLOYER_SECRET',
+    'STELLAR_LICITACION_ADMIN_SECRET',
+  ]) {
+    const secret = String(process.env[name] || '').trim();
+    if (!secret.startsWith('S')) continue;
+    try {
+      const kp = Keypair.fromSecret(secret);
+      if (want && kp.publicKey() === want) return kp;
+    } catch {
+      // malformed secret — keep looking
+    }
+  }
+  if (want) {
+    throw new Error(
+      `La plataforma no tiene la clave del emisor USDC ${want}. Configurá STELLAR_USDC_ISSUER_SECRET con la S… de esa cuenta.`,
+    );
+  }
+  const kp = Keypair.random();
+  for (let i = 0; i < 3; i++) {
+    const faucet = await fundFriendbot(kp.publicKey());
+    if (faucet.funded) {
+      writeEnv('STELLAR_USDC_ISSUER_SECRET', kp.secret());
+      writeEnv('STELLAR_USDC_ISSUER', kp.publicKey());
+      console.warn(`Emisor USDC de testnet provisionado: ${kp.publicKey()}`);
+      return kp;
+    }
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  throw new Error(`Friendbot no fondeó el emisor USDC ${kp.publicKey()}`);
 }
 
 /**

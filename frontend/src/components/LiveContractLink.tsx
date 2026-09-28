@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../lib/api';
+import { useI18n } from '../context/I18nContext';
 
 export default function LiveContractLink({ kind }: { kind: 'forward' | 'warrant' | 'stockVault' }) {
+  const { t } = useI18n();
   const [id, setId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -20,7 +22,7 @@ export default function LiveContractLink({ kind }: { kind: 'forward' | 'warrant'
 
   return (
     <p className="text-xs font-mono text-neutral-600 break-all">
-      Instancia testnet:{' '}
+      {t('misc.testnetInstance')}{' '}
       <a
         href={`https://stellar.expert/explorer/testnet/contract/${id}`}
         target="_blank"

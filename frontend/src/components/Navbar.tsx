@@ -70,14 +70,14 @@ export default function Navbar() {
             <ThemeToggle />
             <div className="hidden sm:flex items-center gap-2">
               <Link
-                href="/wallet"
+                href="/dashboard"
                 className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-black/10 bg-white/70 text-black text-xs font-display font-bold"
               >
                 <Wallet className="w-3.5 h-3.5 shrink-0" />
                 <span className="whitespace-nowrap">
                   {user?.publicKey
                     ? `${formatAmount(Number(user.xlmBalance || 0), 2)} XLM`
-                    : t('nav.wallet')}
+                    : t('nav.portfolio')}
                 </span>
               </Link>
               {user ? (
@@ -99,9 +99,9 @@ export default function Navbar() {
               )}
             </div>
             <Link
-              href="/wallet"
+              href="/dashboard"
               className="sm:hidden p-2 rounded-lg text-black"
-              aria-label={t('nav.wallet')}
+              aria-label={t('nav.portfolio')}
             >
               <Wallet className="w-5 h-5" />
             </Link>
@@ -146,14 +146,14 @@ export default function Navbar() {
 
           <div className="pt-2 mt-2 border-t border-black/10 space-y-1 sm:hidden">
             <Link
-              href="/wallet"
+              href="/dashboard"
               onClick={closeMenu}
               className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-display font-bold text-neutral-700 hover:bg-black/5"
             >
               <Wallet className="w-4 h-4 shrink-0" />
               {user?.publicKey
                 ? `${formatAmount(Number(user.xlmBalance || 0), 2)} XLM`
-                : t('nav.wallet')}
+                : t('nav.portfolio')}
             </Link>
             {user ? (
               <>

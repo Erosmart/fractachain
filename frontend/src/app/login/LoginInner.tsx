@@ -32,7 +32,7 @@ export default function LoginInner() {
       const u = await loginWithEmail(email, password, name);
       router.push(afterAuthPath(u, params.get('next')));
     } catch (err: any) {
-      setError(err.message || 'No se pudo entrar');
+      setError(err.message || t('misc.loginFail'));
     }
   };
 
@@ -42,7 +42,7 @@ export default function LoginInner() {
       const u = await loginWithWallet();
       router.push(afterAuthPath(u, params.get('next')));
     } catch (err: any) {
-      setError(err.message || 'No se pudo entrar con la wallet');
+      setError(err.message || t('misc.loginWalletFail'));
     }
   };
 

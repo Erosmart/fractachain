@@ -15,12 +15,17 @@ import { useAuth } from '../../context/AuthContext';
 import GoogleLoginButton from '../../components/GoogleLoginButton';
 import { useI18n } from '../../context/I18nContext';
 import { API_BASE_URL } from '../../lib/api';
+import { freighterSignXdr } from '../../lib/freighter';
 
 export default function WalletPage() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [balance, setBalance] = useState<string | null>(null);
+  const [usdcBalance, setUsdcBalance] = useState<string | null>(null);
+  const [usdcIssuer, setUsdcIssuer] = useState<string>('');
+  const [funding, setFunding] = useState(false);
+  const [fundNotice, setFundNotice] = useState('');
 
   const publicKey =
     (user as any)?.stellarPublicKey ||
@@ -28,21 +33,62 @@ export default function WalletPage() {
     (user as any)?.wallet?.publicKey ||
     '';
 
-  const usdcIssuer = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
   const cosmosPayUri = publicKey
     ? `web+stellar:pay?destination=${publicKey}&asset_code=USDC&asset_issuer=${usdcIssuer}`
     : '';
 
-  useEffect(() => {
+  const loadState = () => {
     if (!publicKey) return;
-    fetch(`${API_BASE_URL}/api/wallet/balance?account=${encodeURIComponent(publicKey)}`)
+    fetch(`${API_BASE_URL}/api/wallet/state?account=${encodeURIComponent(publicKey)}`)
       .then((r) => r.json())
       .then((j) => {
-        const xlm = j?.data?.xlm ?? j?.xlm ?? j?.data?.balance;
-        if (xlm != null) setBalance(String(xlm));
+        const d = j?.data;
+        if (d?.xlm != null) setBalance(String(d.xlm));
+        if (d?.usdc != null) setUsdcBalance(String(d.usdc));
+        if (d?.usdcIssuer) setUsdcIssuer(d.usdcIssuer);
       })
       .catch(() => {});
-  }, [publicKey]);
+  };
+
+  useEffect(loadState, [publicKey]);
+
+  const fundUsdc = async () => {
+    if (!token) return;
+    setFunding(true);
+    setFundNotice('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/wallet/usdc/fund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: '{}',
+      });
+      const json = await res.json();
+      if (!res.ok || json.success === false) throw new Error(json.message || t('wallet.usdcFundFail'));
+      let data = json.data;
+      if (data?.status === 'NEED_TRUSTLINE' && data.xdr) {
+        setFundNotice(t('wallet.usdcSignTrustline'));
+        const signed = await freighterSignXdr(data.xdr);
+        const res2 = await fetch(`${API_BASE_URL}/api/wallet/usdc/submit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ xdr: signed }),
+        });
+        const json2 = await res2.json();
+        if (!res2.ok || json2.success === false) throw new Error(json2.message || t('wallet.usdcFundFail'));
+        data = json2.data;
+      }
+      setFundNotice(
+        data?.already
+          ? t('wallet.usdcAlready', { n: Number(data.balance).toLocaleString() })
+          : t('wallet.usdcFunded', { n: Number(data?.balance ?? 0).toLocaleString() }),
+      );
+      loadState();
+    } catch (e: any) {
+      setFundNotice(e?.message || t('wallet.usdcFundFail'));
+    } finally {
+      setFunding(false);
+    }
+  };
 
   const handleCopy = () => {
     if (!publicKey) return;
@@ -97,9 +143,28 @@ export default function WalletPage() {
             </div>
             {balance != null && (
               <p className="text-sm">
-                {t('wallet.balance')}: <strong>{balance} XLM</strong>
+                {t('wallet.balance')}: <strong>{Number(balance).toFixed(2)} XLM</strong>
               </p>
             )}
+            {usdcBalance != null && (
+              <p className="text-sm">
+                {t('wallet.usdcBalance')}: <strong>{Number(usdcBalance).toLocaleString()} USDC</strong>
+              </p>
+            )}
+            {usdcIssuer && (
+              <p className="text-[11px] font-mono break-all text-neutral-500">
+                {t('wallet.usdcIssuer')}: USDC:{usdcIssuer}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={fundUsdc}
+              disabled={funding}
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-[#2f6f28] text-white font-display font-bold text-sm disabled:opacity-40"
+            >
+              <Wallet className="w-4 h-4" /> {funding ? t('wallet.usdcFunding') : t('wallet.usdcFund')}
+            </button>
+            {fundNotice && <p className="text-sm text-neutral-700">{fundNotice}</p>}
             <a
               href={`https://stellar.expert/explorer/testnet/account/${publicKey}`}
               target="_blank"

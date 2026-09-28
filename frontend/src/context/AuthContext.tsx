@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { API_BASE_URL } from '../lib/api';
 import { signAndRelay } from '../lib/selfCustody';
+import { tClient } from '../lib/i18n';
 
 export type CustodyMode = 'CUSTODIAL' | 'SELF' | null;
 export type KycStatus = 'UNREGISTERED' | 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -178,13 +179,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }),
       });
       const data = await res.json();
-      if (!data.success || !data.user) throw new Error(data.message || 'Login falló');
+      if (!data.success || !data.user) throw new Error(data.message || tClient('err.loginFail'));
       const u = normalize(data.user);
       applySession(data.token, data.user);
       return u;
     } catch (err: any) {
       if (err?.name === 'TypeError' || /failed to fetch/i.test(err?.message || '')) {
-        throw new Error('No se pudo conectar al backend. Probá recargar; el API tiene que estar en el puerto 4000.');
+        throw new Error(tClient('err.apiDown'));
       }
       throw err;
     } finally {
@@ -203,13 +204,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok || !data.success || !data.user) throw new Error(data.message || 'No se pudo entrar con la wallet');
+      if (!res.ok || !data.success || !data.user) throw new Error(data.message || tClient('err.walletLogin'));
       const u = normalize(data.user);
       applySession(data.token, data.user);
       return u;
     } catch (err: any) {
       if (err?.name === 'TypeError' || /failed to fetch/i.test(err?.message || '')) {
-        throw new Error('No se pudo conectar al backend. Probá recargar; el API tiene que estar en el puerto 4000.');
+        throw new Error(tClient('err.apiDown'));
       }
       throw err;
     } finally {
@@ -226,13 +227,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ email, password, name }),
       });
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo iniciar sesión');
+      if (!res.ok || !data.success) throw new Error(data.message || tClient('err.loginGeneric'));
       const u = normalize(data.user);
       applySession(data.token, data.user);
       return u;
     } catch (err: any) {
       if (err?.name === 'TypeError' || /failed to fetch/i.test(err?.message || '')) {
-        throw new Error('No se pudo conectar al backend. Probá recargar; el API tiene que estar en el puerto 4000.');
+        throw new Error(tClient('err.apiDown'));
       }
       throw err;
     } finally {
@@ -241,7 +242,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [applySession]);
 
   const linkFreighterWallet = useCallback(async () => {
-    if (!token) throw new Error('Iniciá sesión');
+    if (!token) throw new Error(tClient('err.signIn'));
     const { freighterLinkPayload } = await import('../lib/freighter');
     const payload = await freighterLinkPayload();
     const res = await fetch(`${API_BASE_URL}/api/auth/wallet/link`, {
@@ -250,37 +251,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       body: JSON.stringify(payload),
     });
     const data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo vincular la wallet');
+    if (!res.ok || !data.success) throw new Error(data.message || tClient('err.walletLink'));
     applySession(token, data.user);
   }, [token, applySession]);
 
   const chooseCustody = useCallback(async (mode: 'CUSTODIAL' | 'SELF', publicKey?: string) => {
-    if (!token) throw new Error('Iniciá sesión');
+    if (!token) throw new Error(tClient('err.signIn'));
     const res = await fetch(`${API_BASE_URL}/api/auth/wallet`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ mode, publicKey }),
     });
     const data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo guardar la custodia');
+    if (!res.ok || !data.success) throw new Error(data.message || tClient('err.custodySave'));
     if (data.secretOnce) setRevealedSecret(data.secretOnce);
     applySession(token, data.user);
   }, [token, applySession]);
 
   const submitKyc = useCallback(async (payload: { legalName: string; cuit: string; selfieDataUrl?: string; email?: string }) => {
-    if (!token) throw new Error('Iniciá sesión');
+    if (!token) throw new Error(tClient('err.signIn'));
     const res = await fetch(`${API_BASE_URL}/api/kyc/onboard`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(payload),
     });
     const data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo enviar el KYC');
+    if (!res.ok || !data.success) throw new Error(data.message || tClient('err.kycSend'));
     applySession(token, data.user);
   }, [token, applySession]);
 
   const approveToken = useCallback(async (listingId: string) => {
-    if (!token) throw new Error('Iniciá sesión');
+    if (!token) throw new Error(tClient('err.signIn'));
     if (user?.custodyMode === 'SELF') {
       // La trustline vive en la wallet del inversor: solo su firma la puede
       // crear. Después registramos el opt-in y el emisor la autoriza.
@@ -300,57 +301,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo aprobar el token');
+    if (!res.ok || !data.success) throw new Error(data.message || tClient('err.tokenApprove'));
     applySession(token, data.data);
   }, [token, user?.custodyMode, applySession]);
 
   const claimTokens = useCallback(async (listingId: string) => {
-    if (!token) throw new Error('Iniciá sesión');
+    if (!token) throw new Error(tClient('err.signIn'));
     const res = await fetch(`${API_BASE_URL}/api/listings/${listingId}/claim`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data.message || 'No se pudieron reclamar los tokens');
+    if (!res.ok || !data.success) throw new Error(data.message || tClient('err.claimFail'));
     applySession(token, data.data);
     return data.data;
   }, [token, applySession]);
 
   const distributeTokens = useCallback(async (listingId: string) => {
-    if (!token) throw new Error('Iniciá sesión');
+    if (!token) throw new Error(tClient('err.signIn'));
     const res = await fetch(`${API_BASE_URL}/api/listings/${listingId}/distribute`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data.message || 'No se pudieron enviar los tokens on-chain');
+    if (!res.ok || !data.success) throw new Error(data.message || tClient('err.distributeFail'));
     await refreshUser();
     return data.data;
   }, [token, refreshUser]);
 
   const fetchWalletSecret = useCallback(async () => {
-    if (!token) throw new Error('Iniciá sesión');
+    if (!token) throw new Error(tClient('err.signIn'));
     const res = await fetch(`${API_BASE_URL}/api/auth/wallet/secret`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo obtener la clave');
+    if (!res.ok || !data.success) throw new Error(data.message || tClient('err.secretFail'));
     return String(data.secret || '');
   }, [token]);
 
   const finalizeOffering = useCallback(async (listingId: string) => {
-    if (!token) throw new Error('Iniciá sesión');
+    if (!token) throw new Error(tClient('err.signIn'));
     const res = await fetch(`${API_BASE_URL}/api/listings/${listingId}/finalize`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo finalizar la licitación');
+    if (!res.ok || !data.success) throw new Error(data.message || tClient('err.finalizeFail'));
     return data.data;
   }, [token]);
 
   const refundContribution = useCallback(async (listingId: string, selfCustody?: boolean) => {
-    if (!token) throw new Error('Iniciá sesión');
+    if (!token) throw new Error(tClient('err.signIn'));
     if (selfCustody ?? user?.custodyMode === 'SELF') {
       const data = await signAndRelay<{ user?: User } & Record<string, unknown>>({
         prepare: `/api/listings/${listingId}/refund/prepare`,
@@ -365,19 +366,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo reembolsar');
+    if (!res.ok || !data.success) throw new Error(data.message || tClient('err.refundFail'));
     if (data.data?.user) applySession(token, data.data.user);
     return data.data;
   }, [token, user?.custodyMode, applySession]);
 
   const claimDividends = useCallback(async (listingId: string) => {
-    if (!token) throw new Error('Iniciá sesión');
+    if (!token) throw new Error(tClient('err.signIn'));
     const res = await fetch(`${API_BASE_URL}/api/listings/${listingId}/dividends/claim`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
-    if (!res.ok || !data.success) throw new Error(data.message || 'No se pudo cobrar el dividendo');
+    if (!res.ok || !data.success) throw new Error(data.message || tClient('err.dividendFail'));
     applySession(token, data.data.user);
   }, [token, applySession]);
 

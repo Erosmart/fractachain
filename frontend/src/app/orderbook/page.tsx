@@ -7,6 +7,7 @@ import { ArrowUpRight, CheckCircle2, MousePointerClick, ShieldCheck, Zap } from 
 import { API_BASE_URL, bearerHeaders } from '../../lib/api';
 import { isVisibleListing } from '../../lib/listings';
 import { useAuth } from '../../context/AuthContext';
+import { useI18n } from '../../context/I18nContext';
 import { useVisibleInterval } from '../../lib/useVisibleInterval';
 import { freighterSignXdr } from '../../lib/freighter';
 import { isSelfCustody, postJson } from '../../lib/selfCustody';
@@ -118,8 +119,9 @@ const fmtQty = (n: number) =>
   n.toLocaleString('es-AR', { maximumFractionDigits: 4, minimumFractionDigits: 0 });
 
 export default function OrderbookPage() {
+  const { t } = useI18n();
   return (
-    <Suspense fallback={<p className="py-16 text-center text-neutral-500">Cargando orderbook…</p>}>
+    <Suspense fallback={<p className="py-16 text-center text-neutral-500">{t('ob.loading')}</p>}>
       <OrderbookInner />
     </Suspense>
   );
@@ -127,13 +129,20 @@ export default function OrderbookPage() {
 
 function OrderbookInner() {
   const params = useSearchParams();
+  const { t } = useI18n();
   const { user, token, refreshUser, approveToken } = useAuth();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [listingId, setListingId] = useState(params.get('listing') || '');
   const [book, setBook] = useState<Book | null>(null);
   const [side, setSide] = useState<'BUY' | 'SELL'>('BUY');
-  const [price, setPrice] = useState(10);
-  const [amount, setAmount] = useState(1);
+  // Inputs keep the raw string so the field can be emptied while typing;
+  // price/amount are the parsed numbers the rest of the form uses.
+  const [priceStr, setPriceStr] = useState('10');
+  const [amountStr, setAmountStr] = useState('1');
+  const price = Number(priceStr) || 0;
+  const amount = Number(amountStr) || 0;
+  const setPrice = (v: number) => setPriceStr(String(v));
+  const setAmount = (v: number) => setAmountStr(String(v));
   const [taken, setTaken] = useState<TakenLevel | null>(null);
   const [notice, setNotice] = useState('');
   const amountInput = useRef<HTMLInputElement>(null);
@@ -253,7 +262,7 @@ function OrderbookInner() {
       if (onSdex && isSelfCustody(user)) {
         // La orden sale de la wallet del inversor, así que la firma Freighter
         // y el backend solo la retransmite.
-        setNotice('Firmá la orden en Freighter…');
+        setNotice(t('ob.signInFreighter'));
         const prepared = await postJson<{ xdr: string }>(
           `/api/sdex/${listingId}/orders/prepare`,
           token,
@@ -263,7 +272,7 @@ function OrderbookInner() {
         setTaken(null);
         await refreshUser();
         await loadBook(listingId);
-        setNotice(`Orden enviada al DEX de Stellar. Hash ${String(relayed?.hash || '').slice(0, 12)}…`);
+        setNotice(t('ob.sentSdex', { hash: String(relayed?.hash || '').slice(0, 12) }));
         return;
       }
       const res = await fetch(
@@ -281,13 +290,13 @@ function OrderbookInner() {
         },
       );
       const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.message || 'No se pudo cargar la orden');
+      if (!res.ok || !json.success) throw new Error(json.message || t('ob.orderFail'));
       setTaken(null);
       await refreshUser();
 
       if (onSdex) {
         setBook(fromSdex(json.data.book));
-        setNotice(`Orden enviada al DEX de Stellar. Hash ${String(json.data.hash).slice(0, 12)}…`);
+        setNotice(t('ob.sentSdex', { hash: String(json.data.hash).slice(0, 12) }));
       } else {
         setBook({
           ...json.data.book,
@@ -296,8 +305,8 @@ function OrderbookInner() {
         });
         setNotice(
           json.data.order.status === 'FILLED'
-            ? 'Orden ejecutada. Tokens y USDC actualizados.'
-            : 'Orden en el libro. Espera contraparte.',
+            ? t('ob.filled')
+            : t('ob.resting'),
         );
       }
     } catch (err: any) {
@@ -321,7 +330,7 @@ function OrderbookInner() {
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        setNotice(json.message || 'No se pudo cancelar la orden');
+        setNotice(json.message || t('ob.cancelFail'));
         return;
       }
       // Custodial: el backend ya lo envió. Self-custody: firmamos y relay.
@@ -359,7 +368,7 @@ function OrderbookInner() {
       body: JSON.stringify({ xdr }),
     });
     const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.message || 'No se pudo enviar a Stellar');
+    if (!res.ok || !json.success) throw new Error(json.message || t('ob.submitFail'));
     return json.data;
   };
 
@@ -372,29 +381,29 @@ function OrderbookInner() {
     <div className="space-y-6 py-4">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <p className="font-lcd text-[11px] uppercase tracking-[0.2em] text-neutral-500">Mercado secundario</p>
+          <p className="font-lcd text-[11px] uppercase tracking-[0.2em] text-neutral-500">{t('ob.kicker')}</p>
           <h1 className="text-2xl sm:text-3xl font-extrabold font-display">
-            {onSdex ? 'Order book Stellar' : 'Orderbook local'}
+            {onSdex ? t('ob.titleSdex') : t('ob.titleLocal')}
           </h1>
           <p className="text-neutral-600 mt-1 max-w-xl">
             {onSdex
-              ? 'Puntas del DEX nativo de Stellar (CLOB, sin AMM). Solo cuentas con KYC aprobado y trustline autorizada pueden comprar, vender o transferir.'
+              ? t('ob.descSdex')
               : book
-                ? 'Libro local de demo mientras el listing no tiene cuenta emisora en Stellar. Comprador y vendedor con KYC.'
-                : 'Elegí un token. Si el listing tiene emisor en Stellar, cotiza en el DEX nativo; si no, usamos el libro local de demo.'}
+                ? t('ob.descLocal')
+                : t('ob.descNone')}
           </p>
         </div>
         <div className="flex items-center gap-2 px-3 py-2 rounded-2xl crystal-card text-sm">
           <ShieldCheck className="w-4 h-4" />
-          {onSdex ? 'KYC on-chain · AUTH_REQUIRED' : 'Doble KYC'}
+          {onSdex ? t('ob.badgeSdex') : t('ob.badgeLocal')}
         </div>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1">
         {markets.length === 0 && (
           <p className="text-sm text-neutral-500">
-            Todavía no hay tokens para negociar.{' '}
-            <Link href="/market" className="underline font-bold">Abrí o suscribí una licitación</Link>.
+            {t('ob.noMarkets')}{' '}
+            <Link href="/market" className="underline font-bold">{t('ob.openOffering')}</Link>.
           </p>
         )}
         {markets.map((m) => (
@@ -417,7 +426,7 @@ function OrderbookInner() {
             <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center text-sm">
               <span className="font-display font-extrabold break-words">{book.tokenTicker} · {book.legalName}</span>
               <span className="font-mono text-xs text-neutral-500 shrink-0">
-                Último ${book.lastPrice.toFixed(2)}
+                {t('ob.last')} ${book.lastPrice.toFixed(2)}
                 {book.spread != null ? ` · spread $${book.spread.toFixed(2)}` : ''}
               </span>
             </div>
@@ -426,33 +435,33 @@ function OrderbookInner() {
 
             <p className="text-[11px] text-neutral-500 inline-flex items-center gap-1.5">
               <MousePointerClick className="w-3.5 h-3.5 shrink-0" />
-              Tocá una punta para tomar su precio. Después elegís la cantidad.
+              {t('ob.hint')}
             </p>
 
             <div className="py-2.5 px-4 rounded-xl bg-black/[0.04] flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center font-mono">
               <span className="text-base font-bold">${book.lastPrice.toFixed(2)}</span>
               <span className="text-[11px] text-neutral-500 inline-flex items-center gap-1">
-                <ArrowUpRight className="w-3.5 h-3.5" /> Referencia IPO ${book.refPrice.toFixed(2)}
+                <ArrowUpRight className="w-3.5 h-3.5" /> {t('ob.refIpo')} ${book.refPrice.toFixed(2)}
               </span>
             </div>
 
             {/* Compradores a la izquierda, vendedores a la derecha. */}
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-[#2f6f28] mb-1">Compras</p>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[#2f6f28] mb-1">{t('ob.buys')}</p>
                 <div className="grid grid-cols-3 text-[11px] font-mono text-neutral-500 uppercase">
-                  <span>Precio</span>
-                  <span className="text-right">Cant.</span>
-                  <span className="text-right">Total</span>
+                  <span>{t('ob.price')}</span>
+                  <span className="text-right">{t('ob.qty')}</span>
+                  <span className="text-right">{t('ob.total')}</span>
                 </div>
                 <div className="space-y-1 font-mono text-xs mt-1">
-                  {book.bids.length === 0 && <p className="text-neutral-400">Sin compras abiertas</p>}
+                  {book.bids.length === 0 && <p className="text-neutral-400">{t('ob.noBids')}</p>}
                   {book.bids.map((bid) => (
                     <button
                       key={`b-${bid.price}`}
                       type="button"
                       onClick={() => takeLevel('bid', bid)}
-                      title={`Vender a $${bid.price.toFixed(2)} · ${fmtQty(bid.amount)} demandados`}
+                      title={t('ob.takeBid', { p: bid.price.toFixed(2), n: fmtQty(bid.amount) })}
                       className={`w-full grid grid-cols-3 p-1.5 rounded relative overflow-hidden text-[#2f6f28] text-left cursor-pointer transition hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
                         taken?.from === 'bid' && taken.price === bid.price ? 'ring-2 ring-emerald-600 bg-emerald-50' : ''
                       }`}
@@ -467,20 +476,20 @@ function OrderbookInner() {
               </div>
 
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-red-700 mb-1">Ventas</p>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-red-700 mb-1">{t('ob.sells')}</p>
                 <div className="grid grid-cols-3 text-[11px] font-mono text-neutral-500 uppercase">
-                  <span>Precio</span>
-                  <span className="text-right">Cant.</span>
-                  <span className="text-right">Total</span>
+                  <span>{t('ob.price')}</span>
+                  <span className="text-right">{t('ob.qty')}</span>
+                  <span className="text-right">{t('ob.total')}</span>
                 </div>
                 <div className="space-y-1 font-mono text-xs mt-1">
-                  {asksDisplay.length === 0 && <p className="text-neutral-400">Sin ventas abiertas</p>}
+                  {asksDisplay.length === 0 && <p className="text-neutral-400">{t('ob.noAsks')}</p>}
                   {asksDisplay.map((ask) => (
                     <button
                       key={`a-${ask.price}`}
                       type="button"
                       onClick={() => takeLevel('ask', ask)}
-                      title={`Comprar a $${ask.price.toFixed(2)} · ${fmtQty(ask.amount)} disponibles`}
+                      title={t('ob.takeAsk', { p: ask.price.toFixed(2), n: fmtQty(ask.amount) })}
                       className={`w-full grid grid-cols-3 p-1.5 rounded relative overflow-hidden text-red-700 text-left cursor-pointer transition hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 ${
                         taken?.from === 'ask' && taken.price === ask.price ? 'ring-2 ring-red-500 bg-red-50' : ''
                       }`}
@@ -497,12 +506,12 @@ function OrderbookInner() {
 
             {book.trades.length > 0 && (
               <div className="pt-2 border-t border-black/10 space-y-1">
-                <p className="text-xs font-bold">Últimas operaciones</p>
+                <p className="text-xs font-bold">{t('ob.trades')}</p>
                 <div className="grid grid-cols-4 text-[10px] font-mono text-neutral-500 uppercase">
-                  <span>Precio</span>
-                  <span className="text-right">Cant.</span>
-                  <span className="text-right">Comprador</span>
-                  <span className="text-right">Vendedor</span>
+                  <span>{t('ob.price')}</span>
+                  <span className="text-right">{t('ob.qty')}</span>
+                  <span className="text-right">{t('ob.buyer')}</span>
+                  <span className="text-right">{t('ob.seller')}</span>
                 </div>
                 {book.trades.slice(0, 12).map((t) => (
                   <div key={t.id} className="grid grid-cols-4 text-[11px] font-mono text-neutral-700 py-0.5 border-b border-black/5 last:border-0">
@@ -517,11 +526,11 @@ function OrderbookInner() {
           </div>
 
           <div className="lg:col-span-4 p-6 rounded-3xl crystal-card space-y-5">
-            <h3 className="font-display font-extrabold">Orden límite</h3>
+            <h3 className="font-display font-extrabold">{t('ob.limitOrder')}</h3>
             <p className="text-xs text-neutral-500">
-              Saldo ${freeCash.toLocaleString('es-AR', { maximumFractionDigits: 2 })} USDC
+              {t('ob.balance')} ${freeCash.toLocaleString('es-AR', { maximumFractionDigits: 2 })} USDC
               {holding ? ` · ${fmtQty(freeTokens)} ${book.tokenTicker}` : ''}
-              {reservedCash + reservedTokens > 0 ? ' (libre, sin contar órdenes abiertas)' : ''}
+              {reservedCash + reservedTokens > 0 ? ` ${t('ob.freeNote')}` : ''}
             </p>
             <div className="p-1 rounded-xl bg-black/[0.04] flex gap-1">
               <button
@@ -529,25 +538,26 @@ function OrderbookInner() {
                 onClick={() => { setSide('BUY'); setTaken(null); }}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold ${side === 'BUY' ? 'bg-[#4ea743] text-black' : 'text-neutral-500'}`}
               >
-                Comprar
+                {t('ob.buy')}
               </button>
               <button
                 type="button"
                 onClick={() => { setSide('SELL'); setTaken(null); }}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold ${side === 'SELL' ? 'bg-red-500 text-white' : 'text-neutral-500'}`}
               >
-                Vender
+                {t('ob.sell')}
               </button>
             </div>
             <form onSubmit={submit} className="space-y-4">
               <label className="block text-xs space-y-1">
-                Precio (USDC)
+                {t('ob.priceUsdc')}
                 <input
                   type="number"
                   step="0.01"
                   min={0.01}
-                  value={price}
-                  onChange={(e) => { setPrice(Number(e.target.value)); setTaken(null); }}
+                  value={priceStr}
+                  onChange={(e) => { setPriceStr(e.target.value); setTaken(null); }}
+                  onFocus={(e) => e.target.select()}
                   className="w-full px-3 py-2.5 rounded-xl border border-black/10 font-mono"
                 />
               </label>
@@ -555,30 +565,31 @@ function OrderbookInner() {
               {taken && (
                 <div className="px-3 py-2 rounded-xl bg-black/[0.04] text-[11px] space-y-1.5">
                   <p>
-                    Tomando punta {taken.from === 'ask' ? 'vendedora' : 'compradora'} a{' '}
+                    {t(taken.from === 'ask' ? 'ob.takingAsk' : 'ob.takingBid')}{' '}
                     <span className="font-mono font-bold">${taken.price.toFixed(2)}</span> ·{' '}
                     <span className="font-mono">{fmtQty(taken.available)}</span>{' '}
-                    {taken.from === 'ask' ? 'disponibles' : 'demandados'}
+                    {t(taken.from === 'ask' ? 'ob.available' : 'ob.demanded')}
                   </p>
                   <button
                     type="button"
                     onClick={() => applyQty(Math.min(taken.available, maxQty))}
                     className="underline font-bold"
                   >
-                    Tomar toda la punta
+                    {t('ob.takeAll')}
                   </button>
                 </div>
               )}
 
               <label className="block text-xs space-y-1">
-                Cantidad
+                {t('ob.amount')}
                 <input
                   ref={amountInput}
                   type="number"
                   step="0.0001"
                   min={0.0001}
-                  value={amount}
-                  onChange={(e) => setAmount(Number(e.target.value))}
+                  value={amountStr}
+                  onChange={(e) => setAmountStr(e.target.value)}
+                  onFocus={(e) => e.target.select()}
                   className="w-full px-3 py-2.5 rounded-xl border border-black/10 font-mono"
                 />
               </label>
@@ -592,39 +603,42 @@ function OrderbookInner() {
                     disabled={maxQty <= 0}
                     className="flex-1 py-1.5 rounded-lg bg-black/[0.04] text-[11px] font-bold disabled:opacity-40 hover:bg-black/[0.08]"
                   >
-                    {f === 1 ? 'Máx' : `${f * 100}%`}
+                    {f === 1 ? t('ob.max') : `${f * 100}%`}
                   </button>
                 ))}
               </div>
 
-              <p className="text-sm font-mono">Total ${total.toFixed(2)} USDC</p>
+              <p className="text-sm font-mono">{t('ob.total')} ${total.toFixed(2)} USDC</p>
               {amount > maxQty + 1e-9 && (
                 <p className="text-xs text-red-600">
-                  Te excedés: máximo {fmtQty(maxQty)} {side === 'BUY' ? `a $${price.toFixed(2)}` : book.tokenTicker}
+                  {t('ob.exceeds', {
+                    n: fmtQty(maxQty),
+                    unit: side === 'BUY' ? t('ob.atPrice', { p: price.toFixed(2) }) : book.tokenTicker,
+                  })}
                 </p>
               )}
               {!approved && (
                 <p className="text-sm text-neutral-600">
-                  Solo cuentas con KYC aprobado operan.{' '}
-                  <Link href="/login" className="underline font-bold">Iniciar sesión</Link>
+                  {t('ob.kycOnly')}{' '}
+                  <Link href="/login" className="underline font-bold">{t('nav.login')}</Link>
                 </p>
               )}
               {needsTrustline && (
                 <div className="px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs space-y-2">
-                  <p>Para recibir {book.tokenTicker} necesitás aprobar el token (trustline).</p>
+                  <p>{t('ob.needTrustline', { code: book.tokenTicker })}</p>
                   <button
                     type="button"
                     onClick={async () => {
                       try {
                         await approveToken(listingId);
-                        setNotice(`${book.tokenTicker} aprobado. Ya podés comprar.`);
+                        setNotice(t('ob.approvedNotice', { code: book.tokenTicker }));
                       } catch (err: any) {
                         setNotice(err.message);
                       }
                     }}
                     className="px-3 py-1.5 rounded-lg bg-black text-white font-bold"
                   >
-                    Aprobar {book.tokenTicker}
+                    {t('ob.approve', { code: book.tokenTicker })}
                   </button>
                 </div>
               )}
@@ -635,22 +649,22 @@ function OrderbookInner() {
               )}
               <button
                 type="submit"
-                disabled={!approved || needsTrustline}
+                disabled={!approved || needsTrustline || price <= 0 || amount <= 0}
                 className={`w-full py-3 rounded-2xl font-display font-bold text-sm inline-flex items-center justify-center gap-2 disabled:opacity-40 ${
                   side === 'BUY' ? 'bg-black text-white' : 'bg-red-600 text-white'
                 }`}
               >
                 <Zap className="w-4 h-4" />
-                {side === 'BUY' ? 'Publicar compra' : 'Publicar venta'}
+                {side === 'BUY' ? t('ob.postBuy') : t('ob.postSell')}
               </button>
             </form>
             {openOrders.length > 0 && (
               <div className="space-y-2 pt-2 border-t border-black/10">
-                <p className="text-xs font-bold">Tus órdenes</p>
+                <p className="text-xs font-bold">{t('ob.myOrders')}</p>
                 {openOrders.map((o) => (
                   <div key={o.id} className="flex justify-between items-center text-xs">
                     <span>{o.side} {fmtQty(o.remaining)} @ ${o.price}</span>
-                    <button type="button" onClick={() => cancel(o.id)} className="underline">Cancelar</button>
+                    <button type="button" onClick={() => cancel(o.id)} className="underline">{t('ob.cancel')}</button>
                   </div>
                 ))}
               </div>
@@ -668,6 +682,7 @@ function OrderbookInner() {
  * referencia (IPO) para que siempre haya una línea visible.
  */
 function PriceSparkline({ trades, refPrice }: { trades: { price: number; createdAt: string }[]; refPrice: number }) {
+  const { t } = useI18n();
   const points = useMemo(() => {
     const rows = Array.isArray(trades) ? trades : [];
     const sorted = [...rows].sort(
@@ -695,7 +710,7 @@ function PriceSparkline({ trades, refPrice }: { trades: { price: number; created
   return (
     <div className="rounded-2xl border border-black/10 bg-white/60 p-3">
       <div className="flex items-center justify-between text-[11px] text-neutral-500 mb-1">
-        <span className="uppercase tracking-wider font-lcd">Tendencia</span>
+        <span className="uppercase tracking-wider font-lcd">{t('ob.trend')}</span>
         <span className={`font-mono font-bold ${up ? 'text-[#3f8f38]' : 'text-red-600'}`}>
           {up ? '▲' : '▼'} ${last.toFixed(2)}
         </span>

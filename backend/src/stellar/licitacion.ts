@@ -1,10 +1,11 @@
 import { createHash } from 'crypto';
 import { Keypair } from '@stellar/stellar-sdk';
 import { custodialSigningKey, getAccount } from '../auth/accounts';
-import { isStellarPublicKey, loadNativeXlm } from '../auth/stellar_testnet';
+import { isStellarPublicKey, loadAssetBalance, loadNativeXlm } from '../auth/stellar_testnet';
 import { Listing } from '../admin/listings';
 import { loadTestnetDeployment } from './deployment';
-import { hasDeployerSecret, licitacionAdminKeypair } from './keys';
+import { hasDeployerSecret, licitacionAdminKeypair, usdcIssuerPublicKey } from './keys';
+import { USDC_CODE, ensureFiduciaryUsdcTrustline } from './usdc';
 import {
   AnyClient,
   contractClient,
@@ -32,6 +33,42 @@ import { explorerTx } from './onchain';
 const ARGENTINA = 32;
 const INVESTOR_NATIONAL = 0;
 const YEAR_SECS = 365 * 24 * 3600;
+
+/** Asset the offering actually bills in — frozen in the contract at init. */
+export function paymentUnit(listing: Listing): 'XLM' | 'USDC' {
+  return listing.dossier.paymentKind === 'XLM' ? 'XLM' : 'USDC';
+}
+
+/**
+ * Pre-flight balance check before touching the contract. USDC offerings pull
+ * the platform-issued testnet USDC through its SAC; XLM is only ever needed
+ * for fees there. Errors name the missing asset and where to get it.
+ */
+async function assertBuyerFunds(wallet: string, listing: Listing, amount: number) {
+  if (paymentUnit(listing) === 'USDC') {
+    const issuer = usdcIssuerPublicKey();
+    const usdc = issuer ? await loadAssetBalance(wallet, USDC_CODE, issuer) : 0;
+    if (usdc < amount) {
+      throw new Error(
+        `La wallet tiene ${usdc.toFixed(2)} USDC y el aporte es ${amount} USDC. ` +
+          'Fondeá USDC de testnet desde tu página de Wallet (botón "Fondear USDC").',
+      );
+    }
+    const xlm = await loadNativeXlm(wallet);
+    if (xlm < 1.5) {
+      throw new Error(
+        `Te falta XLM para la reserva/fee de la transacción (tenés ${xlm.toFixed(2)}). Friendbot fondea XLM automáticamente.`,
+      );
+    }
+    return;
+  }
+  const xlm = await loadNativeXlm(wallet);
+  if (xlm < amount + 2) {
+    throw new Error(
+      `La wallet tiene ${xlm.toFixed(2)} XLM y el aporte es ${amount}. Friendbot o recargá XLM de testnet.`,
+    );
+  }
+}
 
 function licitacionId(listing: Listing): string {
   if (!isLiveContractId(listing.licitacionContract)) {
@@ -92,7 +129,12 @@ export function canDeployLicitacion(): boolean {
 export async function deployLicitacionForListing(
   listing: Listing,
   deadlineMs: number,
-): Promise<{ contractId: string; hash: string | null; factoryProductId: number | null }> {
+): Promise<{
+  contractId: string;
+  hash: string | null;
+  factoryProductId: number | null;
+  fiduciaryUsdcReady: boolean | null;
+}> {
   const d = listing.dossier;
   const fiduciary = d.proceedsWallet?.trim().toUpperCase();
   if (!isStellarPublicKey(fiduciary)) {
@@ -143,7 +185,33 @@ export async function deployLicitacionForListing(
       console.warn('factory.register_product skipped:', err?.message || err);
     }
   }
-  return { contractId: deployed.contractId, hash: hash || deployed.hash, factoryProductId };
+
+  // USDC payouts land on a classic trustline — the company wallet must have
+  // one or finalize() fails at payout. Demo treasuries are provisioned by the
+  // backend, so we open theirs; a real company opens it in its own wallet and
+  // the flag tells the admin it's still pending.
+  let fiduciaryUsdcReady: boolean | null = null;
+  if (!isXlm) {
+    try {
+      const { demoTreasurySecret } = await import('../admin/demo');
+      fiduciaryUsdcReady = await ensureFiduciaryUsdcTrustline(
+        fiduciary!,
+        demoTreasurySecret(fiduciary!),
+      );
+      if (!fiduciaryUsdcReady) {
+        console.warn(`licitación USDC: ${fiduciary} aún no tiene trustline USDC`);
+      }
+    } catch (err: any) {
+      console.warn('fiduciary USDC trustline:', err?.message || err);
+      fiduciaryUsdcReady = false;
+    }
+  }
+  return {
+    contractId: deployed.contractId,
+    hash: hash || deployed.hash,
+    factoryProductId,
+    fiduciaryUsdcReady,
+  };
 }
 
 /**
@@ -196,12 +264,7 @@ export async function contributeOnChain(
     throw new Error('Wallet propia: firmá el aporte con Freighter desde la ficha de la licitación');
   }
   const buyer = Keypair.fromSecret(custodialSigningKey(accountId));
-  const xlm = await loadNativeXlm(buyer.publicKey());
-  if (xlm < amount + 2) {
-    throw new Error(
-      `La wallet tiene ${xlm.toFixed(2)} XLM y el aporte es ${amount}. Friendbot o recargá XLM de testnet.`,
-    );
-  }
+  await assertBuyerFunds(buyer.publicKey(), listing, amount);
 
   await verifyInvestorOnChain(listing, buyer.publicKey());
 
@@ -238,12 +301,7 @@ export async function prepareContributeXdr(
   amount: number,
 ): Promise<{ xdr: string; publicKey: string; verifyHash: string | null }> {
   const wallet = selfCustodyWallet(accountId);
-  const xlm = await loadNativeXlm(wallet);
-  if (xlm < amount + 2) {
-    throw new Error(
-      `Tu wallet tiene ${xlm.toFixed(2)} XLM y el aporte es ${amount}. Cargá XLM de testnet con Friendbot.`,
-    );
-  }
+  await assertBuyerFunds(wallet, listing, amount);
   const verifyHash = await verifyInvestorOnChain(listing, wallet);
   const xdr = await unsignedInvocationXdr(licitacionId(listing), wallet, 'contribute', {
     buyer: wallet,
@@ -380,6 +438,8 @@ export type LicitacionSnapshot = {
   deadline: string | null;
   /** XLM actually sitting in the wallet the contract pays. */
   fiduciaryXlm?: number | null;
+  /** USDC sitting in the fiduciary wallet, when the offering bills in USDC. */
+  fiduciaryUsdc?: number | null;
   /** The dossier wallet differs from the address `finalize()` pays. */
   fiduciaryMismatch?: boolean;
   error?: string;
@@ -454,7 +514,7 @@ export async function snapshotLicitacion(
   listing: Listing,
   investor?: string,
 ): Promise<LicitacionSnapshot> {
-  if (!isLiveContractId(listing.licitacionContract) || listing.dossier.paymentKind !== 'XLM') {
+  if (!isLiveContractId(listing.licitacionContract)) {
     const deadlineMs = listingDeadlineMs({
       settleAt: listing.settleAt,
       listedAt: listing.listedAt,
@@ -478,7 +538,15 @@ export async function snapshotLicitacion(
     const reads = await readLicitacion(listing, investor);
     const snapshot = snapshotFromReads(listing, reads);
     const wallet = listing.dossier.proceedsWallet?.trim().toUpperCase();
-    snapshot.fiduciaryXlm = reads.fiduciary ? await loadNativeXlm(reads.fiduciary) : null;
+    if (reads.fiduciary) {
+      snapshot.fiduciaryXlm = await loadNativeXlm(reads.fiduciary);
+      if (paymentUnit(listing) === 'USDC') {
+        const issuer = usdcIssuerPublicKey();
+        snapshot.fiduciaryUsdc = issuer
+          ? await loadAssetBalance(reads.fiduciary, USDC_CODE, issuer)
+          : null;
+      }
+    }
     snapshot.fiduciaryMismatch = Boolean(
       reads.fiduciary && isStellarPublicKey(wallet) && reads.fiduciary !== wallet,
     );
