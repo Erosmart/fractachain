@@ -87,6 +87,7 @@ import {
 } from './market/sdex_book';
 import { buildTrustlineXdr, configureIssuerForRegulatedAsset, submitSignedXdr } from './stellar/sdex';
 import {
+  ensureWalletFunded,
   fundTestnetUsdc,
   payUsdcGrant,
   usdcAsset,
@@ -312,15 +313,18 @@ app.get('/api/wallet/state', async (req: Request, res: Response) => {
   try {
     const publicKey = String(req.query.account || '').trim();
     if (!publicKey) return res.status(400).json({ success: false, message: 'Falta account' });
-    // Self-heal: custodial wallets created before the faucet still get their
-    // trustline + grant the first time any page reads their state — no
-    // re-login or button needed. Self-custody is skipped (holder signature).
+    // Self-heal for any registered wallet: friendbot + XLM refill + USDC.
+    // Custodial gets its trustline server-signed; self-custody still gets the
+    // XLM top-up and the USDC grant when its trustline already exists — the
+    // changeTrust signature itself is the holder's and cannot be faked.
     const owned = findAccountByPublicKey(publicKey);
-    if (owned?.custodyMode === 'CUSTODIAL') {
+    if (owned) {
       try {
-        await fundTestnetUsdc(publicKey, { walletSecret: custodialSigningKey(owned.id) });
+        await ensureWalletFunded(publicKey, {
+          walletSecret: owned.custodyMode === 'CUSTODIAL' ? custodialSigningKey(owned.id) : null,
+        });
       } catch (err: any) {
-        console.warn('[usdc-heal]', err?.message || err);
+        console.warn('[wallet-heal]', err?.message || err);
       }
     }
     res.json({ success: true, data: await walletFunds(publicKey) });
@@ -1297,13 +1301,16 @@ app.post('/api/listings/:id/dividends/claim', (req: Request, res: Response) => {
 app.get('/api/portfolio', async (req: Request, res: Response) => {
   const account = getAccountByToken(req.headers.authorization);
   if (!account) return res.status(401).json({ success: false, message: 'Iniciá sesión' });
-  // Existing custodial wallets heal here too: trustline + USDC grant the first
-  // time the dashboard loads after the faucet shipped.
-  if (account.custodyMode === 'CUSTODIAL' && account.publicKey) {
+  // Any registered wallet heals on dashboard load: XLM refill for everyone,
+  // USDC trustline+grant for custodial, grant-only for self-custody that
+  // already opened the line.
+  if (account.publicKey) {
     try {
-      await fundTestnetUsdc(account.publicKey, { walletSecret: custodialSigningKey(account.id) });
+      await ensureWalletFunded(account.publicKey, {
+        walletSecret: account.custodyMode === 'CUSTODIAL' ? custodialSigningKey(account.id) : null,
+      });
     } catch (err: any) {
-      console.warn('[usdc-heal]', err?.message || err);
+      console.warn('[wallet-heal]', err?.message || err);
     }
   }
   wrapAsync(() => buildPortfolio(account.id), res);

@@ -1,4 +1,4 @@
-import { Horizon, Keypair, StrKey } from '@stellar/stellar-sdk';
+import { Asset, BASE_FEE, Horizon, Keypair, Operation, StrKey, TransactionBuilder } from '@stellar/stellar-sdk';
 import { spawn } from 'child_process';
 import { getTestnetConfig } from '../admin/testnet';
 
@@ -88,6 +88,40 @@ export async function loadNativeXlm(publicKey: string): Promise<number> {
   } catch {
     return 0;
   }
+}
+
+/**
+ * Friendbot only creates accounts once — it never refills. A wallet that was
+ * created but spent its XLM below `floor` can't even pay fees, so the
+ * platform tops it up from the deployer. Plain payments need no recipient
+ * signature, which makes this safe for self-custody wallets too.
+ */
+const XLM_FLOOR = Math.max(0, Number(process.env.STELLAR_XLM_FLOOR || 5));
+const XLM_TOPUP = Math.max(XLM_FLOOR, Number(process.env.STELLAR_XLM_TOPUP || 50));
+
+export async function topUpXlm(publicKey: string): Promise<{ topped: boolean; balance: number; hash?: string }> {
+  if (!isStellarPublicKey(publicKey)) return { topped: false, balance: 0 };
+  let balance: number;
+  try {
+    const account = await horizonServer().loadAccount(publicKey);
+    balance = Number(account.balances.find((b) => b.asset_type === 'native')?.balance || 0);
+  } catch {
+    return { topped: false, balance: 0 }; // not on-ledger yet — friendbot creates those
+  }
+  if (balance >= XLM_FLOOR) return { topped: false, balance };
+  const { deployerKeypair } = await import('../stellar/keys'); // dynamic: keys imports fundFriendbot back
+  const payer = deployerKeypair();
+  const source = await horizonServer().loadAccount(payer.publicKey());
+  const tx = new TransactionBuilder(source, {
+    fee: String(Number(BASE_FEE) * 100),
+    networkPassphrase: getTestnetConfig().networkPassphrase,
+  })
+    .addOperation(Operation.payment({ destination: publicKey, asset: Asset.native(), amount: String(XLM_TOPUP) }))
+    .setTimeout(60)
+    .build();
+  tx.sign(payer);
+  const res = await horizonServer().submitTransaction(tx);
+  return { topped: true, balance: balance + XLM_TOPUP, hash: (res as any)?.hash };
 }
 
 export async function loadAssetBalance(

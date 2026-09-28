@@ -229,7 +229,7 @@ export default function DashboardPage() {
           <div className="text-[10px] text-neutral-400 mt-0.5">
             {t('dash.cashDemo')}: ${money(Number(user?.cashUsdc || book?.cashUsdc || 0))}
           </div>
-          {(book?.usdcOnChain ?? 0) <= 0 && user?.publicKey && (
+          {(book?.usdcOnChain ?? 0) <= 0 && user?.publicKey && user?.custodyMode === 'SELF' && (
             <button
               type="button"
               onClick={fundUsdc}
