@@ -117,6 +117,9 @@ function fromSdex(d: any): Book {
     authorized: d.authorized,
     needsTrustline: d.needsTrustline,
     tokenBalance: d.tokenBalance,
+    usdcBalance: d.usdcBalance,
+    usdcTotal: d.usdcTotal,
+    tokenTotal: d.tokenTotal,
   };
 }
 
