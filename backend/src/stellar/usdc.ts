@@ -119,9 +119,19 @@ export interface UsdcFundResult {
  * Without the wallet secret a missing trustline throws `USDC_NEEDS_TRUSTLINE`
  * so the caller can hand the user a `changeTrust` XDR instead.
  */
+/**
+ * Automatic heals must never top a wallet back up: that would silently undo
+ * every purchase. Only a wallet holding no USDC at all — free or locked in
+ * open offers — qualifies for the grant.
+ */
+function grantGap(line: { balance: number }, grant: number, onlyIfEmpty?: boolean) {
+  if (onlyIfEmpty && line.balance > 0) return 0;
+  return grant - line.balance;
+}
+
 export async function fundTestnetUsdc(
   wallet: string,
-  opts?: { walletSecret?: string | null; grant?: number },
+  opts?: { walletSecret?: string | null; grant?: number; onlyIfEmpty?: boolean },
 ): Promise<UsdcFundResult> {
   const issuer = await usdcIssuerKeypair();
   const asset = usdcAsset();
@@ -153,7 +163,7 @@ export async function fundTestnetUsdc(
       }),
     );
   }
-  const gap = grant - line.balance;
+  const gap = grantGap(line, grant, opts?.onlyIfEmpty);
   if (gap > 0) {
     ops.push(
       Operation.payment({
@@ -192,7 +202,10 @@ export async function fundTestnetUsdc(
  * Issuer-side top-up for a wallet that already opened its trustline — used by
  * the self-custody flow right after the user signs `changeTrust` in Freighter.
  */
-export async function payUsdcGrant(wallet: string): Promise<UsdcFundResult> {
+export async function payUsdcGrant(
+  wallet: string,
+  opts?: { onlyIfEmpty?: boolean },
+): Promise<UsdcFundResult> {
   const issuer = await usdcIssuerKeypair();
   const asset = usdcAsset();
   const line = await getTrustlineState(wallet, asset);
@@ -211,7 +224,7 @@ export async function payUsdcGrant(wallet: string): Promise<UsdcFundResult> {
       }),
     );
   }
-  const gap = USDC_GRANT - line.balance;
+  const gap = grantGap(line, USDC_GRANT, opts?.onlyIfEmpty);
   if (gap > 0) {
     ops.push(
       Operation.payment({
@@ -301,10 +314,10 @@ export async function ensureWalletFunded(
   await fundFriendbot(wallet).catch(() => undefined);
   await topUpXlm(wallet).catch(() => undefined);
   if (opts?.walletSecret) {
-    return fundTestnetUsdc(wallet, { walletSecret: opts.walletSecret });
+    return fundTestnetUsdc(wallet, { walletSecret: opts.walletSecret, onlyIfEmpty: true });
   }
   const line = await getTrustlineState(wallet, usdcAsset());
-  if (line.exists) return payUsdcGrant(wallet);
+  if (line.exists) return payUsdcGrant(wallet, { onlyIfEmpty: true });
   return { funded: false, trustline: false };
 }
 

@@ -101,7 +101,7 @@ export interface SdexBookView extends OrderBook {
   needsTrustline: boolean;
   /** Sellable units: trustline balance net of what open sell offers already locked. */
   tokenBalance: number;
-  /** Spendable counter balance: net of USDC already locked by open buy offers. */
+  /** Spendable counter balance: net of USDC already locked by open bids. */
   usdcBalance: number;
   /** Raw trustline balances including what open offers lock — shown so the
    *  order book reconciles with the portfolio total. */
@@ -273,8 +273,10 @@ async function loadSdexBook(listingId: string, accountId?: string): Promise<Sdex
     // the part already locked, so what the trader can still use is the rest.
     tokenTotal = line.balance;
     usdcTotal = counterLine?.balance ?? 0;
+    // Both sides of the book *sell* something: an ask sells the token, a bid
+    // sells USDC — so each balance is locked by its own selling_liabilities.
     tokenBalance = Math.max(0, line.balance - line.sellingLiabilities);
-    usdcBalance = Math.max(0, (counterLine?.balance ?? 0) - (counterLine?.buyingLiabilities ?? 0));
+    usdcBalance = Math.max(0, (counterLine?.balance ?? 0) - (counterLine?.sellingLiabilities ?? 0));
   }
 
   return {
