@@ -14,9 +14,15 @@ import { getOrderBook, getRecentTrades } from '../stellar/sdex';
 import { listDividends } from './dividends';
 import { loadAssetBalance, loadNativeXlm } from '../auth/stellar_testnet';
 import { explorerTx } from '../stellar/onchain';
+import { usdcIssuerPublicKey } from '../stellar/keys';
 
-const USDC_ISSUER =
-  process.env.STELLAR_USDC_ISSUER || 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
+// Canonical platform USDC issuer: env secret/pubkey first, then
+// deployments/testnet.json. Falling back to the Circle issuer here would make
+// the portfolio and the SDEX quote a different asset than the one licitaciones
+// actually charge.
+function usdcIssuer(): string | null {
+  return usdcIssuerPublicKey();
+}
 
 export type PriceSource = 'sdex_last' | 'sdex_mid' | 'sandbox_last' | 'ipo';
 
@@ -145,7 +151,9 @@ export async function buildPortfolio(accountId: string) {
       };
     }),
     ),
-    account.publicKey ? loadAssetBalance(account.publicKey, 'USDC', USDC_ISSUER) : Promise.resolve(0),
+    account.publicKey && usdcIssuer()
+      ? loadAssetBalance(account.publicKey, 'USDC', usdcIssuer()!)
+      : Promise.resolve(0),
     account.publicKey ? loadNativeXlm(account.publicKey) : Promise.resolve(0),
   ]);
 
