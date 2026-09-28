@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Layers, TrendingUp, ArrowRight, KeyRound, Copy, Check } from 'lucide-react';
+import { Layers, TrendingUp, ArrowRight, KeyRound, Copy, Check, DollarSign } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useI18n } from '../../context/I18nContext';
 import WalletAddress from '../../components/WalletAddress';
@@ -73,6 +73,8 @@ export default function DashboardPage() {
   const [secret, setSecret] = useState<string | null>(null);
   const [secretErr, setSecretErr] = useState('');
   const [secretCopied, setSecretCopied] = useState(false);
+  const [fundingUsdc, setFundingUsdc] = useState(false);
+  const [usdcNotice, setUsdcNotice] = useState('');
 
   const revealSecret = async () => {
     try {
@@ -143,6 +145,29 @@ export default function DashboardPage() {
     pendingDividends: holdings.reduce((s, h) => s + (h.pendingDividendUsdc || 0), 0),
   };
 
+  // Wallets created before the faucet exist on-chain but have no USDC — the
+  // button tops them up to the grant. Custodial is silent; self-custody signs
+  // one changeTrust in Freighter (the only signature the chain accepts).
+  const fundUsdc = async () => {
+    if (!token) return;
+    setFundingUsdc(true);
+    setUsdcNotice('');
+    try {
+      const { ensureUsdcReady } = await import('../../lib/usdc');
+      const data = await ensureUsdcReady(token);
+      setUsdcNotice(
+        data?.already
+          ? t('wallet.usdcAlready', { n: Number(data.balance).toLocaleString() })
+          : t('wallet.usdcFunded', { n: Number(data?.balance ?? 0).toLocaleString() }),
+      );
+      await load();
+    } catch (e: any) {
+      setUsdcNotice(e?.message || t('wallet.usdcFundFail'));
+    } finally {
+      setFundingUsdc(false);
+    }
+  };
+
   const run = async (key: string, fn: () => Promise<void>) => {
     setBusy(key);
     try {
@@ -204,6 +229,18 @@ export default function DashboardPage() {
           <div className="text-[10px] text-neutral-400 mt-0.5">
             {t('dash.cashDemo')}: ${money(Number(user?.cashUsdc || book?.cashUsdc || 0))}
           </div>
+          {(book?.usdcOnChain ?? 0) <= 0 && user?.publicKey && (
+            <button
+              type="button"
+              onClick={fundUsdc}
+              disabled={fundingUsdc}
+              className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black text-white text-[11px] font-display font-bold uppercase tracking-wide disabled:opacity-50"
+            >
+              <DollarSign className="w-3.5 h-3.5" />
+              {fundingUsdc ? t('wallet.usdcFunding') : t('dash.fundUsdc')}
+            </button>
+          )}
+          {usdcNotice && <p className="mt-2 text-[11px] text-neutral-600">{usdcNotice}</p>}
         </div>
         <div className="p-5 rounded-3xl crystal-card">
           <div className="text-xs text-neutral-500">{t('dash.marked')}</div>
