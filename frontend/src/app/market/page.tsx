@@ -71,15 +71,6 @@ export default function MarketPage() {
                 {formatInt(pool.raisedAmount)} / {formatInt(pool.hardCap)} {unit}
                 {pool.minInvestment ? ` · ${t('market.min')} ${formatInt(pool.minInvestment)} ${unit}` : ''}
               </p>
-              {(pool as any).validation?.checks && (
-                <ul className="text-xs space-y-1">
-                  {(pool as any).validation.checks.map((c: any) => (
-                    <li key={c.key} className={c.ok ? 'text-[#2f6f28]' : 'text-neutral-400'}>
-                      {c.ok ? '✓' : '○'} {c.label}
-                    </li>
-                  ))}
-                </ul>
-              )}
               <Link href={`/market/${pool.id}`} className="inline-flex items-center gap-2 text-sm font-display font-bold pt-2">
                 {t('market.viewDossier')} <ArrowRight className="w-4 h-4" />
               </Link>

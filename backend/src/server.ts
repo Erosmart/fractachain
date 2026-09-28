@@ -1233,13 +1233,19 @@ app.post('/api/sdex/:listingId/orders', (req: Request, res: Response) => {
 app.post('/api/sdex/:listingId/orders/cancel', (req: Request, res: Response) => {
   const account = getAccountByToken(req.headers.authorization);
   if (!account) return res.status(401).json({ success: false, message: 'Iniciá sesión' });
-  const { side, offerId, price } = req.body as { side: 'BUY' | 'SELL'; offerId: string; price: number };
+  const { side, offerId, price, legacy } = req.body as {
+    side: 'BUY' | 'SELL';
+    offerId: string;
+    price: number;
+    legacy?: boolean;
+  };
   const params = {
     listingId: req.params.listingId,
     accountId: account.id,
     side,
     offerId: String(offerId),
     price: Number(price),
+    legacy: Boolean(legacy),
   };
   // Custodial accounts get the cancel already submitted; self-custody gets the
   // XDR back to sign in their wallet.

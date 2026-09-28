@@ -29,6 +29,8 @@ type MyOrder = {
   amount: number;
   remaining: number;
   status: string;
+  /** Posted against the superseded counter asset — stranded on a dead pair. */
+  legacy?: boolean;
 };
 type Book = {
   listingId: string;
@@ -59,6 +61,7 @@ type SdexOffer = {
   buying: { asset_code?: string; asset_type: string };
   amount: number;
   price: number;
+  legacy?: boolean;
 };
 
 /**
@@ -91,6 +94,7 @@ function fromSdex(d: any): Book {
       amount: o.amount,
       remaining: o.amount,
       status: 'OPEN',
+      legacy: o.legacy,
     };
   });
 
@@ -326,7 +330,7 @@ function OrderbookInner() {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ side: mine.side, offerId: id, price: mine.price }),
+        body: JSON.stringify({ side: mine.side, offerId: id, price: mine.price, legacy: mine.legacy }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
@@ -662,8 +666,15 @@ function OrderbookInner() {
               <div className="space-y-2 pt-2 border-t border-black/10">
                 <p className="text-xs font-bold">{t('ob.myOrders')}</p>
                 {openOrders.map((o) => (
-                  <div key={o.id} className="flex justify-between items-center text-xs">
-                    <span>{o.side} {fmtQty(o.remaining)} @ ${o.price}</span>
+                  <div key={o.id} className="flex justify-between items-center text-xs gap-2">
+                    <span className="flex items-center gap-1.5">
+                      {o.side} {fmtQty(o.remaining)} @ ${o.price}
+                      {o.legacy && (
+                        <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[9px] font-bold uppercase">
+                          {t('ob.legacy')}
+                        </span>
+                      )}
+                    </span>
                     <button type="button" onClick={() => cancel(o.id)} className="underline">{t('ob.cancel')}</button>
                   </div>
                 ))}

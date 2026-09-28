@@ -343,6 +343,7 @@ const es = {
     custodian: 'Custodio CUIT',
     backing: 'Respaldo',
     estatuto: 'Hash estatuto',
+    techDetails: 'Detalles on-chain',
   },
   dash: {
     hello: 'Hola, {name}',
@@ -502,6 +503,7 @@ const es = {
     cancelFail: 'No se pudo cancelar la orden',
     submitFail: 'No se pudo enviar a Stellar',
     trend: 'Tendencia',
+    legacy: 'USDC viejo',
   },
   stk: {
     kicker: 'Mercado Secundario Merval',
@@ -1190,6 +1192,7 @@ const en: Messages = {
     custodian: 'Custodian tax ID',
     backing: 'Backing',
     estatuto: 'Bylaws hash',
+    techDetails: 'On-chain details',
   },
   dash: {
     hello: 'Hi, {name}',
@@ -1349,6 +1352,7 @@ const en: Messages = {
     cancelFail: 'Could not cancel the order',
     submitFail: 'Could not submit to Stellar',
     trend: 'Trend',
+    legacy: 'legacy USDC',
   },
   stk: {
     kicker: 'Merval Secondary Market',
