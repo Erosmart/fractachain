@@ -41,6 +41,8 @@ export interface OrderBookLevel {
   amount: number;
   /** Cumulative amount from the top of the book down to this level. */
   total: number;
+  /** Level lives on the superseded counter-asset pair, not the canonical one. */
+  legacy?: boolean;
 }
 
 export interface OrderBook {

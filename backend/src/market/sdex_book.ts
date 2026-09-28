@@ -112,9 +112,6 @@ export interface SdexBookView extends OrderBook {
  * reject.
  */
 const inflightBooks = new Map<string, Promise<SdexBookView>>();
-/** Pair → last time the legacy scan ran; keeps the poller from spamming Horizon. */
-const legacyScanAt = new Map<string, number>();
-const LEGACY_SCAN_INTERVAL_MS = 15_000;
 
 export async function getSdexBook(listingId: string, accountId?: string): Promise<SdexBookView> {
   const key = `${listingId}:${accountId || ''}`;
@@ -126,10 +123,12 @@ export async function getSdexBook(listingId: string, accountId?: string): Promis
 }
 
 /**
- * Rebooks stranded legacy-pair offers onto the canonical pair — one tx that
- * cancels the old offer and places the equivalent against the current USDC
- * issuer. Only custodial accounts migrate themselves (the platform holds the
- * keys); self-custody leftovers stay listed so the holder can cancel them.
+ * Manual maintenance tool — not run automatically. Rebooks stranded
+ * legacy-pair offers onto the canonical pair in one cancel+replace tx.
+ * Only custodial accounts can be migrated (the platform holds their keys);
+ * the book already displays legacy levels merged in, so nothing here is
+ * required for visibility — this exists in case we ever want to clean up
+ * the old pair rather than just quote it.
  */
 export async function migrateLegacyPair(security: Asset, counter: Asset, legacy: Asset) {
   const offers = await getPairOffers(security, legacy);
@@ -191,28 +190,48 @@ async function loadSdexBook(listingId: string, accountId?: string): Promise<Sdex
   const counter = counterAsset();
   const legacy = legacyCounterAsset();
 
-  if (legacy) {
-    const pairKey = `${listingId}:legacy`;
-    if ((legacyScanAt.get(pairKey) || 0) < Date.now() - LEGACY_SCAN_INTERVAL_MS) {
-      legacyScanAt.set(pairKey, Date.now());
-      try {
-        await migrateLegacyPair(security, counter, legacy);
-      } catch (err: any) {
-        console.warn('[legacy-sdex]', err?.message || err);
-      }
-    }
-  }
-
   const [book, trades] = await Promise.all([
     getOrderBook(security, counter),
     getRecentTrades(security, counter).catch(() => []),
   ]);
 
+  // Orders resting on the old counter asset are still real orders: merge them
+  // into the book flagged `legacy` so nothing disappears. New orders always
+  // post to the canonical pair — prepareOrder only ever builds against
+  // counterAsset(), so the legacy side can only shrink from here.
+  let mergedBook = book;
+  let mergedTrades = trades;
+  let legacyOffers = 0;
+  if (legacy) {
+    const [legacyBook, legacyTrades] = await Promise.all([
+      getOrderBook(security, legacy).catch(() => null),
+      getRecentTrades(security, legacy).catch(() => []),
+    ]);
+    if (legacyBook) {
+      const bids = [...book.bids, ...legacyBook.bids.map((b) => ({ ...b, legacy: true }))]
+        .sort((a, b) => b.price - a.price);
+      const asks = [...book.asks, ...legacyBook.asks.map((a) => ({ ...a, legacy: true }))]
+        .sort((a, b) => a.price - b.price);
+      const bestBid = bids[0]?.price ?? null;
+      const bestAsk = asks[0]?.price ?? null;
+      mergedBook = {
+        ...book,
+        bids,
+        asks,
+        spread: bestBid != null && bestAsk != null ? bestAsk - bestBid : null,
+        midPrice: bestBid != null && bestAsk != null ? (bestAsk + bestBid) / 2 : bestBid ?? bestAsk,
+      };
+      mergedTrades = [...trades, ...legacyTrades.map((t: any) => ({ ...t, legacy: true }))]
+        .sort((a: any, b: any) => String(b.createdAt).localeCompare(String(a.createdAt)))
+        .slice(0, trades.length || 20);
+      legacyOffers = legacyBook.bids.length + legacyBook.asks.length;
+    }
+  }
+
   let myOffers: SdexBookView['myOffers'] = [];
   let authorized = false;
   let needsTrustline = true;
   let tokenBalance = 0;
-  let legacyOffers = 0;
 
   const account = accountId ? getAccount(accountId) : undefined;
   if (account?.publicKey) {
@@ -242,19 +261,15 @@ async function loadSdexBook(listingId: string, accountId?: string): Promise<Sdex
     tokenBalance = line.balance;
   }
 
-  if (legacy) {
-    legacyOffers = (await getPairOffers(security, legacy).catch(() => [])).length;
-  }
-
   return {
-    ...book,
+    ...mergedBook,
     listingId,
     tokenTicker: listing.dossier.tokenTicker,
     legalName: listing.dossier.legalName,
     refPrice: listing.dossier.pricePerShareUsdc,
     // Falls back to the primary-offering price until the pair has traded.
-    lastPrice: trades[0]?.price ?? book.midPrice ?? listing.dossier.pricePerShareUsdc,
-    trades,
+    lastPrice: mergedTrades[0]?.price ?? mergedBook.midPrice ?? listing.dossier.pricePerShareUsdc,
+    trades: mergedTrades,
     myOffers,
     legacyOffers,
     authorized,
