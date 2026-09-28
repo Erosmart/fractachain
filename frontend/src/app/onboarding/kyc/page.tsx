@@ -18,6 +18,7 @@ export default function KycOnboardingPage() {
   const [selfie, setSelfie] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showKycModal, setShowKycModal] = useState(true);
 
   if (!user) {
     router.replace('/login');
@@ -116,7 +117,6 @@ export default function KycOnboardingPage() {
             ref={fileRef}
             type="file"
             accept="image/*"
-            capture="user"
             className="hidden"
             onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
           />
@@ -130,6 +130,23 @@ export default function KycOnboardingPage() {
           {busy ? t('onboarding.sending') : t('onboarding.send')}
         </button>
       </form>
+      {showKycModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="max-w-sm w-full rounded-3xl bg-white p-6 space-y-4 shadow-2xl">
+            <h2 className="text-xl font-extrabold font-display">
+              {t('onboarding.kycModalTitle')}
+            </h2>
+            <p className="text-sm text-neutral-600">{t('onboarding.kycModalBody')}</p>
+            <button
+              type="button"
+              onClick={() => setShowKycModal(false)}
+              className="w-full py-3 rounded-2xl bg-black text-white font-display font-bold"
+            >
+              {t('onboarding.kycModalCta')}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

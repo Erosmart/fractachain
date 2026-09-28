@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { createStellarKeypair, fundFriendbot, isStellarPublicKey, loadNativeXlm } from './stellar_testnet';
+import { getTestnetConfig } from '../admin/testnet';
 import { persistToPg } from '../data/pgstore';
 
 export type CustodyMode = 'CUSTODIAL' | 'SELF' | null;
@@ -455,7 +456,7 @@ export function submitOnboardingKyc(
     if (clash) throw new Error('Ese email ya tiene una cuenta');
     account.email = email;
   } else if (!data.selfieDataUrl || !data.selfieDataUrl.startsWith('data:image')) {
-    throw new Error('Falta la foto de la cara');
+    throw new Error('Falta la foto');
   }
 
   if (data.selfieDataUrl && data.selfieDataUrl.startsWith('data:image')) {
@@ -471,7 +472,12 @@ export function submitOnboardingKyc(
   account.legalName = data.legalName.trim();
   account.name = account.legalName;
   account.cuit = data.cuit.trim();
-  account.kycStatus = process.env.HACKATHON_DEMO === 'true' ? 'APPROVED' : 'PENDING';
+  // On testnet validation is automatic — there is no real KYC provider behind
+  // the form, so anything else would just strand the user on the pending page.
+  const autoApprove =
+    process.env.HACKATHON_DEMO === 'true' ||
+    getTestnetConfig().networkPassphrase.includes('Test SDF');
+  account.kycStatus = autoApprove ? 'APPROVED' : 'PENDING';
   account.kycId = account.kycId || `kyc-${account.id}`;
   save();
   if (account.kycStatus === 'APPROVED' && account.publicKey) {
