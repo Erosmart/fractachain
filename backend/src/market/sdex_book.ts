@@ -192,7 +192,7 @@ async function loadSdexBook(listingId: string, accountId?: string): Promise<Sdex
 
   const [book, trades] = await Promise.all([
     getOrderBook(security, counter),
-    getRecentTrades(security, counter).catch(() => []),
+    getRecentTrades(security, counter, 100).catch(() => []),
   ]);
 
   // Orders resting on the old counter asset are still real orders: merge them
@@ -205,7 +205,7 @@ async function loadSdexBook(listingId: string, accountId?: string): Promise<Sdex
   if (legacy) {
     const [legacyBook, legacyTrades] = await Promise.all([
       getOrderBook(security, legacy).catch(() => null),
-      getRecentTrades(security, legacy).catch(() => []),
+      getRecentTrades(security, legacy, 100).catch(() => []),
     ]);
     if (legacyBook) {
       const bids = [...book.bids, ...legacyBook.bids.map((b) => ({ ...b, legacy: true }))]
@@ -223,7 +223,7 @@ async function loadSdexBook(listingId: string, accountId?: string): Promise<Sdex
       };
       mergedTrades = [...trades, ...legacyTrades.map((t: any) => ({ ...t, legacy: true }))]
         .sort((a: any, b: any) => String(b.createdAt).localeCompare(String(a.createdAt)))
-        .slice(0, trades.length || 20);
+        .slice(0, 150);
       legacyOffers = legacyBook.bids.length + legacyBook.asks.length;
     }
   }

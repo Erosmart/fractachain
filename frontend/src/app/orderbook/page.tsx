@@ -41,7 +41,7 @@ type Book = {
   spread: number | null;
   asks: Level[];
   bids: Level[];
-  trades: { id: string; price: number; amount: number; buyer?: string; seller?: string; createdAt: string }[];
+  trades: { id: string; price: number; amount: number; buyer?: string; seller?: string; createdAt: string; legacy?: boolean }[];
   myOrders: MyOrder[];
   reservedCash?: number;
   reservedTokens?: number;
@@ -518,12 +518,12 @@ function OrderbookInner() {
                   <span className="text-right">{t('ob.buyer')}</span>
                   <span className="text-right">{t('ob.seller')}</span>
                 </div>
-                {book.trades.slice(0, 12).map((t) => (
-                  <div key={t.id} className="grid grid-cols-4 text-[11px] font-mono text-neutral-700 py-0.5 border-b border-black/5 last:border-0">
-                    <span className="font-bold">${t.price.toFixed(2)}</span>
-                    <span className="text-right">{fmtQty(t.amount)}</span>
-                    <span className="text-right text-[#2f6f28]" title={t.buyer}>{t.buyer ? `${t.buyer.slice(0, 4)}…${t.buyer.slice(-4)}` : '—'}</span>
-                    <span className="text-right text-red-700" title={t.seller}>{t.seller ? `${t.seller.slice(0, 4)}…${t.seller.slice(-4)}` : '—'}</span>
+                {book.trades.slice(0, 20).map((tr) => (
+                  <div key={tr.id} className="grid grid-cols-4 text-[11px] font-mono text-neutral-700 py-0.5 border-b border-black/5 last:border-0">
+                    <span className="font-bold">${tr.price.toFixed(2)}{tr.legacy && <span className="ml-1 text-[8px] text-amber-600 font-bold uppercase">{t('ob.legacy')}</span>}</span>
+                    <span className="text-right">{fmtQty(tr.amount)}</span>
+                    <span className="text-right text-[#2f6f28]" title={tr.buyer}>{tr.buyer ? `${tr.buyer.slice(0, 4)}…${tr.buyer.slice(-4)}` : '—'}</span>
+                    <span className="text-right text-red-700" title={tr.seller}>{tr.seller ? `${tr.seller.slice(0, 4)}…${tr.seller.slice(-4)}` : '—'}</span>
                   </div>
                 ))}
               </div>
@@ -701,7 +701,7 @@ function PriceSparkline({ trades, refPrice }: { trades: { price: number; created
       (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     );
     const prices = [refPrice, ...sorted.map((t) => t.price)];
-    return prices.slice(-40);
+    return prices.slice(-120);
   }, [trades, refPrice]);
 
   const w = 600;
