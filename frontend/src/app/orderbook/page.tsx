@@ -41,7 +41,7 @@ type Book = {
   spread: number | null;
   asks: Level[];
   bids: Level[];
-  trades: { id: string; price: number; amount: number; buyer?: string; seller?: string; createdAt: string }[];
+  trades: { id: string; price: number; amount: number; buyer?: string; seller?: string; createdAt: string; legacy?: boolean }[];
   myOrders: MyOrder[];
   reservedCash?: number;
   reservedTokens?: number;
@@ -51,6 +51,7 @@ type Book = {
   authorized?: boolean;
   needsTrustline?: boolean;
   tokenBalance?: number;
+  usdcBalance?: number;
 };
 
 /** Shape returned by /api/sdex/:id, before we fold it into `Book`. */
@@ -230,9 +231,12 @@ function OrderbookInner() {
   const reservedCash = book?.reservedCash ?? 0;
   const reservedTokens = book?.reservedTokens ?? 0;
 
-  const freeCash = Math.max(0, Number(user?.cashUsdc || 0) - reservedCash);
-  // On SDEX the balance comes from the trustline, and Stellar already nets out
-  // what resting offers have locked, so there is nothing to subtract.
+  // On SDEX the spendable balance lives on-chain: the backend already nets out
+  // what resting offers have locked (liabilities), so use it as-is. Sandbox
+  // books keep using the platform ledger minus reserved cash.
+  const freeCash = onSdex
+    ? Number(book?.usdcBalance || 0)
+    : Math.max(0, Number(user?.cashUsdc || 0) - reservedCash);
   const freeTokens = onSdex
     ? Number(book?.tokenBalance || 0)
     : Math.max(0, Number(holding?.tokens || 0) - reservedTokens);
@@ -518,12 +522,12 @@ function OrderbookInner() {
                   <span className="text-right">{t('ob.buyer')}</span>
                   <span className="text-right">{t('ob.seller')}</span>
                 </div>
-                {book.trades.slice(0, 12).map((t) => (
-                  <div key={t.id} className="grid grid-cols-4 text-[11px] font-mono text-neutral-700 py-0.5 border-b border-black/5 last:border-0">
-                    <span className="font-bold">${t.price.toFixed(2)}</span>
-                    <span className="text-right">{fmtQty(t.amount)}</span>
-                    <span className="text-right text-[#2f6f28]" title={t.buyer}>{t.buyer ? `${t.buyer.slice(0, 4)}…${t.buyer.slice(-4)}` : '—'}</span>
-                    <span className="text-right text-red-700" title={t.seller}>{t.seller ? `${t.seller.slice(0, 4)}…${t.seller.slice(-4)}` : '—'}</span>
+                {book.trades.slice(0, 20).map((tr) => (
+                  <div key={tr.id} className="grid grid-cols-4 text-[11px] font-mono text-neutral-700 py-0.5 border-b border-black/5 last:border-0">
+                    <span className="font-bold">${tr.price.toFixed(2)}{tr.legacy && <span className="ml-1 text-[8px] text-amber-600 font-bold uppercase">{t('ob.legacy')}</span>}</span>
+                    <span className="text-right">{fmtQty(tr.amount)}</span>
+                    <span className="text-right text-[#2f6f28]" title={tr.buyer}>{tr.buyer ? `${tr.buyer.slice(0, 4)}…${tr.buyer.slice(-4)}` : '—'}</span>
+                    <span className="text-right text-red-700" title={tr.seller}>{tr.seller ? `${tr.seller.slice(0, 4)}…${tr.seller.slice(-4)}` : '—'}</span>
                   </div>
                 ))}
               </div>
@@ -701,7 +705,7 @@ function PriceSparkline({ trades, refPrice }: { trades: { price: number; created
       (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     );
     const prices = [refPrice, ...sorted.map((t) => t.price)];
-    return prices.slice(-40);
+    return prices.slice(-120);
   }, [trades, refPrice]);
 
   const w = 600;
