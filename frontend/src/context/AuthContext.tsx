@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { API_BASE_URL } from '../lib/api';
 import { signAndRelay } from '../lib/selfCustody';
 import { tClient } from '../lib/i18n';
+import { ensureUsdcReady } from '../lib/usdc';
 
 export type CustodyMode = 'CUSTODIAL' | 'SELF' | null;
 export type KycStatus = 'UNREGISTERED' | 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -207,6 +208,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok || !data.success || !data.user) throw new Error(data.message || tClient('err.walletLogin'));
       const u = normalize(data.user);
       applySession(data.token, data.user);
+      // Una firma Freighter más dentro del login: habilita la trustline USDC y
+      // dispara el grant. Sin ella la wallet no puede recibir USDC.
+      await ensureUsdcReady(data.token).catch(() => undefined);
       return u;
     } catch (err: any) {
       if (err?.name === 'TypeError' || /failed to fetch/i.test(err?.message || '')) {
@@ -230,6 +234,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok || !data.success) throw new Error(data.message || tClient('err.loginGeneric'));
       const u = normalize(data.user);
       applySession(data.token, data.user);
+      // Wallets ya configuradas: custodiales se fondean server-side sin popup;
+      // self-custody firma la trustline una sola vez si le falta.
+      if (u.publicKey && u.custodyMode) await ensureUsdcReady(data.token).catch(() => undefined);
       return u;
     } catch (err: any) {
       if (err?.name === 'TypeError' || /failed to fetch/i.test(err?.message || '')) {
@@ -253,6 +260,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.message || tClient('err.walletLink'));
     applySession(token, data.user);
+    // Al vincular la wallet también queda habilitada para recibir USDC.
+    await ensureUsdcReady(token).catch(() => undefined);
   }, [token, applySession]);
 
   const chooseCustody = useCallback(async (mode: 'CUSTODIAL' | 'SELF', publicKey?: string) => {
@@ -266,6 +275,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!res.ok || !data.success) throw new Error(data.message || tClient('err.custodySave'));
     if (data.secretOnce) setRevealedSecret(data.secretOnce);
     applySession(token, data.user);
+    // Mismo post-paso que en login/link: custodial se resuelve en el backend,
+    // self-custody firma el changeTrust en Freighter una sola vez.
+    await ensureUsdcReady(token).catch(() => undefined);
   }, [token, applySession]);
 
   const submitKyc = useCallback(async (payload: { legalName: string; cuit: string; selfieDataUrl?: string; email?: string }) => {

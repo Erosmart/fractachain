@@ -14,9 +14,15 @@ import { getOrderBook, getRecentTrades } from '../stellar/sdex';
 import { listDividends } from './dividends';
 import { loadAssetBalance, loadNativeXlm } from '../auth/stellar_testnet';
 import { explorerTx } from '../stellar/onchain';
+import { usdcIssuerPublicKey } from '../stellar/keys';
 
-const USDC_ISSUER =
-  process.env.STELLAR_USDC_ISSUER || 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
+// Canonical platform USDC issuer: env secret/pubkey first, then
+// deployments/testnet.json. Falling back to the Circle issuer here would make
+// the portfolio and the SDEX quote a different asset than the one licitaciones
+// actually charge.
+function usdcIssuer(): string | null {
+  return usdcIssuerPublicKey();
+}
 
 export type PriceSource = 'sdex_last' | 'sdex_mid' | 'sandbox_last' | 'ipo';
 
@@ -145,9 +151,68 @@ export async function buildPortfolio(accountId: string) {
       };
     }),
     ),
-    account.publicKey ? loadAssetBalance(account.publicKey, 'USDC', USDC_ISSUER) : Promise.resolve(0),
+    account.publicKey && usdcIssuer()
+      ? loadAssetBalance(account.publicKey, 'USDC', usdcIssuer()!)
+      : Promise.resolve(0),
     account.publicKey ? loadNativeXlm(account.publicKey) : Promise.resolve(0),
   ]);
+
+  // On-chain truth: SDEX buys never touch the local holdings ledger, so the
+  // wallet's classic token balance per tradable listing is the source of
+  // truth for what they actually hold and can sell.
+  if (account.publicKey) {
+    const tradable = listings.filter((l) => sdexAvailable(l));
+    const onChainBals = await Promise.all(
+      tradable.map((l) =>
+        loadAssetBalance(account.publicKey!, l.dossier.tokenTicker, l.dossier.issuerPublicKey)
+          .then((b) => [l.id, b] as const)
+          .catch(() => [l.id, 0] as const),
+      ),
+    );
+    for (const [listingId, bal] of onChainBals) {
+      const pos = positions.find((p) => p.listingId === listingId);
+      if (pos) {
+        pos.tokensOnChain = bal;
+        pos.shares = bal + (pos.tokensOwed || 0);
+        pos.marketValue = Math.round(pos.shares * pos.marketPrice * 1e6) / 1e6;
+        pos.pnl = Math.round((pos.marketValue - pos.costBasis) * 1e6) / 1e6;
+        pos.pnlPct = pos.costBasis > 0 ? Math.round((pos.pnl / pos.costBasis) * 10000) / 100 : 0;
+      } else if (bal > 0) {
+        const listing = tradable.find((l) => l.id === listingId)!;
+        const quote = await quoteListing(listing);
+        const marketValue = Math.round(bal * quote.price * 1e6) / 1e6;
+        positions.push({
+          listingId,
+          tokenTicker: listing.dossier.tokenTicker,
+          legalName: listing.dossier.legalName,
+          shares: bal,
+          tokens: 0,
+          tokensOwed: 0,
+          tokensOnChain: bal,
+          sdex: true,
+          // Bought on the DEX — no platform cost basis exists, so P&L starts
+          // flat instead of pretending the IPO price was the entry.
+          costBasis: marketValue,
+          marketPrice: quote.price,
+          marketValue,
+          pnl: 0,
+          pnlPct: 0,
+          priceSource: quote.source,
+          priceSourceLabel: priceSourceLabel(quote.source),
+          priceAsOf: quote.asOf,
+          pendingDividendUsdc: 0,
+          distributions: listDividends(listingId).slice(0, 3),
+          listingStatus: listing.status,
+          paymentKind: listing.dossier.paymentKind || null,
+          finalizeHash: listing.finalizeHash || null,
+          refundedAt: null,
+          refundHash: null,
+          canClaim: false,
+          canRefund: false,
+        });
+      }
+    }
+  }
 
   // What the company sees: the offerings whose raise is paid into this wallet.
   // Without this the issuer only saw sandbox USDC and concluded the XLM never

@@ -136,6 +136,7 @@ import {
   revokeToken,
   setCustody,
   custodialSigningKey,
+  findAccountByPublicKey,
   setKycStatusByKycId,
   submitOnboardingKyc,
   toPublic,
@@ -311,6 +312,17 @@ app.get('/api/wallet/state', async (req: Request, res: Response) => {
   try {
     const publicKey = String(req.query.account || '').trim();
     if (!publicKey) return res.status(400).json({ success: false, message: 'Falta account' });
+    // Self-heal: custodial wallets created before the faucet still get their
+    // trustline + grant the first time any page reads their state — no
+    // re-login or button needed. Self-custody is skipped (holder signature).
+    const owned = findAccountByPublicKey(publicKey);
+    if (owned?.custodyMode === 'CUSTODIAL') {
+      try {
+        await fundTestnetUsdc(publicKey, { walletSecret: custodialSigningKey(owned.id) });
+      } catch (err: any) {
+        console.warn('[usdc-heal]', err?.message || err);
+      }
+    }
     res.json({ success: true, data: await walletFunds(publicKey) });
   } catch (err: any) {
     res.status(400).json({ success: false, message: err.message });
@@ -1282,9 +1294,18 @@ app.post('/api/listings/:id/dividends/claim', (req: Request, res: Response) => {
   wrap(() => claimPendingDividend(account.id, req.params.id), res);
 });
 
-app.get('/api/portfolio', (req: Request, res: Response) => {
+app.get('/api/portfolio', async (req: Request, res: Response) => {
   const account = getAccountByToken(req.headers.authorization);
   if (!account) return res.status(401).json({ success: false, message: 'Iniciá sesión' });
+  // Existing custodial wallets heal here too: trustline + USDC grant the first
+  // time the dashboard loads after the faucet shipped.
+  if (account.custodyMode === 'CUSTODIAL' && account.publicKey) {
+    try {
+      await fundTestnetUsdc(account.publicKey, { walletSecret: custodialSigningKey(account.id) });
+    } catch (err: any) {
+      console.warn('[usdc-heal]', err?.message || err);
+    }
+  }
   wrapAsync(() => buildPortfolio(account.id), res);
 });
 

@@ -10,6 +10,7 @@ import { getListing, Listing } from '../admin/listings';
 import { custodialSigningKey, getAccount, markTokensOnChain } from '../auth/accounts';
 import { isStellarPublicKey } from '../auth/stellar_testnet';
 import { syncHolderAuthorization } from '../stellar/compliance';
+import { usdcIssuerPublicKey } from '../stellar/keys';
 import {
   buildBuyOfferXdr,
   buildSellOfferXdr,
@@ -26,19 +27,20 @@ import {
 } from '../stellar/sdex';
 
 /**
- * Circle's USDC on testnet, per the Stellar docs. Overridable for pubnet,
- * where the issuer differs.
+ * The classic USDC the SDEX pairs quote against. Must resolve to the same
+ * issuer the licitación escrow charges (platform issuer on testnet, Circle on
+ * pubnet) — otherwise the book would trade a different asset than the one
+ * investors paid with. `usdcIssuerPublicKey` covers env and deployments.json.
  *
- * This is the *classic* asset, deliberately not the Soroban USDC contract in
- * `issuance.ts`: SDEX trades classic assets, and only classic assets have an
- * order book.
+ * This is deliberately the *classic* asset, not the Soroban SAC: SDEX trades
+ * classic assets, and only classic assets have an order book.
  */
 const USDC_CODE = process.env.STELLAR_USDC_CODE || 'USDC';
-const USDC_ISSUER =
-  process.env.STELLAR_USDC_ISSUER || 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
 
 export function counterAsset(): Asset {
-  return new Asset(USDC_CODE, USDC_ISSUER);
+  const issuer = usdcIssuerPublicKey();
+  if (!issuer) throw new Error('Falta el emisor USDC configurado (STELLAR_USDC_ISSUER_SECRET / deployments)');
+  return new Asset(USDC_CODE, issuer);
 }
 
 export function listingAsset(listing: Listing): Asset {
