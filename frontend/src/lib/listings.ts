@@ -16,7 +16,6 @@ export const HIDDEN_LISTING_IDS = new Set([
   'IPO-MADO-muhwtllr', // test — Marcos Dorados
   'IPO-LUCAS-muhvrt8i', // test — Mc Lucas
   'IPO-MCC-muaxfboe', // test — Minecraft S.A
-  'IPO-UWU-muaw7pyt', // test — uwu s.a
 ]);
 
 export const isVisibleListing = (id?: string | null) => !!id && !HIDDEN_LISTING_IDS.has(id);
