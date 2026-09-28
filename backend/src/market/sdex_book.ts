@@ -103,6 +103,10 @@ export interface SdexBookView extends OrderBook {
   tokenBalance: number;
   /** Spendable counter balance: net of USDC already locked by open buy offers. */
   usdcBalance: number;
+  /** Raw trustline balances including what open offers lock — shown so the
+   *  order book reconciles with the portfolio total. */
+  usdcTotal: number;
+  tokenTotal: number;
   sandbox: false;
 }
 
@@ -236,6 +240,8 @@ async function loadSdexBook(listingId: string, accountId?: string): Promise<Sdex
   let needsTrustline = true;
   let tokenBalance = 0;
   let usdcBalance = 0;
+  let usdcTotal = 0;
+  let tokenTotal = 0;
 
   const account = accountId ? getAccount(accountId) : undefined;
   if (account?.publicKey) {
@@ -265,6 +271,8 @@ async function loadSdexBook(listingId: string, accountId?: string): Promise<Sdex
     needsTrustline = !line.exists;
     // Stellar counts resting-offer amounts inside `balance`; liabilities are
     // the part already locked, so what the trader can still use is the rest.
+    tokenTotal = line.balance;
+    usdcTotal = counterLine?.balance ?? 0;
     tokenBalance = Math.max(0, line.balance - line.sellingLiabilities);
     usdcBalance = Math.max(0, (counterLine?.balance ?? 0) - (counterLine?.buyingLiabilities ?? 0));
   }
@@ -284,6 +292,8 @@ async function loadSdexBook(listingId: string, accountId?: string): Promise<Sdex
     needsTrustline,
     tokenBalance,
     usdcBalance,
+    usdcTotal,
+    tokenTotal,
     sandbox: false,
   };
 }
