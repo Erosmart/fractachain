@@ -38,19 +38,19 @@ Un productor o una empresa tokeniza un activo real (cosecha, warrant, acciones).
 | Lending | Crédito LTV 40–60 % contra stock certificado | `warrant-vault` | `/warrants` |
 | Merval | Acciones 1:1 (tYPF, tGGAL…) + proof of reserve | `stock-vault` | `/stocks` |
 
-El demo que pega chain es la licitación pagada en XLM (SAC), con wallet custodial firmada por el backend. El resto de los contratos está en Rust y varios ya tienen instancia en testnet. Esas pantallas no los invocan.
+El demo que pega chain es la licitación pagada en USDC de plataforma (SAC del issuer `GCASKV…`), con wallet custodial firmada por el backend. El resto de los contratos está en Rust y varios ya tienen instancia en testnet. Esas pantallas no los invocan.
 
 ---
 
 ## 2. Función
 
-**Productor.** Arma un dossier (CUIT, ISIN, CNV, caps, TNA, wallet fiduciaria) y publica la licitación. Si cierra Successful, `finalize()` manda el XLM a la fiduciaria. Hoy eso se opera desde Admin → Emisión. Forwards y warrants en la UI son simulador.
+**Productor.** Arma un dossier (CUIT, ISIN, CNV, caps, TNA, wallet fiduciaria) y publica la licitación. Si cierra Successful, `finalize()` manda los USDC a la fiduciaria. Hoy eso se opera desde Admin → Emisión. Forwards y warrants en la UI son simulador.
 
-**Inversor.** Se registra (email; Google/Firebase y Freighter opcionales), elige custodia, pasa KYC y aporta con `contribute()` on-chain. Recibe unidades RWA en el storage del contrato, no un asset clásico en Freighter. Si la oferta falla, `refund()` le devuelve el XLM. Secundario: CLOB sandbox o Stellar DEX si el listing tiene emisor `G…` real.
+**Inversor.** Se registra (email; Google/Firebase y Freighter opcionales), elige custodia, pasa KYC y aporta con `contribute()` on-chain. Recibe unidades RWA en el storage del contrato, no un asset clásico en Freighter. Si la oferta falla, `refund()` le devuelve los USDC. Secundario: CLOB sandbox o Stellar DEX si el listing tiene emisor `G…` real.
 
-Pago live del demo = XLM (Friendbot). El USDC Circle del dashboard (`usdcOnChain`) se lee on-chain. Los 50.000 `cashUsdc` de cada cuenta nueva son sandbox. Con `HACKATHON_DEMO=true` el KYC se aprueba solo.
+Pago live del demo = USDC de plataforma (issuer `GCASKV25…`, SAC propio). Las wallets custodiales se fondean solas al registrarse / al entrar: Friendbot cubre el XLM y el issuer firma la trustline + 10.000 USDC de prueba. Wallets self-custody (Freighter) reciben el XLM y firman su trustline una vez. En testnet el KYC se aprueba solo (foto cualquiera a modo de placeholder — no hay proveedor real).
 
-La home también ofrece pesos por Alfred Pay, MoneyGram, USDC directo y Cosmos Pay. Esos on-ramps son mock. En forwards, warrants y Merval el cartel de maqueta todavía dice "aporte en USDC". El aporte que pega chain es XLM.
+La home también ofrece pesos por Alfred Pay, MoneyGram, USDC directo y Cosmos Pay. Esos on-ramps son mock. En forwards, warrants y Merval el cartel de maqueta todavía dice "aporte en USDC". El aporte que pega chain es el USDC de plataforma.
 
 ---
 
@@ -66,7 +66,7 @@ La home lo presenta como marco ya vigente: "100% regulado", "opera bajo el sandb
 
 ## 4. Arquitectura
 
-Inversor / productor → Next.js 14 (:3000) → Express (:4000) → Stellar classic (testnet: cuentas G…, XLM, SDEX, USDC Circle) y Soroban 28 (factory, licitación, stock, forward, warrant).
+Inversor / productor → Next.js 14 (:3000) → Express (:4000) → Stellar classic (testnet: cuentas G…, XLM, SDEX, USDC de plataforma `GCASKV…`) y Soroban 28 (factory, licitación, stock, forward, warrant).
 
 - Contratos (`contracts/`): workspace Cargo, soroban-sdk 28.0.0, target `wasm32v1-none`. `issuance-factory` registra cada instancia. `fractachain-core` es librería y no se despliega.
 - Backend (`backend/`): Express + TypeScript. JSON en `backend/data/`. Postgres write-through si hay `DATABASE_URL`. Firma `contribute` / `finalize` / `refund` cuando el listing es on-chain (contrato `C…` y pago XLM).
@@ -82,7 +82,7 @@ IDs públicos (sin secretos): `deployments/testnet.json`. Pipeline: `scripts/tes
 |---|---|
 | Contratos | Rust 2021, soroban-sdk 28.0.0, `wasm32v1-none` |
 | Red | Stellar testnet, Horizon + Soroban RPC, Friendbot, SDEX |
-| Tokens | SAC XLM / USDC; USDC clásico Circle (`GBBD47IF…FLA5`) para SDEX |
+| Tokens | USDC de plataforma `GCASKV25…` (SAC) para licitaciones y SDEX; el par viejo contra USDC Circle (`GBBD47IF…FLA5`) se mergea en el book por órdenes históricas |
 | API | Node 20, Express 4.19, TypeScript, `@stellar/stellar-sdk` ^17.1, `pg` opcional |
 | UI | Next.js 14.2.5, React 18.3, Tailwind 3.4, Freighter API ^6 y Firebase ^12 (opcionales) |
 | Deploy | Docker `node:20-alpine` (`output: 'standalone'`), Compose, Railway (2 servicios) |
@@ -91,29 +91,30 @@ IDs públicos (sin secretos): `deployments/testnet.json`. Pipeline: `scripts/tes
 
 ## Vivo vs mock
 
-On-chain = contrato `C…` válido y `paymentKind === 'XLM'`.
+On-chain = contrato `C…` válido de ese listing (cada oferta despliega su propia instancia desde la factory).
 
 | Pieza | Estado |
 |---|---|
-| `contribute` / `finalize` / `refund` (licitación XLM, custodial) | Vivo |
+| `contribute` / `finalize` / `refund` (licitación, custodial) | Vivo (USDC plataforma; XLM queda soportado para listings viejos) |
+| Fondeo de wallet custodial (XLM + trustline + 10.000 USDC) | Vivo, automático |
 | Trustline `AUTH_REQUIRED` al aprobar KYC | Vivo (si hay `STELLAR_ISSUER_SECRET`) |
-| Orderbook SDEX | Vivo si el listing tiene issuer `G…` |
-| USDC Circle en dashboard (`usdcOnChain`) | Vivo (Horizon) |
-| Aporte USDC de la UI, CLOB, `cashUsdc` 50.000, dividendos | Sandbox |
+| Orderbook SDEX | Vivo si el listing tiene issuer `G…`; book mergea el par legacy USDC Circle |
+| Aporte USDC de la UI, balance USDC en dashboard | Vivo |
+| CLOB, dividendos | Sandbox |
 | `/forwards` `/warrants` `/stocks` `/admin/opa` | Maqueta UI (contratos sí están en testnet) |
 | On-ramps de la home (Alfred Pay, MoneyGram, Cosmos Pay, CCTP, Near Intents, oráculos) | Mocks (`backend/src/mocks/`) |
 | Freighter para aportar | Fuera del happy path |
-| `HACKATHON_DEMO=true` | KYC auto. No es compliance real |
+| KYC | Auto-aprobado en testnet (no es compliance real) |
 
 ### IDs de contrato en testnet
 
-Los `C…` de abajo son los **contract IDs** de los contratos Soroban desplegados en Stellar testnet, tal como quedan en `deployments/testnet.json`. Son instancias compartidas del proyecto: no se deploya un contrato por empresa, así que todos los listings de `backend/data/listings.json` referencian el mismo `stockContract` (`stockVault`) y la misma `licitacionContract` (`licitacion`).
+Los `C…` de abajo son los **contract IDs** de los contratos Soroban desplegados en Stellar testnet, tal como quedan en `deployments/testnet.json`. Cada oferta nueva despliega su propio `stock-vault` + `licitacion` desde la factory — los listings viejos comparten las primeras instancias (era de contrato único), pero las emisiones actuales son independientes.
 
-Que el listing tenga un contract ID no significa que opere on-chain: el backend solo invoca al contrato cuando el ID es válido **y** el listing paga en XLM (`isOnChainListing` en `backend/src/admin/listings.ts`). Con `paymentKind: 'USDC'` los montos (`raisedUsdc`, `tokensMinted`, `cvDepositHash`) son sandbox del backend, no estado del contrato.
+Que el listing tenga un contract ID no significa que opere on-chain: el backend solo invoca al contrato cuando el ID es válido (`isOnChainListing` en `backend/src/admin/listings.ts`). Un listing sin contrato desplegado corre entero en sandbox.
 
 Testnet (2026-09-20): [factory](https://stellar.expert/explorer/testnet/contract/CDF7VE4JMPQYR6Q76MYFEEG64CZIZLOJLGSUQN5NXTZSP3U5JTWHNJGW) · [licitación](https://stellar.expert/explorer/testnet/contract/CDHKGEJNNFYKXW4XOEDXXE5LOF5HCYVORR2JT7AOK2FAN5B6I65X7JLM) · [stock](https://stellar.expert/explorer/testnet/contract/CD3MZ34ER36Z7WR66YIXH6MIYMY4OGFYVN3S5P7NNXGT6DZXVJUBDGL5) · [forward](https://stellar.expert/explorer/testnet/contract/CDAVRDFDCACOHNXXIGQGEDSVDANQ5EJISUPVMSYIDUPWRNEA4JY5AANU) · [warrant](https://stellar.expert/explorer/testnet/contract/CCC4AE7Y6VGEYCPP45Q7EUQGLHFHJNZVUV6GGAPYGMYLEAXYGHOUE2QA).
 
-Pitch en 5 pasos: register → wallet custodial → KYC → `/market` aportar XLM (`contribute`) → `finalize` / `refund`. Guion: `HACKATHON.md`, `RUNBOOK_DEMO_P0.md`.
+Pitch en 5 pasos: register → wallet custodial → KYC → `/market` aportar USDC (`contribute`) → `finalize` / `refund`. Guion: `HACKATHON.md`, `RUNBOOK_DEMO_P0.md`.
 
 ---
 
