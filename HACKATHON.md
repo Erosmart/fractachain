@@ -12,6 +12,8 @@
 4. Aportar USDC. El cupo se actualiza. Si hay emisor y wallet custodial, la trustline sale en testnet (hash en Stellar Expert).
 5. Ver la posición en Portfolio.
 
+Forwards, warrants y Merval son roadmap a futuro: hoy no forman parte del producto operativo.
+
 **Building blocks Stellar:** Soroban 28, SAC USDC/XLM, Horizon, SDEX con `AUTH_REQUIRED`, Friendbot.
 
 **No es.** Un DEX genérico, ni un token sin custodia. Es financiamiento de producción argentina.

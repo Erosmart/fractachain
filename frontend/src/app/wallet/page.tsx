@@ -33,10 +33,6 @@ export default function WalletPage() {
     (user as any)?.wallet?.publicKey ||
     '';
 
-  const cosmosPayUri = publicKey
-    ? `web+stellar:pay?destination=${publicKey}&asset_code=USDC&asset_issuer=${usdcIssuer}`
-    : '';
-
   const loadState = () => {
     if (!publicKey) return;
     fetch(`${API_BASE_URL}/api/wallet/state?account=${encodeURIComponent(publicKey)}`)
@@ -174,12 +170,6 @@ export default function WalletPage() {
               className="inline-flex items-center gap-2 text-sm font-bold text-[#2f6f28]"
             >
               Stellar Expert <ExternalLink className="w-4 h-4" />
-            </a>
-            <a
-              href={cosmosPayUri}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-black text-white font-display font-bold text-sm"
-            >
-              <Wallet className="w-4 h-4" /> {t('wallet.cosmosPay')}
             </a>
           </>
         ) : (

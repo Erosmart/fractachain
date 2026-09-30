@@ -5,7 +5,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js_14-000000?style=flat&logo=nextdotjs&logoColor=white)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 
-El primer mercado regulado de Activos del Mundo Real (RWA), sobre Stellar / Soroban 28: licitación de acciones para empresas y productores, con negociación en el mercado secundario.
+El primer mercado regulado de Activos del Mundo Real (RWA), sobre Stellar / Soroban 28: licitación de acciones y deuda para empresas y productores, con negociación en el mercado secundario.
 
 [github.com/Erosmart/fractachain](https://github.com/Erosmart/fractachain) · Argentina Builder Challenge · Stellar. Código source-available (`LICENSE`).
 
@@ -17,7 +17,7 @@ La home (`/`) es el pitch. Este README dice qué de eso corre de verdad en testn
 
 Queremos ser el primer mercado regulado de Activos del Mundo Real. La solución se centra en darles a empresas y productores acceso a financiamiento —emitir un título de deuda o vender sus acciones en el mercado— a un costo mucho más bajo que en el mercado tradicional.
 
-Soluciones de tokenización puede haber muchas, pero tokenización sin un mercado con liquidez no sirve. Con las herramientas de on-ramping y off-ramping que ya funcionan en Stellar, las empresas quedan expuestas a inversores de más de 90 países bajo el mismo marco jurídico que un inversor en Argentina, con operación y liquidez inmediata las 24 horas.
+Soluciones de tokenización puede haber muchas, pero tokenización sin un mercado con liquidez no sirve. Con las herramientas de on-ramping y off-ramping que ya funcionan en Stellar —anchors como Alfred Pay o MoneyGram para pasar de pesos a USDC—, las empresas quedan expuestas a inversores de más de 90 países bajo el mismo marco jurídico que un inversor en Argentina, con operación y liquidez inmediata las 24 horas.
 
 Aplicaciones de RWA puede haber miles, pero si son cerradas, donde solo comercia un grupo chico, es lo mismo de siempre. En FractaChain, cuando una empresa hace su oferta pública de acciones pueden participar todos: desde inversores pequeños hasta grandes instituciones financieras.
 
@@ -29,11 +29,11 @@ En definitiva, llevar lo mejor del mercado tradicional (seguridad jurídica, cus
 
 ## 1. Qué es
 
-Una empresa o un productor tokeniza sus acciones y las ofrece en licitación. Un inversor las suscribe y, si hay mercado, las negocia. Todo liquida en Stellar testnet. No es un DEX genérico ni un token suelto.
+Una empresa o un productor tokeniza acciones o deuda y las ofrece en licitación. Un inversor las suscribe y, si hay mercado, las negocia. Todo liquida en Stellar testnet. No es un DEX genérico ni un token suelto.
 
 | En la home | Qué hace | Contrato | UI |
 |---|---|---|---|
-| Inversión | Oferta primaria: caps, deadline, reembolso si falla | `fractachain-licitacion` | `/market` |
+| Inversión | Oferta primaria de acciones o deuda: caps, deadline, reembolso si falla | `fractachain-licitacion` | `/market` |
 | Secundario | Orderbook entre inversores sobre el Stellar DEX | SDEX nativo | `/orderbook` |
 
 El demo que pega chain es la licitación pagada en USDC de plataforma (SAC del issuer `GCASKV…`), con wallet custodial firmada por el backend.
@@ -42,23 +42,25 @@ El demo que pega chain es la licitación pagada en USDC de plataforma (SAC del i
 
 ## 2. Función
 
-**Productor.** Arma un dossier (CUIT, ISIN, CNV, caps, TNA, wallet fiduciaria) y publica la licitación. Si cierra Successful, `finalize()` manda los USDC a la fiduciaria. Hoy eso se opera desde Admin → Emisión.
+**Productor.** Arma el dossier de la oferta —el expediente de compliance: CUIT, ISIN, datos ante la CNV, caps, TNA y la wallet fiduciaria que recibe los fondos— y publica la licitación. La oferta puede ser de acciones o de deuda (bono/ON): en ambos casos primero se constituye y estructura un fideicomiso que concentra el activo, y lo que se tokeniza y se vende son partes de ese fideicomiso. Con el dossier listo se despliega el contrato, se mintean los tokens y se abre la licitación, que cierra cuando se completa el cupo (cap) o cuando llega la fecha límite. Si cerró Successful, `finalize()` manda los USDC a la fiduciaria; si no se alcanzó el mínimo de inversión, `refund()` le devuelve el aporte a cada inversor. Hoy eso se opera desde Admin → Emisión.
 
 **Inversor.** Se registra (email; Google/Firebase y Freighter opcionales), elige custodia, pasa KYC y aporta con `contribute()` on-chain. Recibe unidades RWA en el storage del contrato, no un asset clásico en Freighter. Si la oferta falla, `refund()` le devuelve los USDC. Secundario: CLOB sandbox o Stellar DEX si el listing tiene emisor `G…` real.
 
 Pago live del demo = USDC de plataforma (issuer `GCASKV25…`, SAC propio). Las wallets custodiales se fondean solas al registrarse / al entrar: Friendbot cubre el XLM y el issuer firma la trustline + 10.000 USDC de prueba. Wallets self-custody (Freighter) reciben el XLM y firman su trustline una vez. En testnet el KYC se aprueba solo (foto cualquiera a modo de placeholder — no hay proveedor real).
 
-La home también ofrece pesos por Alfred Pay, MoneyGram, USDC directo y Cosmos Pay. Esos on-ramps son mock. El aporte que pega chain es el USDC de plataforma.
+La entrada de pesos a USDC se apoya en los anchors de on/off-ramping que ya operan en Stellar (Alfred Pay, MoneyGram). Hoy la home los muestra como mock; el aporte que pega chain es el USDC de plataforma.
 
 ---
 
 ## 3. Problema
 
-El productor agropecuario necesita liquidez contra la campaña (semilla, fertilizante, flete). El inversor quiere yield con respaldo real. El circuito banco / warrant / Caja de Valores es lento, caro para pymes y casi no tiene secundario.
+El productor agropecuario necesita liquidez contra la campaña (semilla, fertilizante, flete) y las pymes casi no acceden al mercado de capitales: emitir acciones o deuda por la vía tradicional es lento y caro, y el circuito banco / warrant / Caja de Valores casi no tiene secundario. El inversor quiere yield con respaldo real.
 
-Fractachain recorta eso sobre Stellar: el expediente viaja con la emisión, el dinero queda en un contrato con caps y deadline, hay `refund` si falla, y si cierra el productor cobra en la fiduciaria y el inversor puede negociar.
+Fractachain recorta eso sobre Stellar dentro del marco de la CNV (régimen de tokenización: Ley 26.831 y Ley 27.440, RG 1069/25, RG 1081/25, RG 1150/26; registro PSAV y custodia, RG 1058/25): el expediente viaja con la emisión, el dinero queda en un contrato con caps y deadline, hay `refund` si falla, y si cierra el productor cobra en la fiduciaria y el inversor puede negociar.
 
-La home lo presenta como marco ya vigente: "100% regulado", "opera bajo el sandbox de la CNV", RG 1150 / Ley 26.831. Es el diseño legal del producto, no una habilitación obtenida. El badge de la home dice Stellar Protocolo 27. Los contratos de este repo compilan con soroban-sdk 28.0.0.
+Roadmap a futuro: forwards de producción y warrants (crédito colateralizado contra stock certificado, Ley 9643) y tokenización de acciones del Merval. Hoy no son parte del producto operativo.
+
+La home lo presenta como marco ya vigente: "100% regulado", "opera bajo el sandbox de la CNV". Es el diseño legal del producto, no una habilitación obtenida. El badge de la home dice Stellar Protocolo 27. Los contratos de este repo compilan con soroban-sdk 28.0.0.
 
 ---
 
@@ -99,7 +101,7 @@ On-chain = contrato `C…` válido de ese listing (cada oferta despliega su prop
 | Orderbook SDEX | Vivo si el listing tiene issuer `G…`; book mergea el par legacy USDC Circle |
 | Aporte USDC de la UI, balance USDC en dashboard | Vivo |
 | CLOB, dividendos | Sandbox |
-| On-ramps de la home (Alfred Pay, MoneyGram, Cosmos Pay, CCTP, Near Intents, oráculos) | Mocks (`backend/src/mocks/`) |
+| On-ramps de la home (Alfred Pay, MoneyGram, CCTP, Near Intents, oráculos) | Mocks (`backend/src/mocks/`) |
 | Freighter para aportar | Fuera del happy path |
 | KYC | Auto-aprobado en testnet (no es compliance real) |
 
