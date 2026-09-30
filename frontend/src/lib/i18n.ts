@@ -138,10 +138,17 @@ const es = {
     cnvSub: 'Sandbox RG 1150 / 2026 · Ley 26.831',
     caja: 'Caja de Valores S.A.',
     cajaSub: 'Custodia comitente 1:1',
+    stepsTitle: 'De la idea a la licitación: 4 pasos',
+    steps: [
+      ['Constitución de la sociedad', 'Una SAS o S.A. ante la IGJ / Registro Público provincial opera la plataforma y es titular de todas las inscripciones regulatorias.'],
+      ['Inscripción PSAV ante la CNV', 'El registro de Proveedores de Servicios de Activos Virtuales (Ley 27.739, RG 1058) habilita a custodiar, emitir y facilitar la compraventa de tokens. Pide programa AML/CFT ante la UIF, solvencia, idoneidad técnica y un Oficial de Cumplimiento.'],
+      ['Fideicomiso financiero', 'Con oferta pública bajo la Ley 26.831 y el Sandbox CNV (RG 1069/1081/1087/1150, vigente al 31/12/2027). Se estructura como Programa Global con Series independientes: cada emisión sucesiva sale más barata.'],
+      ['Tokenización y emisión', 'Las cuotapartes del fideicomiso —o las acciones y bonos que una empresa emite dentro de una Serie— se representan como tokens en Stellar/Soroban, respaldados 1:1 por el activo custodiado.'],
+    ],
     cards: [
       ['Diseño regulado', 'PSAV, AML/CFT, KYC on-chain y time-lock horario ART. El marco es el de la CNV; la habilitación todavía no está otorgada.'],
       ['Cualquier inversor del mundo', 'Liquidación T+0 en Stellar. El riel es global; el título sigue siendo argentino y custodiado.'],
-      ['Tres productos, un expediente', 'Consumo, futuros licitables y lending contra stock. Misma custodia, mismo regulador.'],
+      ['Un fideicomiso, muchas emisiones', 'El Programa Global emite Series independientes; con emisión frecuente la CNV habilita autorización automática (RG 1074/2025).'],
     ],
   },
   merval: {
@@ -987,10 +994,17 @@ const en: Messages = {
     cnvSub: 'Sandbox RG 1150 / 2026 · Law 26.831',
     caja: 'Caja de Valores S.A.',
     cajaSub: '1:1 beneficial custody',
+    stepsTitle: 'From idea to offering: 4 steps',
+    steps: [
+      ['Incorporate the company', 'A SAS or S.A. registered with the IGJ / provincial Public Registry operates the platform and holds every regulatory registration.'],
+      ['PSAV registration at the CNV', 'The Virtual Asset Service Provider registry (Law 27.739, RG 1058) authorizes custody, issuance and trading of tokens. It requires an AML/CFT program with the UIF, solvency, technical fitness and a Compliance Officer.'],
+      ['Financial trust', 'A public-offering fideicomiso under Law 26.831 and the CNV Sandbox (RG 1069/1081/1087/1150, in force until Dec 31, 2027), structured as a Global Program with independent Series so each new issuance gets cheaper.'],
+      ['Tokenization and issuance', 'The trust units —or the shares and bonds a client company issues inside a Series— become tokens on Stellar/Soroban, backed 1:1 by the custodied asset.'],
+    ],
     cards: [
       ['Regulatory design', 'VASP, AML/CFT, on-chain KYC and ART business-hours time-lock. The framework is the CNV one; authorization has not been granted.'],
       ['Any investor in the world', 'T+0 settlement on Stellar. The rail is global; the security stays Argentine and custodied.'],
-      ['Three products, one file', 'Consumption, auctioned forwards and lending against inventory. Same custody, same regulator.'],
+      ['One trust, many issuances', 'The Global Program issues independent Series; frequent issuance unlocks automatic CNV authorization (RG 1074/2025).'],
     ],
   },
   merval: {
