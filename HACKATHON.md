@@ -1,6 +1,6 @@
 # Fractachain — pitch Genesis (Argentina Builder Challenge)
 
-**Un problema.** El productor agropecuario argentino necesita dólares contra la campaña (semilla, fertilizante, flete) y el inversor quiere yield con respaldo real. El circuito banco / warrant / Caja de Valores es lento y casi no tiene secundario.
+**Un problema.** El productor agropecuario argentino necesita dólares contra la campaña (semilla, fertilizante, flete) y el inversor quiere yield con respaldo real. El circuito banco / warrant / Caja de Valores es lento y casi no tiene mercado secundario (donde el inversor revende lo que suscribió).
 
 **Una solución, un flujo.** Fractachain pone esa campaña en Stellar: el inversor aporta USDC a una licitación, recibe un token respaldado y puede verlo en el portfolio. Contratos Soroban (factory, licitación, stock vault) ya están en testnet.
 
