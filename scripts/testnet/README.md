@@ -22,15 +22,12 @@ bash scripts/testnet/01-keys.sh    # G… + Friendbot + backend/.env
 bash scripts/testnet/02-build.sh   # WASM
 bash scripts/testnet/03-deploy.sh  # sube e inicializa factory/stock/CBO3
 bash scripts/testnet/04-licitacion-xlm.sh  # nueva licitación XLM + bind Las Lilas
-# opcional, después del loop inversor:
-bash scripts/testnet/05-forward-warrant.sh
 ```
 
 En Windows, desde `backend/`:
 
 ```bash
 npx ts-node src/stellar/deploy_licitacion.ts
-npx ts-node src/stellar/deploy_forward_warrant.ts
 ```
 
 El 03 escribe `deployments/testnet.json` (solo IDs públicos). Las claves `S…` quedan en `backend/.env`. El 04 deja `licitacionLegacy` = CBO3… (caps rotos / USDC) y `licitacion` = la instancia XLM nueva.

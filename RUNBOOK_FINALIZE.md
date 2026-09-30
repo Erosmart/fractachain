@@ -67,4 +67,4 @@ Hashes salen con URL `https://stellar.expert/explorer/testnet/tx/<hash>`.
 - Pago: XLM testnet / Friendbot.
 - Custodia: wallet firmada por el backend.
 - RWA: unidades en el contrato, no un asset Freighter/SDEX.
-- USDC Circle, forwards, warrants, Merval: maqueta.
+- USDC Circle: maqueta.
