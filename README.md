@@ -5,7 +5,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js_14-000000?style=flat&logo=nextdotjs&logoColor=white)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 
-El primer mercado regulado de Activos del Mundo Real (RWA), sobre Stellar / Soroban 28: financiamiento para empresas y productores, warrants, forwards y acciones del Merval.
+El primer mercado regulado de Activos del Mundo Real (RWA), sobre Stellar / Soroban 28: licitación de acciones para empresas y productores, con negociación en el mercado secundario.
 
 [github.com/Erosmart/fractachain](https://github.com/Erosmart/fractachain) · Argentina Builder Challenge · Stellar. Código source-available (`LICENSE`).
 
@@ -29,28 +29,26 @@ En definitiva, llevar lo mejor del mercado tradicional (seguridad jurídica, cus
 
 ## 1. Qué es
 
-Un productor o una empresa tokeniza un activo real (cosecha, warrant, acciones). Un inversor lo suscribe y, si hay mercado, lo negocia. Todo liquida en Stellar testnet. No es un DEX genérico ni un token suelto.
+Una empresa o un productor tokeniza sus acciones y las ofrece en licitación. Un inversor las suscribe y, si hay mercado, las negocia. Todo liquida en Stellar testnet. No es un DEX genérico ni un token suelto.
 
 | En la home | Qué hace | Contrato | UI |
 |---|---|---|---|
 | Inversión | Oferta primaria: caps, deadline, reembolso si falla | `fractachain-licitacion` | `/market` |
-| Consumo | Compra a futuro de cosecha (escrow, entrega, disputa) | `forward-contract` | `/forwards` |
-| Lending | Crédito LTV 40–60 % contra stock certificado | `warrant-vault` | `/warrants` |
-| Merval | Acciones 1:1 (tYPF, tGGAL…) + proof of reserve | `stock-vault` | `/stocks` |
+| Secundario | Orderbook entre inversores sobre el Stellar DEX | SDEX nativo | `/orderbook` |
 
-El demo que pega chain es la licitación pagada en USDC de plataforma (SAC del issuer `GCASKV…`), con wallet custodial firmada por el backend. El resto de los contratos está en Rust y varios ya tienen instancia en testnet. Esas pantallas no los invocan.
+El demo que pega chain es la licitación pagada en USDC de plataforma (SAC del issuer `GCASKV…`), con wallet custodial firmada por el backend.
 
 ---
 
 ## 2. Función
 
-**Productor.** Arma un dossier (CUIT, ISIN, CNV, caps, TNA, wallet fiduciaria) y publica la licitación. Si cierra Successful, `finalize()` manda los USDC a la fiduciaria. Hoy eso se opera desde Admin → Emisión. Forwards y warrants en la UI son simulador.
+**Productor.** Arma un dossier (CUIT, ISIN, CNV, caps, TNA, wallet fiduciaria) y publica la licitación. Si cierra Successful, `finalize()` manda los USDC a la fiduciaria. Hoy eso se opera desde Admin → Emisión.
 
 **Inversor.** Se registra (email; Google/Firebase y Freighter opcionales), elige custodia, pasa KYC y aporta con `contribute()` on-chain. Recibe unidades RWA en el storage del contrato, no un asset clásico en Freighter. Si la oferta falla, `refund()` le devuelve los USDC. Secundario: CLOB sandbox o Stellar DEX si el listing tiene emisor `G…` real.
 
 Pago live del demo = USDC de plataforma (issuer `GCASKV25…`, SAC propio). Las wallets custodiales se fondean solas al registrarse / al entrar: Friendbot cubre el XLM y el issuer firma la trustline + 10.000 USDC de prueba. Wallets self-custody (Freighter) reciben el XLM y firman su trustline una vez. En testnet el KYC se aprueba solo (foto cualquiera a modo de placeholder — no hay proveedor real).
 
-La home también ofrece pesos por Alfred Pay, MoneyGram, USDC directo y Cosmos Pay. Esos on-ramps son mock. En forwards, warrants y Merval el cartel de maqueta todavía dice "aporte en USDC". El aporte que pega chain es el USDC de plataforma.
+La home también ofrece pesos por Alfred Pay, MoneyGram, USDC directo y Cosmos Pay. Esos on-ramps son mock. El aporte que pega chain es el USDC de plataforma.
 
 ---
 
@@ -60,17 +58,17 @@ El productor agropecuario necesita liquidez contra la campaña (semilla, fertili
 
 Fractachain recorta eso sobre Stellar: el expediente viaja con la emisión, el dinero queda en un contrato con caps y deadline, hay `refund` si falla, y si cierra el productor cobra en la fiduciaria y el inversor puede negociar.
 
-La home lo presenta como marco ya vigente: "100% regulado", "opera bajo el sandbox de la CNV", RG 1150 / Ley 26.831, forwards Art. 1131 CCyC y warrants Ley 9643. Es el diseño legal del producto, no una habilitación obtenida. El badge de la home dice Stellar Protocolo 27. Los contratos de este repo compilan con soroban-sdk 28.0.0.
+La home lo presenta como marco ya vigente: "100% regulado", "opera bajo el sandbox de la CNV", RG 1150 / Ley 26.831. Es el diseño legal del producto, no una habilitación obtenida. El badge de la home dice Stellar Protocolo 27. Los contratos de este repo compilan con soroban-sdk 28.0.0.
 
 ---
 
 ## 4. Arquitectura
 
-Inversor / productor → Next.js 14 (:3000) → Express (:4000) → Stellar classic (testnet: cuentas G…, XLM, SDEX, USDC de plataforma `GCASKV…`) y Soroban 28 (factory, licitación, stock, forward, warrant).
+Inversor / productor → Next.js 14 (:3000) → Express (:4000) → Stellar classic (testnet: cuentas G…, XLM, SDEX, USDC de plataforma `GCASKV…`) y Soroban 28 (factory, licitación, stock).
 
 - Contratos (`contracts/`): workspace Cargo, soroban-sdk 28.0.0, target `wasm32v1-none`. `issuance-factory` registra cada instancia. `fractachain-core` es librería y no se despliega.
 - Backend (`backend/`): Express + TypeScript. JSON en `backend/data/`. Postgres write-through si hay `DATABASE_URL`. Firma `contribute` / `finalize` / `refund` cuando el listing es on-chain (contrato `C…` y pago XLM).
-- Frontend (`frontend/`): Next 14 App Router, React 18, Tailwind. Marketplace, KYC, admin, orderbook. Forwards, warrants, stocks y OPA son maqueta, con disclaimer en esas pantallas.
+- Frontend (`frontend/`): Next 14 App Router, React 18, Tailwind. Marketplace, KYC, admin, orderbook.
 
 IDs públicos (sin secretos): `deployments/testnet.json`. Pipeline: `scripts/testnet/`. App: `RAILWAY_DEPLOY.md`.
 
@@ -101,7 +99,6 @@ On-chain = contrato `C…` válido de ese listing (cada oferta despliega su prop
 | Orderbook SDEX | Vivo si el listing tiene issuer `G…`; book mergea el par legacy USDC Circle |
 | Aporte USDC de la UI, balance USDC en dashboard | Vivo |
 | CLOB, dividendos | Sandbox |
-| `/forwards` `/warrants` `/stocks` `/admin/opa` | Maqueta UI (contratos sí están en testnet) |
 | On-ramps de la home (Alfred Pay, MoneyGram, Cosmos Pay, CCTP, Near Intents, oráculos) | Mocks (`backend/src/mocks/`) |
 | Freighter para aportar | Fuera del happy path |
 | KYC | Auto-aprobado en testnet (no es compliance real) |
@@ -112,7 +109,7 @@ Los `C…` de abajo son los **contract IDs** de los contratos Soroban desplegado
 
 Que el listing tenga un contract ID no significa que opere on-chain: el backend solo invoca al contrato cuando el ID es válido (`isOnChainListing` en `backend/src/admin/listings.ts`). Un listing sin contrato desplegado corre entero en sandbox.
 
-Testnet (2026-09-20): [factory](https://stellar.expert/explorer/testnet/contract/CDF7VE4JMPQYR6Q76MYFEEG64CZIZLOJLGSUQN5NXTZSP3U5JTWHNJGW) · [licitación](https://stellar.expert/explorer/testnet/contract/CDHKGEJNNFYKXW4XOEDXXE5LOF5HCYVORR2JT7AOK2FAN5B6I65X7JLM) · [stock](https://stellar.expert/explorer/testnet/contract/CD3MZ34ER36Z7WR66YIXH6MIYMY4OGFYVN3S5P7NNXGT6DZXVJUBDGL5) · [forward](https://stellar.expert/explorer/testnet/contract/CDAVRDFDCACOHNXXIGQGEDSVDANQ5EJISUPVMSYIDUPWRNEA4JY5AANU) · [warrant](https://stellar.expert/explorer/testnet/contract/CCC4AE7Y6VGEYCPP45Q7EUQGLHFHJNZVUV6GGAPYGMYLEAXYGHOUE2QA).
+Testnet (2026-09-20): [factory](https://stellar.expert/explorer/testnet/contract/CDF7VE4JMPQYR6Q76MYFEEG64CZIZLOJLGSUQN5NXTZSP3U5JTWHNJGW) · [licitación](https://stellar.expert/explorer/testnet/contract/CDHKGEJNNFYKXW4XOEDXXE5LOF5HCYVORR2JT7AOK2FAN5B6I65X7JLM) · [stock](https://stellar.expert/explorer/testnet/contract/CD3MZ34ER36Z7WR66YIXH6MIYMY4OGFYVN3S5P7NNXGT6DZXVJUBDGL5).
 
 Pitch en 5 pasos: register → wallet custodial → KYC → `/market` aportar USDC (`contribute`) → `finalize` / `refund`. Guion: `HACKATHON.md`, `RUNBOOK_DEMO_P0.md`.
 

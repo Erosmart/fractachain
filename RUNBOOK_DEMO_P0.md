@@ -22,7 +22,7 @@ Fecha: 2026-09-20 · Caps pitch: soft=hard=100 XLM (un ticket de 100 puede cerra
 5. Las Lilas → **Aportar XLM** → ver hash en Stellar Expert.
 6. Si el hard cap (100 XLM) está lleno → **Cerrar licitación (finalize on-chain)** en la ficha o en Emisión. Ver hash `finalize()`.
 7. Successful: el XLM ya está en la wallet de la empresa. El inversor anota RWA en portfolio (no hay claim on-chain extra). Failed: **Reembolsar XLM**.
-8. Decir en voz alta: pago demo = XLM Friendbot; RWA = unidades en el contrato, no asset Freighter; USDC/forwards/warrants/Merval = maqueta.
+8. Decir en voz alta: pago demo = XLM Friendbot; RWA = unidades en el contrato, no asset Freighter; USDC Circle = maqueta.
 
 Detalle del cierre: `RUNBOOK_FINALIZE.md`.
 
@@ -38,7 +38,6 @@ Detalle del cierre: `RUNBOOK_FINALIZE.md`.
 ## No hacer en este runbook
 
 - Commit / push (pedido explicito).
-- Instanciar forward/warrant para el pitch.
 - Prometer USDC Circle live sin faucet.
 
 ## Archivos tocados en esta sesion P0 (working tree)
