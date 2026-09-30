@@ -77,6 +77,21 @@ export default function RegulationSection() {
         <CajaMark />
       </div>
 
+      <div className="space-y-4 pt-2">
+        <h3 className="font-section text-lg sm:text-xl font-extrabold text-black">{copy.stepsTitle}</h3>
+        <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+          {copy.steps.map(([title, desc], i) => (
+            <li key={title} className="p-4 sm:p-5 rounded-2xl bg-white/70 border border-black/10 space-y-2">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-black text-white text-[11px] font-lcd font-bold">
+                {i + 1}
+              </span>
+              <div className="text-sm font-display font-bold text-black">{title}</div>
+              <p className="text-xs text-neutral-600 leading-relaxed">{desc}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
         {copy.cards.map(([title, desc], i) => {
           const Icon = icons[i];
