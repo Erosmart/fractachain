@@ -42,7 +42,7 @@ El demo que pega chain es la licitación pagada en USDC de plataforma (SAC del i
 
 ## 2. Función
 
-**Productor.** Arma el dossier de la oferta —el expediente de compliance: CUIT, ISIN, datos ante la CNV, caps, TNA y la wallet fiduciaria que recibe los fondos— y publica la licitación. La oferta puede ser de acciones o de deuda (bono/ON): en ambos casos primero se constituye y estructura un fideicomiso que concentra el activo, y lo que se tokeniza y se vende son partes de ese fideicomiso. Con el dossier listo se despliega el contrato, se mintean los tokens y se abre la licitación, que cierra cuando se completa el cupo (cap) o cuando llega la fecha límite. Si cerró Successful, `finalize()` manda los USDC a la fiduciaria; si no se alcanzó el mínimo de inversión, `refund()` le devuelve el aporte a cada inversor. Hoy eso se opera desde Admin → Emisión.
+**Productor.** Arma el dossier de la oferta —el expediente de compliance: CUIT, ISIN, datos ante la CNV, caps, TNA y la wallet fiduciaria que recibe los fondos— y publica la licitación. La oferta puede ser de acciones o de deuda (bono/ON): en ambos casos se emite bajo una Serie del fideicomiso financiero con oferta pública (ver §Estructuración legal), y lo que se tokeniza y se vende son las cuotapartes o los títulos de esa Serie. Con el dossier listo se despliega el contrato, se mintean los tokens y se abre la licitación, que cierra cuando se completa el cupo (cap) o cuando llega la fecha límite. Si cerró Successful, `finalize()` manda los USDC a la fiduciaria; si no se alcanzó el mínimo de inversión, `refund()` le devuelve el aporte a cada inversor. Hoy eso se opera desde Admin → Emisión.
 
 **Inversor.** Se registra (email; Google/Firebase y Freighter opcionales), elige custodia, pasa KYC y aporta con `contribute()` on-chain. Recibe unidades RWA en el storage del contrato, no un asset clásico en Freighter. Si la oferta falla, `refund()` le devuelve los USDC. Secundario: CLOB sandbox o Stellar DEX si el listing tiene emisor `G…` real.
 
@@ -52,19 +52,36 @@ La entrada de pesos a USDC se apoya en los anchors de on/off-ramping que ya oper
 
 ---
 
-## 3. Problema
+## 3. Estructuración legal
+
+De una idea a una oferta tokenizada hay 4 pasos:
+
+| Paso | Qué se hace | Marco |
+|---|---|---|
+| 1. Sociedad | SAS o S.A. ante la IGJ / Registro Público provincial: la operadora de la plataforma y titular de las inscripciones. | — |
+| 2. PSAV | Inscripción como Proveedor de Servicios de Activos Virtuales en la CNV: habilita a custodiar, emitir y facilitar compraventa de tokens. Pide manuales de compliance, programa AML/CFT ante la UIF, solvencia, idoneidad técnica y un Oficial de Cumplimiento. | Ley 27.739, RG CNV 1058, UIF Res. 49/2024 |
+| 3. Fideicomiso | Fideicomiso financiero con oferta pública: separa el patrimonio de los inversores del de la operadora. Se estructura como Programa Global con Series independientes (recorta >60 % el costo legal de las emisiones sucesivas). | Ley 26.831, Sandbox CNV RG 1069/1081/1087/1150 (vigente al 31/12/2027) |
+| 4. Tokenización | Las cuotapartes del fideicomiso —o las acciones/bonos que una empresa cliente emite dentro de una Serie— se representan como tokens en Stellar vía contratos Soroban, respaldados 1:1 por el activo custodiado. | `issuance-factory` → `stock-vault` + `licitacion` |
+
+Warrants y certificados de depósito (Ley 9643) y forwards de cosa futura (Art. 1131 CCyC) completan el marco del roadmap. El Sandbox CNV es una autorización formal publicada en el Boletín Oficial, no un régimen experimental informal.
+
+**En la web.** El frontend (Next.js 14) refleja ese mismo proceso: `/` es el pitch; `/register` y `/onboarding` cubren cuenta, elección de custodia y KYC; `/market` lista las licitaciones abiertas y la ficha de cada oferta ejecuta el `contribute()`; `/dashboard` muestra la posición del inversor; `/orderbook` es el secundario sobre el SDEX; `/admin` → Emisión es donde el emisor carga el dossier, despliega el contrato y abre o cierra la licitación.
+
+---
+
+## 4. Problema
 
 El productor agropecuario necesita liquidez contra la campaña (semilla, fertilizante, flete) y las pymes casi no acceden al mercado de capitales: emitir acciones o deuda por la vía tradicional es lento y caro, y el circuito banco / warrant / Caja de Valores casi no tiene secundario. El inversor quiere yield con respaldo real.
 
-Fractachain recorta eso sobre Stellar dentro del marco de la CNV (régimen de tokenización: Ley 26.831 y Ley 27.440, RG 1069/25, RG 1081/25, RG 1150/26; registro PSAV y custodia, RG 1058/25): el expediente viaja con la emisión, el dinero queda en un contrato con caps y deadline, hay `refund` si falla, y si cierra el productor cobra en la fiduciaria y el inversor puede negociar.
+Fractachain recorta eso sobre Stellar dentro del marco de la CNV (ver §Estructuración legal): el expediente viaja con la emisión, el dinero queda en un contrato con caps y deadline, hay `refund` si falla, y si cierra el productor cobra en la fiduciaria y el inversor puede negociar.
 
-Roadmap a futuro: forwards de producción y warrants (crédito colateralizado contra stock certificado, Ley 9643) y tokenización de acciones del Merval. Hoy no son parte del producto operativo.
+Roadmap a futuro: forwards de producción (Art. 1131 CCyC), warrants y crédito colateralizado contra stock certificado (Ley 9643), y tokenización de acciones del Merval. Hoy no son parte del producto operativo.
 
 La home lo presenta como marco ya vigente: "100% regulado", "opera bajo el sandbox de la CNV". Es el diseño legal del producto, no una habilitación obtenida. El badge de la home dice Stellar Protocolo 27. Los contratos de este repo compilan con soroban-sdk 28.0.0.
 
 ---
 
-## 4. Arquitectura
+## 5. Arquitectura
 
 Inversor / productor → Next.js 14 (:3000) → Express (:4000) → Stellar classic (testnet: cuentas G…, XLM, SDEX, USDC de plataforma `GCASKV…`) y Soroban 28 (factory, licitación, stock).
 
