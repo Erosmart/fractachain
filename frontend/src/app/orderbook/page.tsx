@@ -445,7 +445,7 @@ function OrderbookInner() {
               </span>
             </div>
 
-            <PriceSparkline trades={book.trades} refPrice={book.refPrice} />
+            <PriceCandles trades={book.trades} refPrice={book.refPrice} />
 
             <p className="text-[11px] text-neutral-500 inline-flex items-center gap-1.5">
               <MousePointerClick className="w-3.5 h-3.5 shrink-0" />
@@ -701,46 +701,130 @@ function OrderbookInner() {
 }
 
 /**
- * Línea de tendencia del precio: polilínea SVG de los últimos trades.
- * Con pocos trades dibuja de todas formas — arranca en el precio de
- * referencia (IPO) para que siempre haya una línea visible.
+ * Gráfico de velas japonesas del precio: agrupa los últimos trades en
+ * buckets de tiempo y dibuja OHLC + volumen. Las velas sin trades quedan
+ * planas en el cierre anterior — y las primeras en el precio de referencia
+ * (IPO) — para que siempre haya una serie visible.
  */
-function PriceSparkline({ trades, refPrice }: { trades: { price: number; createdAt: string }[]; refPrice: number }) {
-  const { t } = useI18n();
-  const points = useMemo(() => {
-    const rows = Array.isArray(trades) ? trades : [];
-    const sorted = [...rows].sort(
-      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-    );
-    const prices = [refPrice, ...sorted.map((t) => t.price)];
-    return prices.slice(-120);
+function PriceCandles({ trades, refPrice }: { trades: { price: number; amount?: number; createdAt: string }[]; refPrice: number }) {
+  const { t, locale } = useI18n();
+  const candles = useMemo(() => {
+    const sorted = (Array.isArray(trades) ? trades : [])
+      .map((tr) => ({ t: new Date(tr.createdAt).getTime(), p: tr.price, v: Number(tr.amount) || 0 }))
+      .filter((tr) => Number.isFinite(tr.t) && tr.p > 0)
+      .sort((a, b) => a.t - b.t);
+
+    const N = 44, LEAD = 4;
+    const tFirst = sorted[0]?.t ?? Date.now();
+    const tLast = sorted[sorted.length - 1]?.t ?? tFirst;
+    const dt = Math.max(tLast - tFirst, 60_000) / (N - LEAD);
+    const t0 = tFirst - LEAD * dt;
+
+    const out = Array.from({ length: N }, (_, i) => ({
+      t: t0 + i * dt, o: 0, h: -Infinity, l: Infinity, c: 0, v: 0,
+    }));
+    for (const tr of sorted) {
+      const i = Math.min(N - 1, Math.max(0, Math.floor((tr.t - t0) / dt)));
+      const b = out[i];
+      b.h = Math.max(b.h, tr.p);
+      b.l = Math.min(b.l, tr.p);
+      b.c = tr.p;
+      b.v += tr.v;
+    }
+    let prev = refPrice;
+    for (const b of out) {
+      if (!Number.isFinite(b.h)) { b.c = prev; b.h = prev; b.l = prev; }
+      b.o = prev;
+      b.h = Math.max(b.h, b.o);
+      b.l = Math.min(b.l, b.o);
+      prev = b.c;
+    }
+    return out;
   }, [trades, refPrice]);
 
-  const w = 600;
-  const h = 80;
-  const pad = 6;
-  const min = Math.min(...points);
-  const max = Math.max(...points);
-  const range = max - min || 1;
-  const step = points.length > 1 ? (w - pad * 2) / (points.length - 1) : 0;
-  const path = points
-    .map((p, i) => `${i === 0 ? 'M' : 'L'}${(pad + i * step).toFixed(1)},${(h - pad - ((p - min) / range) * (h - pad * 2)).toFixed(1)}`)
-    .join(' ');
-
-  const first = points[0];
-  const last = points[points.length - 1];
-  const up = last >= first;
+  const W = 600, H = 190;
+  const PADL = 4, PADR = 46, PADT = 8, PADB = 16, VOLH = 20;
+  const plotW = W - PADL - PADR;
+  const priceH = H - PADT - PADB - VOLH - 4;
+  const lo = Math.min(...candles.map((c) => c.l));
+  const hi = Math.max(...candles.map((c) => c.h));
+  const range = Math.max(hi - lo, 0.01);
+  const maxV = Math.max(...candles.map((c) => c.v), 1);
+  const bw = plotW / candles.length;
+  const y = (p: number) => PADT + (1 - (p - lo) / range) * priceH;
+  const first = candles[0];
+  const last = candles[candles.length - 1];
+  const up = last.c >= first.o;
+  const loc = locale === 'en' ? 'en-US' : 'es-AR';
+  const daySpan = last.t - first.t > 20 * 3600e3;
+  const timeFmt = (ts: number) =>
+    new Date(ts).toLocaleString(loc, daySpan
+      ? { day: '2-digit', month: '2-digit' }
+      : { hour: '2-digit', minute: '2-digit' });
 
   return (
     <div className="rounded-2xl border border-black/10 bg-white/60 p-3">
       <div className="flex items-center justify-between text-[11px] text-neutral-500 mb-1">
         <span className="uppercase tracking-wider font-lcd">{t('ob.trend')}</span>
         <span className={`font-mono font-bold ${up ? 'text-[#3f8f38]' : 'text-red-600'}`}>
-          {up ? '▲' : '▼'} ${last.toFixed(2)}
+          {up ? '▲' : '▼'} ${last.c.toFixed(2)}
         </span>
       </div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-20" preserveAspectRatio="none" role="img">
-        <path d={path} fill="none" stroke={up ? '#3f8f38' : '#dc2626'} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-44" role="img">
+        {/* grid horizontal + etiquetas de precio */}
+        {Array.from({ length: 5 }, (_, i) => {
+          const p = lo + (range * i) / 4;
+          const yy = y(p);
+          return (
+            <g key={i}>
+              <line x1={PADL} x2={W - PADR} y1={yy} y2={yy} stroke="#000" strokeOpacity={0.07} strokeDasharray="3 4" />
+              <text x={W - PADR + 5} y={yy + 3} fontSize={8.5} fill="#000" fillOpacity={0.45} fontFamily="monospace">
+                {p.toFixed(2)}
+              </text>
+            </g>
+          );
+        })}
+        {/* volumen + velas */}
+        {candles.map((c, i) => {
+          const x = PADL + i * bw + bw / 2;
+          const col = c.c >= c.o ? '#3f8f38' : '#dc2626';
+          const body = Math.max(1.2, Math.abs(y(c.o) - y(c.c)));
+          const top = Math.min(y(c.o), y(c.c));
+          const vh = (c.v / maxV) * VOLH;
+          return (
+            <g key={i}>
+              {vh > 0 && (
+                <rect x={x - bw * 0.32} y={H - PADB - vh} width={Math.max(1.5, bw * 0.64)} height={vh} fill={col} opacity={0.25} />
+              )}
+              <line x1={x} x2={x} y1={y(c.h)} y2={y(c.l)} stroke={col} strokeWidth={1.1} />
+              <rect x={x - bw * 0.32} y={top} width={Math.max(1.5, bw * 0.64)} height={body} fill={col} rx={0.5} />
+            </g>
+          );
+        })}
+        {/* línea de último precio */}
+        <line x1={PADL} x2={W - PADR} y1={y(last.c)} y2={y(last.c)} stroke="#111" strokeOpacity={0.5} strokeDasharray="2 3" />
+        <rect x={W - PADR + 1} y={y(last.c) - 7} width={PADR - 3} height={13} rx={3} fill="#111" />
+        <text x={W - PADR + 5} y={y(last.c) + 3} fontSize={8.5} fill="#fff" fontFamily="monospace">
+          {last.c.toFixed(2)}
+        </text>
+        {/* eje de tiempo */}
+        {[0, 0.33, 0.66, 1].map((f) => {
+          const i = Math.min(candles.length - 1, Math.round(f * (candles.length - 1)));
+          return (
+            <text
+              key={f}
+              x={Math.min(Math.max(PADL + i * bw + bw / 2, PADL + 14), W - PADR - 14)}
+              y={H - 4}
+              fontSize={8}
+              fill="#000"
+              fillOpacity={0.4}
+              fontFamily="monospace"
+              textAnchor="middle"
+            >
+              {timeFmt(candles[i].t)}
+            </text>
+          );
+        })}
       </svg>
     </div>
   );

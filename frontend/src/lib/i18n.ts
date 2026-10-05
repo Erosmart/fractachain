@@ -508,7 +508,7 @@ const es = {
     orderFail: 'No se pudo cargar la orden',
     cancelFail: 'No se pudo cancelar la orden',
     submitFail: 'No se pudo enviar a Stellar',
-    trend: 'Tendencia',
+    trend: 'Velas japonesas',
     legacy: 'USDC viejo',
   },
   stk: {
@@ -1363,7 +1363,7 @@ const en: Messages = {
     orderFail: 'Could not post the order',
     cancelFail: 'Could not cancel the order',
     submitFail: 'Could not submit to Stellar',
-    trend: 'Trend',
+    trend: 'Candlesticks',
     legacy: 'legacy USDC',
   },
   stk: {
