@@ -2,12 +2,14 @@
 
 import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Wallet } from 'lucide-react';
+import { Wallet, TrendingUp, Building2 } from 'lucide-react';
 import { useAuth, afterAuthPath } from '../../context/AuthContext';
 import { useI18n } from '../../context/I18nContext';
 import GoogleLoginButton from '../../components/GoogleLoginButton';
 import WalletAddress from '../../components/WalletAddress';
 import BrandLogo from '../../components/BrandLogo';
+
+const ISSUANCE_PATH = '/admin/issuance';
 
 export default function LoginInner() {
   const router = useRouter();
@@ -19,10 +21,14 @@ export default function LoginInner() {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [role, setRole] = useState<'investor' | 'client'>(
+    params.get('next') === ISSUANCE_PATH ? 'client' : 'investor'
+  );
+  const nextPath = () => params.get('next') || (role === 'client' ? ISSUANCE_PATH : null);
 
   const goNext = () => {
     if (!user) return;
-    router.push(afterAuthPath(user, params.get('next')));
+    router.push(afterAuthPath(user, nextPath()));
   };
 
   const handleEmail = async (e: React.FormEvent) => {
@@ -30,7 +36,7 @@ export default function LoginInner() {
     setError('');
     try {
       const u = await loginWithEmail(email, password, name);
-      router.push(afterAuthPath(u, params.get('next')));
+      router.push(afterAuthPath(u, nextPath()));
     } catch (err: any) {
       setError(err.message || t('misc.loginFail'));
     }
@@ -40,7 +46,7 @@ export default function LoginInner() {
     setError('');
     try {
       const u = await loginWithWallet();
-      router.push(afterAuthPath(u, params.get('next')));
+      router.push(afterAuthPath(u, nextPath()));
     } catch (err: any) {
       setError(err.message || t('misc.loginWalletFail'));
     }
@@ -101,10 +107,38 @@ export default function LoginInner() {
         <p className="text-xs text-neutral-600 mt-1">{t('auth.kycNoticeBody')}</p>
       </div>
 
+      <div className="space-y-3">
+        <p className="text-center text-sm font-display font-bold">{t('auth.roleQuestion')}</p>
+        <div className="grid grid-cols-2 gap-3">
+          {(
+            [
+              ['investor', TrendingUp, t('auth.investor')],
+              ['client', Building2, t('auth.client')],
+            ] as const
+          ).map(([value, Icon, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setRole(value)}
+              aria-pressed={role === value}
+              className={`py-3 px-2 rounded-2xl border font-display font-bold text-sm flex items-center justify-center gap-2 transition-colors ${
+                role === value ? 'bg-black text-white border-black' : 'bg-white border-black/15 hover:bg-black/[0.03]'
+              }`}
+            >
+              <Icon size={16} />
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="text-center text-xs text-neutral-500">
+          {role === 'client' ? t('auth.clientHint') : t('auth.investorHint')}
+        </p>
+      </div>
+
       <div className="p-6 rounded-3xl crystal-card space-y-5">
         <GoogleLoginButton
           className="w-full py-3"
-          onSuccess={(u) => router.push(afterAuthPath(u as any, params.get('next')))}
+          onSuccess={(u) => router.push(afterAuthPath(u as any, nextPath()))}
         />
         <button
           type="button"

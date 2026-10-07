@@ -231,6 +231,11 @@ const es = {
       'Después de crear tu cuenta pedimos nombre, CUIT y una foto. En producción la validación la hace un proveedor de KYC del ecosistema Stellar habilitado en Argentina (SEP-12).',
     linkWallet: 'Vincular mi Freighter a esta cuenta',
     linkWalletHint: 'Firma el challenge y queda guardada en el backend.',
+    roleQuestion: '¿Cómo querés usar Fractachain?',
+    investor: 'Soy inversor',
+    client: 'Soy cliente (empresa)',
+    investorHint: 'Vas a poder aportar en las licitaciones y operar en el mercado secundario.',
+    clientHint: 'Vas a poder cargar tu empresa y pedir la emisión de un lote.',
   },
   onboarding: {
     walletTitle: '¿Quién guarda las claves?',
@@ -1087,6 +1092,11 @@ const en: Messages = {
       'After creating your account we ask for name, tax ID and a photo. In production, verification is done by a Stellar-ecosystem KYC provider enabled for Argentina (SEP-12).',
     linkWallet: 'Link my Freighter to this account',
     linkWalletHint: 'Sign the challenge and it is stored in the backend.',
+    roleQuestion: 'How do you want to use Fractachain?',
+    investor: "I'm an investor",
+    client: "I'm a client (company)",
+    investorHint: 'You will be able to contribute to listings and trade on the secondary market.',
+    clientHint: 'You will be able to add your company and request a new issuance.',
   },
   onboarding: {
     walletTitle: 'Who holds the keys?',
