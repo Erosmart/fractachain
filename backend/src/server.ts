@@ -37,7 +37,6 @@ import {
   updateProductPrice,
 } from './admin/issuance';
 import {
-  contributeListing,
   createListing,
   deployListing,
   assertDeployable,
@@ -840,22 +839,22 @@ app.post('/api/listings/:id/licitacion', (req: Request, res: Response) => {
     const { listing: draft, deadlineMs } = prepareOpenLicitacion(req.params.id, opts);
     // Each offering gets its own instance, initialized with the company wallet
     // as fiduciary, so there is nothing left to repoint afterwards.
-    const onChain = canDeployLicitacion() ? await deployLicitacionForListing(draft, deadlineMs) : undefined;
+    if (!canDeployLicitacion()) {
+      throw new Error('deployments/testnet.json no tiene el WASM de la licitación: no se puede abrir on-chain');
+    }
+    const onChain = await deployLicitacionForListing(draft, deadlineMs);
     const listing = openLicitacion(req.params.id, opts, onChain);
     return {
       ...listing,
-      fiduciary: onChain
-        ? {
-            hash: onChain.hash,
-            fiduciary: listing.dossier.proceedsWallet,
-            paymentUnit: paymentUnit(listing),
-            usdcTrustlineReady: onChain.fiduciaryUsdcReady,
-            note:
-              onChain.fiduciaryUsdcReady === false
-                ? 'La wallet de cobro todavía no tiene trustline USDC: tiene que crearla antes del finalize o el pago falla on-chain.'
-                : null,
-          }
-        : null,
+      fiduciary: {
+        hash: onChain.hash,
+        fiduciary: listing.dossier.proceedsWallet,
+        paymentUnit: paymentUnit(listing),
+        usdcTrustlineReady: onChain.fiduciaryUsdcReady,
+        note: onChain.fiduciaryUsdcReady
+          ? null
+          : 'La wallet de cobro todavía no tiene trustline USDC: tiene que crearla antes del finalize o el pago falla on-chain.',
+      },
     };
   }, res);
 });
@@ -1040,24 +1039,21 @@ app.post('/api/listings/:id/contribute', (req: Request, res: Response) => {
     const listing = getListing(req.params.id);
     if (!listing) throw new Error('Listing no encontrado');
     const amount = Number(req.body.usdcAmount);
-    if (isOnChainListing(listing)) {
-      const chain = await contributeOnChain(listing, account.id, amount);
-      recordOnChainContribution(listing.id, account.id, {
-        amount,
-        tokens: chain.tokens,
-        raised: chain.raised,
-      });
-      const onChain = await receiptAfterContribute(listing.id, account.id, {
-        contributeHash: chain.hash,
-      });
-      // Hitting the hard cap is what the contract waits for; closing here is
-      // what keeps the company from having to ask someone to press a button.
-      const closed = await autoFinalizeIfDue(listing.id);
-      const updated = getListing(listing.id)!;
-      return { ...updated, onChain: { ...onChain, autoFinalized: Boolean(closed) } };
+    // No sandbox ledger: a contribution only exists if the contract took the USDC.
+    if (!isOnChainListing(listing)) {
+      throw new Error('Esta licitación no tiene contrato Soroban: no acepta aportes');
     }
-    contributeListing(listing.id, amount, account.id);
-    const onChain = await receiptAfterContribute(listing.id, account.id);
+    const chain = await contributeOnChain(listing, account.id, amount);
+    recordOnChainContribution(listing.id, account.id, {
+      amount,
+      tokens: chain.tokens,
+      raised: chain.raised,
+    });
+    const onChain = await receiptAfterContribute(listing.id, account.id, {
+      contributeHash: chain.hash,
+    });
+    // Hitting the hard cap is what the contract waits for; closing here is
+    // what keeps the company from having to ask someone to press a button.
     const closed = await autoFinalizeIfDue(listing.id);
     const updated = getListing(listing.id)!;
     return { ...updated, onChain: { ...onChain, autoFinalized: Boolean(closed) } };
