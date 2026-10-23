@@ -8,13 +8,44 @@ Registro de progreso del Entregable 1 del SOW (sprint desde el 19/10/2026, testn
 |---|---|---|
 | 1 | Registrar el SAC de USDC de Circle (testnet) en la factory con `set_payment_asset(PaymentKind::USDC)` | Hecho (23/10) |
 | 2 | Configurar el token de pago de la licitación con el SAC de Circle | Hecho (23/10): las instancias nuevas se inicializan con el SAC derivado del USDC configurado |
-| 3 | Normalizar decimales (7 en el SAC) y recalcular `price_per_unit` | Parcial: el SAC de Circle usa 7 decimales, igual que `toStroops`; falta bajar precios y montos de demo |
+| 3 | Normalizar decimales (7 en el SAC) y recalcular `price_per_unit` | Hecho (23/10): ver detalle abajo |
 | 4 | `contributeOnChain` en USDC | Hecho (23/10), verificado on-chain |
 | 5 | `finalizeOnChain` en USDC | Hecho (23/10), verificado on-chain |
 | 6 | `refundOnChain` en USDC | Hecho (23/10), verificado on-chain |
-| 7 | Sacar el camino sandbox (`cashUsdc`) de los listings on-chain | Pendiente |
-| 8 | Tests unitarios en Rust con `soroban_sdk::testutils` y un SAC de prueba | Pendiente |
-| — | CI en GitHub Actions con `cargo test` y el flujo E2E | Pendiente |
+| 7 | Sacar el camino sandbox (`cashUsdc`) de los listings on-chain | Hecho (23/10): ver detalle abajo |
+| 8 | Tests unitarios en Rust con `soroban_sdk::testutils` y un SAC de prueba | Escritos (23/10), pendiente de correr: falta Rust local y la conexión no alcanza para bajar el toolchain |
+| — | CI en GitHub Actions con `cargo test`, tests y typecheck | Workflow escrito (`.github/workflows/ci.yml`), corre en el primer push |
+| — | Flujo E2E en CI sobre una red Stellar local | Pendiente (semana 4 del SOW); hoy el E2E corre contra testnet con `npm run e2e:usdc` |
+
+### Detalle de la tarea 3: decimales y precio
+
+- `toStroops` convierte de decimal a unidades del SAC sin pasar por punto flotante (antes `0.1 + 0.2` perdía una unidad). Lo cubren 8 tests nuevos en `backend/src/test_runner.ts`.
+- Antes de desplegar una licitación, el backend lee `decimals()` del SAC y aborta si no es 7. Contra el SAC de Circle en testnet devuelve 7.
+- El backend rechaza, antes de firmar, los aportes que no son múltiplo del precio, con el mismo criterio que `require_divisible` del contrato.
+- `price_per_unit` se inicializa en USD reales del USDC de Circle. Defaults de demo: precio 1 USDC, inversión mínima 1, soft cap 3, hard cap 5. Entran en los 5 USDC que la tesorería da a cada wallet.
+
+### Detalle de la tarea 7: sin camino sandbox en licitaciones
+
+- Se eliminó el aporte sandbox (`contributeListing` + `debitCash`). El endpoint de aporte rechaza los listings sin contrato Soroban.
+- Una licitación solo abre si su contrato se desplegó; ya no se genera un contract ID ficticio.
+- Las licitaciones nuevas son siempre en USDC de Circle. Las que ya existen en XLM siguen funcionando hasta cerrar.
+- El saldo `cashUsdc` sigue en el orderbook sandbox y en el dashboard; sacarlo es parte del Entregable 3.
+
+### Detalle de la tarea 8: tests en Rust
+
+En `contracts/fractachain-licitacion/src/test.rs` hay 9 tests nuevos con un SAC de prueba en la escala de Circle (7 decimales) y los montos de demo:
+
+- aporte en USDC: el saldo pasa al escrow y se acreditan las unidades;
+- cierre por hard cap: el fiduciario cobra en USDC y el escrow queda en 0;
+- licitación fallida: refund devuelve todo y un segundo refund falla;
+- refund bloqueado mientras está abierta o si cerró con éxito;
+- aportes que no son múltiplo del precio (2.5 USDC, 1 unidad menos de 1 USDC);
+- aportes por encima del hard cap;
+- aporte sin fondos no mueve nada;
+- cambio de token antes del primer aporte: se liquida en el token nuevo (el mismo cambio que se hizo de USDC propio a Circle);
+- token y precio quedan fijos después del primer aporte.
+
+Los tests de la factory (`issuance-factory/src/test.rs`) ya cubrían registrar productos en USDC y detectar productos con un SAC rotado.
 
 ## Configuración on-chain (testnet)
 
@@ -67,4 +98,4 @@ La tesorería terminó con los mismos 20 USDC con los que empezó.
 
 - El faucet de Circle da 20 USDC cada 2 horas. Por eso el fondeo por wallet de demo es de 5 USDC (`STELLAR_USDC_GRANT`).
 - Las licitaciones creadas antes del cambio siguen con el USDC propio. El contrato no permite cambiar el token después del primer aporte.
-- Pendiente de decidir: bajar `minInvestmentUsdc` (hoy 15.000) y los caps de demo para que entren en el pool de Circle.
+- La demo en Railway necesita `STELLAR_USDC_TREASURY_SECRET` (una tesorería con USDC de Circle) cuando se despliegue este código.
