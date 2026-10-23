@@ -11,7 +11,8 @@ import { getTestnetConfig } from '../admin/testnet';
 import { custodialSigningKey, findAccountByPublicKey, getAccount, markTokensOnChain } from '../auth/accounts';
 import { isStellarPublicKey } from '../auth/stellar_testnet';
 import { syncHolderAuthorization } from '../stellar/compliance';
-import { usdcIssuerPublicKey } from '../stellar/keys';
+import { loadTestnetDeployment } from '../stellar/deployment';
+import { CIRCLE_TESTNET_USDC_ISSUER, usdcClassicAsset, usdcCode, usdcIssuerPublicKey } from '../stellar/keys';
 import {
   buildBuyOfferXdr,
   buildOfferOpsXdr,
@@ -31,35 +32,33 @@ import {
 
 /**
  * The classic USDC the SDEX pairs quote against. Must resolve to the same
- * issuer the licitación escrow charges (platform issuer on testnet, Circle on
- * pubnet) — otherwise the book would trade a different asset than the one
- * investors paid with. `usdcIssuerPublicKey` covers env and deployments.json.
+ * issuer the licitación escrow charges (Circle's, or the platform fallback)
+ * — otherwise the book would trade a different asset than the one investors
+ * paid with. `usdcClassicAsset` reads it from deployments/testnet.json.
  *
  * This is deliberately the *classic* asset, not the Soroban SAC: SDEX trades
  * classic assets, and only classic assets have an order book.
  */
-const USDC_CODE = process.env.STELLAR_USDC_CODE || 'USDC';
+const USDC_CODE = usdcCode();
 
 export function counterAsset(): Asset {
-  const issuer = usdcIssuerPublicKey();
-  if (!issuer) throw new Error('Falta el emisor USDC configurado (STELLAR_USDC_ISSUER_SECRET / deployments)');
-  return new Asset(USDC_CODE, issuer);
+  return usdcClassicAsset();
 }
 
 /**
- * Circle's faucet USDC — what testnet books quoted against before the
- * platform issuer (GCASKV…) existed. Offers left on that pair are zombies:
+ * The USDC testnet books quoted against before the last `usdc:set` switch
+ * (recorded as `usdcClassicLegacy`; Circle's when nothing was recorded, which
+ * is what preceded the platform issuer). Offers left on that pair are zombies:
  * unreachable by new orders and invisible to the book. Testnet-only concern,
- * so this returns null anywhere else (and when the platform issuer itself is
- * the legacy one, which would make the pair identical anyway).
+ * so this returns null anywhere else (and when the current issuer is the
+ * legacy one, which would make the pair identical anyway).
  */
-const LEGACY_USDC_ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
-
 export function legacyCounterAsset(): Asset | null {
   const issuer = usdcIssuerPublicKey();
-  if (!issuer || issuer === LEGACY_USDC_ISSUER) return null;
+  const legacy = loadTestnetDeployment()?.usdcClassicLegacy?.issuer || CIRCLE_TESTNET_USDC_ISSUER;
+  if (!issuer || issuer === legacy) return null;
   if (!getTestnetConfig().networkPassphrase.includes('Test SDF')) return null;
-  return new Asset(USDC_CODE, LEGACY_USDC_ISSUER);
+  return new Asset(USDC_CODE, legacy);
 }
 
 export function listingAsset(listing: Listing): Asset {

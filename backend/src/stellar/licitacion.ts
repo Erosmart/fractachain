@@ -4,7 +4,7 @@ import { custodialSigningKey, getAccount } from '../auth/accounts';
 import { isStellarPublicKey, loadAssetBalance, loadNativeXlm } from '../auth/stellar_testnet';
 import { Listing } from '../admin/listings';
 import { loadTestnetDeployment } from './deployment';
-import { hasDeployerSecret, licitacionAdminKeypair, usdcIssuerPublicKey } from './keys';
+import { hasDeployerSecret, licitacionAdminKeypair, usdcIssuerPublicKey, usdcSacId } from './keys';
 import { USDC_CODE, ensureFiduciaryUsdcTrustline } from './usdc';
 import {
   AnyClient,
@@ -41,7 +41,7 @@ export function paymentUnit(listing: Listing): 'XLM' | 'USDC' {
 
 /**
  * Pre-flight balance check before touching the contract. USDC offerings pull
- * the platform-issued testnet USDC through its SAC; XLM is only ever needed
+ * the testnet USDC (Circle's, or the platform fallback) through its SAC; XLM is only ever needed
  * for fees there. Errors name the missing asset and where to get it.
  */
 async function assertBuyerFunds(wallet: string, listing: Listing, amount: number) {
@@ -146,8 +146,7 @@ export async function deployLicitacionForListing(
   if (!wasmHash) throw new Error('deployments/testnet.json no tiene el WASM de la licitación');
 
   const isXlm = d.paymentKind === 'XLM';
-  const paymentToken = isXlm ? xlmSac() : deployment?.usdcSac;
-  if (!isLiveContractId(paymentToken)) throw new Error('Falta usdcSac en deployments/testnet.json');
+  const paymentToken = isXlm ? xlmSac() : usdcSacId();
 
   const admin = await licitacionAdminKeypair();
   const deployed = await deployFromWasmHash(wasmHash, admin);

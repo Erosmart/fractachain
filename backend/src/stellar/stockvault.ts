@@ -11,7 +11,7 @@ import { createHash } from 'crypto';
 import { Listing } from '../admin/listings';
 import { isStellarPublicKey } from '../auth/stellar_testnet';
 import { loadTestnetDeployment } from './deployment';
-import { licitacionAdminKeypair, porOracleKeypair } from './keys';
+import { licitacionAdminKeypair, porOracleKeypair, usdcSacId } from './keys';
 import {
   contractClient,
   deployFromWasmHash,
@@ -57,10 +57,7 @@ export async function deployStockVaultForListing(
   if (!wasmHash) {
     throw new Error('deployments/testnet.json no tiene el WASM del stock vault');
   }
-  const paymentToken = d?.usdcSac;
-  if (!isLiveContractId(paymentToken)) {
-    throw new Error('Falta usdcSac en deployments/testnet.json');
-  }
+  const paymentToken = usdcSacId();
 
   const admin = await licitacionAdminKeypair();
   const oracle = await porOracleKeypair();

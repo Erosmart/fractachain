@@ -308,7 +308,7 @@ app.post('/api/auth/wallet/link', async (req: Request, res: Response) => {
 
 // --- Wallet balances + testnet USDC faucet ---
 
-/** Balances the wallet page shows: native XLM plus platform-issued testnet USDC. */
+/** Balances the wallet page shows: native XLM plus the testnet USDC licitaciones settle in. */
 app.get('/api/wallet/state', async (req: Request, res: Response) => {
   try {
     const publicKey = String(req.query.account || '').trim();
@@ -334,7 +334,7 @@ app.get('/api/wallet/state', async (req: Request, res: Response) => {
 });
 
 /**
- * "Friendbot de USDC": the platform's own testnet issuer tops up the wallet.
+ * "Friendbot de USDC": the demo pool (Circle USDC) or the platform issuer tops up the wallet.
  *
  * Custodial accounts are funded inline (the backend signs their changeTrust).
  * Self-custody wallets get an unsigned changeTrust XDR for Freighter, then
