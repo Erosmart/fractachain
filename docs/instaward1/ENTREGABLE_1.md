@@ -13,8 +13,8 @@ Registro de progreso del Entregable 1 del SOW (sprint desde el 19/10/2026, testn
 | 5 | `finalizeOnChain` en USDC | Hecho (23/10), verificado on-chain |
 | 6 | `refundOnChain` en USDC | Hecho (23/10), verificado on-chain |
 | 7 | Sacar el camino sandbox (`cashUsdc`) de los listings on-chain | Hecho (23/10): ver detalle abajo |
-| 8 | Tests unitarios en Rust con `soroban_sdk::testutils` y un SAC de prueba | Escritos (23/10), pendiente de correr: falta Rust local y la conexión no alcanza para bajar el toolchain |
-| — | CI en GitHub Actions con `cargo test`, tests y typecheck | Workflow escrito (`.github/workflows/ci.yml`), corre en el primer push |
+| 8 | Tests unitarios en Rust con `soroban_sdk::testutils` y un SAC de prueba | Hecho (24/10): `cargo test --workspace --locked` pasa con 113 tests, incluidos los 9 nuevos de USDC (Rust 1.99.1) |
+| — | CI en GitHub Actions con `cargo test`, tests y typecheck | Workflow escrito (`.github/workflows/ci.yml`); corre al abrir el PR hacia `main` |
 | — | Flujo E2E en CI sobre una red Stellar local | Pendiente (semana 4 del SOW); hoy el E2E corre contra testnet con `npm run e2e:usdc` |
 
 ### Detalle de la tarea 3: decimales y precio
