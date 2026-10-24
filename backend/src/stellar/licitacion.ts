@@ -4,7 +4,7 @@ import { custodialSigningKey, getAccount } from '../auth/accounts';
 import { isStellarPublicKey, loadAssetBalance, loadNativeXlm } from '../auth/stellar_testnet';
 import { Listing } from '../admin/listings';
 import { loadTestnetDeployment } from './deployment';
-import { hasDeployerSecret, licitacionAdminKeypair, usdcIssuerPublicKey } from './keys';
+import { hasDeployerSecret, licitacionAdminKeypair, usdcIssuerPublicKey, usdcSacId } from './keys';
 import { USDC_CODE, ensureFiduciaryUsdcTrustline } from './usdc';
 import {
   AnyClient,
@@ -19,7 +19,7 @@ import {
   toStroops,
   unsignedInvocationXdr,
   wasmHashOf,
-  xlmSac,
+  assertStroopScale,
 } from './soroban';
 import {
   canFinalizeFromSnapshot,
@@ -32,7 +32,21 @@ import { explorerTx } from './onchain';
 
 const ARGENTINA = 32;
 const INVESTOR_NATIONAL = 0;
+const PAYMENT_KIND_USDC = 1;
 const YEAR_SECS = 365 * 24 * 3600;
+
+/**
+ * Mirrors the contract's `require_divisible` so a ticket that is not a whole
+ * number of units fails with a readable message before anything is signed.
+ */
+async function assertWholeUnits(listing: Listing, stroops: bigint) {
+  const client = await contractClient(licitacionId(listing));
+  const price = BigInt(await read<bigint>(client, 'get_price_per_unit'));
+  if (price > 0n && stroops % price !== 0n) {
+    const unit = fromStroops(price);
+    throw new Error(`El aporte tiene que ser múltiplo de ${unit} ${paymentUnit(listing)} (precio por unidad)`);
+  }
+}
 
 /** Asset the offering actually bills in — frozen in the contract at init. */
 export function paymentUnit(listing: Listing): 'XLM' | 'USDC' {
@@ -41,7 +55,7 @@ export function paymentUnit(listing: Listing): 'XLM' | 'USDC' {
 
 /**
  * Pre-flight balance check before touching the contract. USDC offerings pull
- * the platform-issued testnet USDC through its SAC; XLM is only ever needed
+ * the testnet USDC (Circle's, or the platform fallback) through its SAC; XLM is only ever needed
  * for fees there. Errors name the missing asset and where to get it.
  */
 async function assertBuyerFunds(wallet: string, listing: Listing, amount: number) {
@@ -125,6 +139,9 @@ export function canDeployLicitacion(): boolean {
  * Every offering needs its own contract: `Fiduciary`, caps and price freeze
  * after the first contribution, so sharing one instance across listings made
  * the second offering inherit the first one's payout wallet.
+ *
+ * New offerings always settle in USDC; XLM instances deployed earlier keep
+ * working until they close.
  */
 export async function deployLicitacionForListing(
   listing: Listing,
@@ -133,7 +150,7 @@ export async function deployLicitacionForListing(
   contractId: string;
   hash: string | null;
   factoryProductId: number | null;
-  fiduciaryUsdcReady: boolean | null;
+  fiduciaryUsdcReady: boolean;
 }> {
   const d = listing.dossier;
   const fiduciary = d.proceedsWallet?.trim().toUpperCase();
@@ -145,9 +162,8 @@ export async function deployLicitacionForListing(
     || (isLiveContractId(deployment?.licitacion) ? await wasmHashOf(deployment!.licitacion!) : '');
   if (!wasmHash) throw new Error('deployments/testnet.json no tiene el WASM de la licitación');
 
-  const isXlm = d.paymentKind === 'XLM';
-  const paymentToken = isXlm ? xlmSac() : deployment?.usdcSac;
-  if (!isLiveContractId(paymentToken)) throw new Error('Falta usdcSac en deployments/testnet.json');
+  const paymentToken = usdcSacId();
+  await assertStroopScale(paymentToken);
 
   const admin = await licitacionAdminKeypair();
   const deployed = await deployFromWasmHash(wasmHash, admin);
@@ -176,7 +192,7 @@ export async function deployLicitacionForListing(
         admin: admin.publicKey(),
         kind: 0,
         contract_address: deployed.contractId,
-        payment_kind: isXlm ? 0 : 1,
+        payment_kind: PAYMENT_KIND_USDC,
         price_per_unit: price,
         name: `${d.tokenTicker} · ${d.legalName}`,
       });
@@ -190,21 +206,18 @@ export async function deployLicitacionForListing(
   // one or finalize() fails at payout. Demo treasuries are provisioned by the
   // backend, so we open theirs; a real company opens it in its own wallet and
   // the flag tells the admin it's still pending.
-  let fiduciaryUsdcReady: boolean | null = null;
-  if (!isXlm) {
-    try {
-      const { demoTreasurySecret } = await import('../admin/demo');
-      fiduciaryUsdcReady = await ensureFiduciaryUsdcTrustline(
-        fiduciary!,
-        demoTreasurySecret(fiduciary!),
-      );
-      if (!fiduciaryUsdcReady) {
-        console.warn(`licitación USDC: ${fiduciary} aún no tiene trustline USDC`);
-      }
-    } catch (err: any) {
-      console.warn('fiduciary USDC trustline:', err?.message || err);
-      fiduciaryUsdcReady = false;
+  let fiduciaryUsdcReady = false;
+  try {
+    const { demoTreasurySecret } = await import('../admin/demo');
+    fiduciaryUsdcReady = await ensureFiduciaryUsdcTrustline(
+      fiduciary!,
+      demoTreasurySecret(fiduciary!),
+    );
+    if (!fiduciaryUsdcReady) {
+      console.warn(`licitación USDC: ${fiduciary} aún no tiene trustline USDC`);
     }
+  } catch (err: any) {
+    console.warn('fiduciary USDC trustline:', err?.message || err);
   }
   return {
     contractId: deployed.contractId,
@@ -264,11 +277,12 @@ export async function contributeOnChain(
     throw new Error('Wallet propia: firmá el aporte con Freighter desde la ficha de la licitación');
   }
   const buyer = Keypair.fromSecret(custodialSigningKey(accountId));
+  const stroops = toStroops(amount);
+  await assertWholeUnits(listing, stroops);
   await assertBuyerFunds(buyer.publicKey(), listing, amount);
 
   await verifyInvestorOnChain(listing, buyer.publicKey());
 
-  const stroops = toStroops(amount);
   const client = await contractClient(licitacionId(listing), buyer);
   const { hash } = await invoke(client, 'contribute', {
     buyer: buyer.publicKey(),
@@ -301,11 +315,13 @@ export async function prepareContributeXdr(
   amount: number,
 ): Promise<{ xdr: string; publicKey: string; verifyHash: string | null }> {
   const wallet = selfCustodyWallet(accountId);
+  const stroops = toStroops(amount);
+  await assertWholeUnits(listing, stroops);
   await assertBuyerFunds(wallet, listing, amount);
   const verifyHash = await verifyInvestorOnChain(listing, wallet);
   const xdr = await unsignedInvocationXdr(licitacionId(listing), wallet, 'contribute', {
     buyer: wallet,
-    payment_amount: toStroops(amount),
+    payment_amount: stroops,
   });
   return { xdr, publicKey: wallet, verifyHash };
 }

@@ -555,3 +555,188 @@ fn pubnet_rejects_kyc_outside_argentine_business_hours() {
     );
     assert!(f.client.is_verified(&who));
 }
+
+// --- Instaward 1, deliverable 1: a licitación settled in USDC -------------
+//
+// These run on the same scale as Circle's USDC SAC on testnet (7 decimals),
+// with the demo terms the backend opens offerings with: 1 USDC per unit,
+// soft cap 3 USDC, hard cap 5 USDC. A test SAC stands in for Circle's.
+
+/// 1 USDC in the SAC's smallest unit (7 decimals).
+const USDC: i128 = 10_000_000;
+
+struct UsdcFixture {
+    env: Env,
+    client: FractachainLicitacionContractClient<'static>,
+    admin: Address,
+    fiduciary: Address,
+    usdc: Address,
+}
+
+fn usdc_setup() -> UsdcFixture {
+    let env = Env::default();
+    env.mock_all_auths();
+    env.ledger().set_timestamp(BIZ_TS);
+
+    let admin = Address::generate(&env);
+    let fiduciary = Address::generate(&env);
+    let usdc = env
+        .register_stellar_asset_contract_v2(Address::generate(&env))
+        .address();
+    let contract_id = env.register(FractachainLicitacionContract, ());
+    let client = FractachainLicitacionContractClient::new(&env, &contract_id);
+    client.initialize(
+        &admin,
+        &fiduciary,
+        &usdc,
+        &(3 * USDC),
+        &(5 * USDC),
+        &(BIZ_TS + 30 * DAY),
+        &USDC,
+        &LegalInfo {
+            fideicomiso_hash: BytesN::from_array(&env, &[9u8; 32]),
+            cnv_record_id: String::from_str(&env, "CNV-USDC"),
+            legal_terms_uri: String::from_str(&env, "https://fractachain.example/legal"),
+        },
+    );
+    UsdcFixture { env, client, admin, fiduciary, usdc }
+}
+
+/// KYC-approved investor holding `usdc` whole USDC.
+fn usdc_investor(f: &UsdcFixture, usdc: i128) -> Address {
+    let who = Address::generate(&f.env);
+    StellarAssetClient::new(&f.env, &f.usdc).mint(&who, &(usdc * USDC));
+    f.client
+        .verify_investor(&f.admin, &who, &32, &InvestorType::National, &(BIZ_TS + 365 * DAY));
+    who
+}
+
+fn usdc_balance(f: &UsdcFixture, who: &Address) -> i128 {
+    TokenClient::new(&f.env, &f.usdc).balance(who)
+}
+
+#[test]
+fn usdc_contribution_moves_usdc_into_escrow_and_mints_units() {
+    let f = usdc_setup();
+    let buyer = usdc_investor(&f, 5);
+    f.client.contribute(&buyer, &(3 * USDC));
+
+    assert_eq!(usdc_balance(&f, &buyer), 2 * USDC);
+    assert_eq!(usdc_balance(&f, &f.client.address), 3 * USDC);
+    assert_eq!(f.client.get_total_raised(), 3 * USDC);
+    assert_eq!(f.client.get_rwa_balance(&buyer), 3);
+    assert_eq!(f.client.get_payment_token(), f.usdc);
+}
+
+#[test]
+fn usdc_hard_cap_finalize_pays_the_fiduciary_in_usdc() {
+    let f = usdc_setup();
+    let a = usdc_investor(&f, 5);
+    let b = usdc_investor(&f, 5);
+    f.client.contribute(&a, &(3 * USDC));
+    f.client.contribute(&b, &(2 * USDC));
+
+    // Hard cap reached: no need to wait for the deadline.
+    f.client.finalize();
+    assert_eq!(f.client.get_state(), State::Successful);
+    assert_eq!(usdc_balance(&f, &f.fiduciary), 5 * USDC);
+    assert_eq!(usdc_balance(&f, &f.client.address), 0);
+    assert!(f.client.proceeds_withdrawn());
+    assert_eq!(f.client.get_rwa_balance(&a), 3);
+    assert_eq!(f.client.get_rwa_balance(&b), 2);
+}
+
+#[test]
+fn usdc_failed_offering_refunds_every_unit_of_usdc() {
+    let f = usdc_setup();
+    let buyer = usdc_investor(&f, 5);
+    f.client.contribute(&buyer, &(2 * USDC));
+
+    f.env.ledger().set_timestamp(BIZ_TS + 31 * DAY);
+    f.client.finalize();
+    assert_eq!(f.client.get_state(), State::Failed);
+    assert_eq!(usdc_balance(&f, &f.fiduciary), 0);
+
+    f.client.refund(&buyer);
+    assert_eq!(usdc_balance(&f, &buyer), 5 * USDC);
+    assert_eq!(usdc_balance(&f, &f.client.address), 0);
+    assert_eq!(f.client.get_rwa_balance(&buyer), 0);
+    // A second refund has nothing left to pay.
+    assert!(f.client.try_refund(&buyer).is_err());
+}
+
+#[test]
+fn usdc_refund_is_closed_while_the_offering_is_open_or_successful() {
+    let f = usdc_setup();
+    let buyer = usdc_investor(&f, 5);
+    f.client.contribute(&buyer, &(5 * USDC));
+    assert!(f.client.try_refund(&buyer).is_err());
+    f.client.finalize();
+    assert!(f.client.try_refund(&buyer).is_err());
+    assert_eq!(usdc_balance(&f, &f.fiduciary), 5 * USDC);
+}
+
+#[test]
+fn usdc_tickets_must_be_whole_units_of_the_usdc_price() {
+    let f = usdc_setup();
+    let buyer = usdc_investor(&f, 5);
+    // 2.5 USDC at 1 USDC per unit.
+    assert!(f.client.try_contribute(&buyer, &(2 * USDC + USDC / 2)).is_err());
+    // One stroop off a whole unit.
+    assert!(f.client.try_contribute(&buyer, &(USDC - 1)).is_err());
+    assert_eq!(usdc_balance(&f, &buyer), 5 * USDC);
+}
+
+#[test]
+fn usdc_contribution_above_the_hard_cap_is_rejected() {
+    let f = usdc_setup();
+    let buyer = usdc_investor(&f, 10);
+    assert!(f.client.try_contribute(&buyer, &(6 * USDC)).is_err());
+    f.client.contribute(&buyer, &(4 * USDC));
+    assert!(f.client.try_contribute(&buyer, &(2 * USDC)).is_err());
+}
+
+#[test]
+fn usdc_contribution_without_funds_moves_nothing() {
+    let f = usdc_setup();
+    let buyer = usdc_investor(&f, 1);
+    assert!(f.client.try_contribute(&buyer, &(2 * USDC)).is_err());
+    assert_eq!(f.client.get_total_raised(), 0);
+    assert_eq!(f.client.get_rwa_balance(&buyer), 0);
+}
+
+/// The path the platform took when it moved from its own testnet USDC to
+/// Circle's: repoint an unfunded offering, then every transfer uses the new SAC.
+#[test]
+fn switching_to_another_usdc_before_funding_settles_in_the_new_token() {
+    let f = usdc_setup();
+    let circle = f
+        .env
+        .register_stellar_asset_contract_v2(Address::generate(&f.env))
+        .address();
+    f.client.set_payment_token(&f.admin, &circle);
+    assert_eq!(f.client.get_payment_token(), circle);
+
+    let buyer = usdc_investor(&f, 1);
+    StellarAssetClient::new(&f.env, &circle).mint(&buyer, &(5 * USDC));
+    f.client.contribute(&buyer, &(5 * USDC));
+    f.client.finalize();
+
+    assert_eq!(TokenClient::new(&f.env, &circle).balance(&f.fiduciary), 5 * USDC);
+    assert_eq!(usdc_balance(&f, &f.fiduciary), 0);
+    assert_eq!(usdc_balance(&f, &buyer), USDC);
+}
+
+#[test]
+fn usdc_token_and_price_are_frozen_after_the_first_contribution() {
+    let f = usdc_setup();
+    let buyer = usdc_investor(&f, 5);
+    f.client.contribute(&buyer, &USDC);
+    let other = f
+        .env
+        .register_stellar_asset_contract_v2(Address::generate(&f.env))
+        .address();
+    assert!(f.client.try_set_payment_token(&f.admin, &other).is_err());
+    assert!(f.client.try_set_price_per_unit(&f.admin, &(2 * USDC)).is_err());
+    assert_eq!(f.client.get_payment_token(), f.usdc);
+}

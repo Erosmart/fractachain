@@ -36,7 +36,7 @@ Una empresa o un productor tokeniza acciones o deuda y las ofrece en licitación
 | Inversión | Oferta primaria de acciones o deuda: caps, deadline, reembolso si falla | `fractachain-licitacion` | `/market` |
 | Secundario | Orderbook entre inversores sobre el Stellar DEX | SDEX nativo | `/orderbook` |
 
-Lo que hoy corre on-chain en el demo es la licitación: el aporte se paga en USDC de plataforma (SAC del issuer `GCASKV…`) y lo firma una wallet custodial del backend.
+Lo que hoy corre on-chain en el demo es la licitación: el aporte se paga en USDC de Circle en testnet (SAC `CBIELTK6…`, issuer `GBBD47IF…`) y lo firma una wallet custodial del backend o la wallet propia del inversor.
 
 ---
 
@@ -46,9 +46,9 @@ Lo que hoy corre on-chain en el demo es la licitación: el aporte se paga en USD
 
 **Inversor.** Se registra (email; Google/Firebase y Freighter opcionales), elige custodia, pasa KYC y aporta llamando a `contribute()` on-chain. Recibe unidades RWA registradas en el storage del contrato —no un asset clásico en Freighter—. Si la oferta falla, `refund()` le devuelve los USDC. En el mercado secundario opera un orderbook sandbox, o el Stellar DEX cuando el listing tiene un emisor `G…` real.
 
-El pago en vivo del demo es USDC de plataforma (issuer `GCASKV25…`, SAC propio). Las wallets custodiales se fondean solas al registrarse o al entrar: Friendbot cubre el XLM y el issuer firma la trustline con 10.000 USDC de prueba. Las wallets self-custody (Freighter) reciben el XLM y firman su trustline una vez. En testnet el KYC se aprueba solo (foto cualquiera a modo de placeholder — no hay proveedor real).
+El pago en vivo del demo es USDC de Circle (issuer `GBBD47IF…`). La plataforma no puede emitirlo, así que las wallets de demo se fondean desde una tesorería que se carga en [faucet.circle.com](https://faucet.circle.com) (20 USDC cada 2 horas): Friendbot cubre el XLM y la tesorería transfiere 5 USDC por wallet. Por eso las licitaciones de demo usan montos chicos (precio 1 USDC, mínimo 1, soft cap 3, hard cap 5). Las wallets self-custody (Freighter) firman su trustline una vez. El USDC propio (`GCASKV25…`) queda como fallback con `npm run usdc:set -- platform`. En testnet el KYC se aprueba solo (foto cualquiera a modo de placeholder — no hay proveedor real).
 
-La entrada de pesos a USDC se apoya en los anchors de on/off-ramping que ya operan en Stellar (Alfred Pay, MoneyGram). Hoy la home los muestra como maqueta; el aporte que corre on-chain es el USDC de plataforma.
+La entrada de pesos a USDC se apoya en los anchors de on/off-ramping que ya operan en Stellar (Alfred Pay, MoneyGram). Hoy la home los muestra como maqueta; el aporte que corre on-chain es el USDC de Circle en testnet.
 
 ---
 
@@ -85,10 +85,10 @@ La home lo presenta como marco ya vigente: "100% regulado", "opera bajo el sandb
 
 ## 5. Arquitectura
 
-Inversor / productor → Next.js 14 (:3000) → Express (:4000) → Stellar classic (testnet: cuentas G…, XLM, SDEX, USDC de plataforma `GCASKV…`) y Soroban 28 (factory, licitación, stock).
+Inversor / productor → Next.js 14 (:3000) → Express (:4000) → Stellar classic (testnet: cuentas G…, XLM, SDEX, USDC de Circle `GBBD47IF…`) y Soroban 28 (factory, licitación, stock).
 
 - Contratos (`contracts/`): workspace Cargo, soroban-sdk 28.0.0, target `wasm32v1-none`. `issuance-factory` registra cada instancia. `fractachain-core` es librería y no se despliega.
-- Backend (`backend/`): Express + TypeScript. JSON en `backend/data/`. Postgres write-through si hay `DATABASE_URL`. Firma `contribute` / `finalize` / `refund` cuando el listing es on-chain (contrato `C…` y pago XLM).
+- Backend (`backend/`): Express + TypeScript. JSON en `backend/data/`. Postgres write-through si hay `DATABASE_URL`. Firma `contribute` / `finalize` / `refund` sobre el contrato `C…` de cada licitación; no hay aportes sandbox. El USDC vigente sale de `usdcClassic` en `deployments/testnet.json` y el SAC se deriva de ese activo.
 - Frontend (`frontend/`): Next 14 App Router, React 18, Tailwind. Marketplace, KYC, admin, orderbook.
 
 IDs públicos (sin secretos): `deployments/testnet.json`. Pipeline: `scripts/testnet/`. App: `RAILWAY_DEPLOY.md`.
@@ -101,7 +101,7 @@ IDs públicos (sin secretos): `deployments/testnet.json`. Pipeline: `scripts/tes
 |---|---|
 | Contratos | Rust 2021, soroban-sdk 28.0.0, `wasm32v1-none` |
 | Red | Stellar testnet, Horizon + Soroban RPC, Friendbot, SDEX |
-| Tokens | USDC de plataforma `GCASKV25…` (SAC) para licitaciones y SDEX; el par viejo contra USDC Circle (`GBBD47IF…FLA5`) se mergea en el book por órdenes históricas |
+| Tokens | USDC de Circle `GBBD47IF…FLA5` (SAC `CBIELTK6…DAMA`) para licitaciones y SDEX; el par viejo contra el USDC de plataforma (`GCASKV25…`) se mergea en el book por órdenes históricas |
 | API | Node 20, Express 4.19, TypeScript, `@stellar/stellar-sdk` ^17.1, `pg` opcional |
 | UI | Next.js 14.2.5, React 18.3, Tailwind 3.4, Freighter API ^6 y Firebase ^12 (opcionales) |
 | Deploy | Docker `node:20-alpine` (`output: 'standalone'`), Compose, Railway (2 servicios) |
@@ -114,10 +114,10 @@ On-chain = contrato `C…` válido de ese listing (cada oferta despliega su prop
 
 | Pieza | Estado |
 |---|---|
-| `contribute` / `finalize` / `refund` (licitación, custodial) | Vivo (USDC plataforma; XLM queda soportado para listings viejos) |
-| Fondeo de wallet custodial (XLM + trustline + 10.000 USDC) | Vivo, automático |
+| `contribute` / `finalize` / `refund` (licitación) | Vivo en USDC de Circle ([evidencia](docs/instaward1/ENTREGABLE_1.md)); XLM queda soportado para listings viejos |
+| Fondeo de wallet de demo (XLM + trustline + 5 USDC desde la tesorería) | Vivo, automático; la tesorería se recarga en faucet.circle.com |
 | Trustline `AUTH_REQUIRED` al aprobar KYC | Vivo (si hay `STELLAR_ISSUER_SECRET`) |
-| Orderbook SDEX | Vivo si el listing tiene issuer `G…`; el book combina el par legacy USDC Circle |
+| Orderbook SDEX | Vivo si el listing tiene issuer `G…`; el book combina el par legacy del USDC de plataforma |
 | Aporte USDC de la UI, balance USDC en dashboard | Vivo |
 | CLOB, dividendos | Sandbox |
 | On-ramps de la home (Alfred Pay, MoneyGram, CCTP, Near Intents, oráculos) | Mocks (`backend/src/mocks/`) |
@@ -128,7 +128,7 @@ On-chain = contrato `C…` válido de ese listing (cada oferta despliega su prop
 
 Los `C…` de abajo son los **contract IDs** de los contratos Soroban desplegados en Stellar testnet, tal como quedan en `deployments/testnet.json`. Cada oferta nueva despliega su propio `stock-vault` + `licitacion` desde la factory — los listings viejos comparten las primeras instancias (era de contrato único), pero las emisiones actuales son independientes.
 
-Que el listing tenga un contract ID no significa que opere on-chain: el backend solo invoca al contrato cuando el ID es válido (`isOnChainListing` en `backend/src/admin/listings.ts`). Un listing sin contrato desplegado corre entero en sandbox.
+El backend solo invoca al contrato cuando el ID es válido (`isOnChainListing` en `backend/src/admin/listings.ts`). Una licitación nueva no abre sin su contrato desplegado, y un listing viejo sin contrato no acepta aportes.
 
 Testnet (2026-09-20): [factory](https://stellar.expert/explorer/testnet/contract/CDF7VE4JMPQYR6Q76MYFEEG64CZIZLOJLGSUQN5NXTZSP3U5JTWHNJGW) · [licitación](https://stellar.expert/explorer/testnet/contract/CDHKGEJNNFYKXW4XOEDXXE5LOF5HCYVORR2JT7AOK2FAN5B6I65X7JLM) · [stock](https://stellar.expert/explorer/testnet/contract/CD3MZ34ER36Z7WR66YIXH6MIYMY4OGFYVN3S5P7NNXGT6DZXVJUBDGL5).
 
@@ -147,3 +147,5 @@ cd frontend && cp .env.example .env.local && npm i && npm run dev   # :3000
 ```
 
 `cd contracts && cargo test` · pipeline testnet: `scripts/testnet/README.md` · pitch: `HACKATHON.md` · demo: `RUNBOOK_DEMO_P0.md`.
+
+USDC (desde `backend/`): `npm run usdc:set -- circle` apunta la factory al USDC de Circle (`platform` vuelve al emisor propio, `--dry-run` muestra el plan sin enviar nada) y `npm run e2e:usdc` corre contribute → finalize → refund en testnet y devuelve los USDC a la tesorería. CI: `.github/workflows/ci.yml` (cargo test, typecheck y tests del backend, typecheck del frontend).
