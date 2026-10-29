@@ -2,7 +2,7 @@
 /**
  * Agentes demo: fondean una licitación (Las Lilas II) y operan el orderbook.
  *
- *   HACKATHON_DEMO=true npm run dev:api   (API en :4000)
+ *   HACKATHON_DEMO=true npm run dev   (app + API en :3000)
  *   node tools/agents/agents_lilas.mjs
  *
  * Escribe agents_secrets.json en la raíz del repo con las claves privadas
@@ -12,7 +12,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const API = process.env.API_URL || 'http://localhost:4000';
+const API = process.env.API_URL || 'http://localhost:3000';
 const N_AGENTS = Number(process.env.AGENTS || 6);
 const TRADE_ROUNDS = Number(process.env.ROUNDS || 12);
 const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', '..');
@@ -38,14 +38,18 @@ async function call(method, url, body, token) {
   return data;
 }
 
-async function login(email, name) {
-  const r = await call('POST', '/api/auth/email', { email, password: 'agente-demo-1', name });
+async function login(email, name, password = 'agente-demo-1') {
+  const r = await call('POST', '/api/auth/email', { email, password, name });
+  if (r.twoFactorRequired) throw new Error(`${email} tiene 2FA: usá un admin sin 2FA en desarrollo`);
   return { token: r.token, user: r.user };
 }
 
 async function main() {
-  // --- admin local: ADMIN_EMAILS default incluye este mail ---
-  const admin = await login('erosnahuelp85@gmail.com', 'Admin');
+  // Admin reservado por ADMIN_EMAILS; entra con ADMIN_BOOTSTRAP_PASSWORD (sin 2FA en desarrollo).
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminEmail || !adminPassword) throw new Error('Definí ADMIN_EMAIL y ADMIN_PASSWORD (el admin de ADMIN_EMAILS)');
+  const admin = await login(adminEmail, 'Admin', adminPassword);
   console.log('admin ok:', admin.user.id, 'isAdmin:', admin.user.isAdmin);
 
   // --- listing nuevo "Las Lilas II" (la de LILAS original ya llegó al hardCap) ---

@@ -1,9 +1,8 @@
 # Deploy: Docker local → Railway
 
-Dos contenedores desde el mismo repo: **API** (`apps/api`, Express) y **web**
-(`apps/web`, Astro SSR). En Railway van como **dos servicios** independientes.
-Los dos se construyen **desde la raíz** del repo (npm workspaces necesita el
-`package-lock.json` raíz).
+Fractachain es **una sola aplicación**: el servidor Node de `apps/web` sirve
+las páginas (Astro SSR) y el API (`/api`, `/health`) en el mismo proceso,
+puerto y origen. Una imagen (`Dockerfile` en la raíz), un servicio.
 
 Los IDs públicos de testnet viven en `deployments/testnet.json` (sin
 secretos). Las `S…` van en variables de entorno, nunca en la imagen.
@@ -13,60 +12,60 @@ secretos). Las `S…` van en variables de entorno, nunca en la imagen.
 ## Probar en local (igual que Railway)
 
 ```bash
-cp apps/api/.env.example apps/api/.env      # completá AUTH_SECRET y WALLET_PEPPER
+cp .env.example .env      # completá AUTH_SECRET y WALLET_PEPPER
 docker compose up --build
 ```
 
-- Web: http://localhost:3000
-- API: http://localhost:4000/health
+- App: http://localhost:3000
+- Salud: http://localhost:3000/health
 
-El estado del API (usuarios, listings, KYC…) queda en el volumen `api-data`
-(`/app/data` dentro del contenedor). `docker compose down -v` lo borra.
+El estado (usuarios, listings, KYC, auditoría…) queda en el volumen
+`app-data` (`/app/data`). `docker compose down -v` lo borra.
 
-`PUBLIC_*` se **hornea en el build** de la web. Si cambia la URL pública del
-API, hay que reconstruir:
-
-```bash
-PUBLIC_API_URL=https://tu-api.up.railway.app docker compose up --build web
-```
+`PUBLIC_*` se **hornea en el build** (build args). Los secretos del servidor
+se leen en runtime.
 
 ---
 
-## Railway (dos servicios)
+## Railway (un servicio)
 
-| | API | Web |
-|---|---|---|
-| **Root Directory** | *(vacío — raíz del repo)* | *(vacío)* |
-| **Dockerfile path** | `apps/api/Dockerfile` | `apps/web/Dockerfile` |
-| **Watch paths** | `apps/api/**`, `packages/shared/**`, `deployments/testnet.json`, `package-lock.json` | `apps/web/**`, `packages/shared/**`, `package-lock.json` |
-| **Volume** | montado en `/app/data` | — |
-| **Healthcheck** | `GET /health` | `GET /` |
+| | |
+|---|---|
+| **Root Directory** | *(vacío — raíz del repo)* |
+| **Dockerfile path** | `Dockerfile` |
+| **Watch paths** | `apps/web/**`, `packages/**`, `deployments/testnet.json`, `package-lock.json`, `Dockerfile` |
+| **Volume** | montado en `/app/data` |
+| **Healthcheck** | `GET /health` |
 
-> Migración desde v1: cambiá el *Dockerfile path* de los servicios
-> (`backend/Dockerfile` → `apps/api/Dockerfile`, `frontend/Dockerfile` →
-> `apps/web/Dockerfile`) y renombrá las variables `NEXT_PUBLIC_*` → `PUBLIC_*`.
-> El volumen del API sigue en `/app/data`.
+> **Migración desde v1 (dos servicios):** creá (o reutilizá) **un** servicio
+> con el `Dockerfile` de la raíz y montale el volumen que tenía el API en
+> `/app/data`. El servicio viejo del frontend se puede borrar. Las variables
+> `NEXT_PUBLIC_*` pasan a ser `PUBLIC_*` y `PUBLIC_API_URL` queda **vacía**
+> (mismo origen). `CORS_ORIGINS` ya no hace falta.
 
-### Variables — API (runtime)
+### Variables de runtime (secretas)
 
-Railway asigna `PORT`. Obligatorias en producción (el API no arranca sin ellas):
+Railway asigna `PORT`. Obligatorias en producción (sin ellas no arranca):
 
 ```
 NODE_ENV=production
-AUTH_SECRET=<openssl rand -hex 32>          # firma de sesiones (antes AUTH_PEPPER)
-WALLET_PEPPER=<el MISMO valor que usabas en v1>   # cifra las wallets custodiales
-CORS_ORIGINS=https://<web>.up.railway.app
+AUTH_SECRET=<openssl rand -hex 32>             # firma de sesiones (antes AUTH_PEPPER)
+WALLET_PEPPER=<el MISMO valor que usabas en v1>   # cifra wallets custodiales y secretos 2FA
+APP_URL=https://<tu-app>.up.railway.app         # links de los emails
 ADMIN_EMAILS=admin@tu-dominio
 ```
 
-Opcionales:
+Recomendadas / opcionales:
 
 ```
+SMTP_URL=smtps://usuario:clave@smtp.proveedor.com:465   # sin esto los emails van al log
+MAIL_FROM=Fractachain <no-reply@tu-dominio>
 ADMIN_BOOTSTRAP_PASSWORD=...     # contraseña inicial del admin (si la cuenta no tiene)
-FIREBASE_PROJECT_ID=...          # habilita "Ingresar con Google" (verificación de ID token)
-DATABASE_URL=postgres://...      # espejo + restore en Postgres (kv_store)
+ADMIN_REQUIRE_2FA=true           # default en producción: el panel admin exige TOTP
+REQUIRE_EMAIL_VERIFICATION=true  # default en producción: email confirmado antes del KYC
+FIREBASE_PROJECT_ID=...          # habilita "Ingresar con Google"
+DATABASE_URL=postgres://...      # espejo + restore en Postgres y locks entre réplicas
 HACKATHON_DEMO=true              # KYC auto-aprobado para el demo
-DEMO_SEED_ACCOUNTS=false         # cuenta test@fractachain.dev (por defecto off en prod)
 SESSION_TTL_HOURS=12
 TRUST_PROXY=1
 STELLAR_NETWORK=testnet
@@ -79,51 +78,53 @@ STELLAR_ISSUER_SECRET=S...
 STELLAR_USDC_ISSUER_SECRET=S...
 ```
 
-**Rotar `WALLET_PEPPER`:** poné el valor nuevo en `WALLET_PEPPER` y el viejo en
-`WALLET_PEPPER_PREVIOUS`. Cada wallet custodial se re-cifra con la clave nueva
-la primera vez que se usa. Cuando todas migraron, sacá `WALLET_PEPPER_PREVIOUS`.
+**Primer ingreso del admin en producción:** entra con
+`ADMIN_BOOTSTRAP_PASSWORD` (o Google), va a **Cuenta → Seguridad**, escanea el
+QR con una app de autenticación y guarda los códigos de recuperación. Hasta
+entonces el panel de admin responde "Activá la verificación en dos pasos".
+
+**Rotar `WALLET_PEPPER`:** valor nuevo en `WALLET_PEPPER`, el viejo en
+`WALLET_PEPPER_PREVIOUS`; cada secreto se re-cifra la primera vez que se usa.
 
 **Sesiones v1:** los tokens `fc1.` dejan de valer; cada usuario vuelve a
 ingresar una vez.
 
-### Variables — web (build)
-
-En el servicio web, como *build-time variables* (el Dockerfile las declara
-como `ARG`):
+### Variables de build (`PUBLIC_*`)
 
 ```
-PUBLIC_API_URL=https://<api>.up.railway.app
+PUBLIC_API_URL=                       # vacío: el API está en el mismo servidor
 PUBLIC_STELLAR_RPC_URL=https://soroban-testnet.stellar.org
 PUBLIC_STELLAR_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
-PUBLIC_FIREBASE_API_KEY=...            # opcionales: login con Google
+PUBLIC_FIREBASE_API_KEY=...           # opcionales: login con Google
 PUBLIC_FIREBASE_AUTH_DOMAIN=...
 PUBLIC_FIREBASE_PROJECT_ID=...
-PUBLIC_FIREBASE_STORAGE_BUCKET=...
-PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
 PUBLIC_FIREBASE_APP_ID=...
 ```
 
-Orden: primero el API, copiá su URL pública a `PUBLIC_API_URL` y a
-`CORS_ORIGINS` del API (con la URL de la web), y **rebuild** de la web.
-
 ---
 
-## Desarrollo sin la clave del deployer
+## Desarrollo sin las claves del equipo
 
 La factory compartida de testnet sólo acepta los medios de pago que registró
-su admin. Si no tenés `STELLAR_DEPLOYER_SECRET`, cloná la factory con tu admin
-local (no toca `deployments/testnet.json`):
+su admin, y el USDC de testnet lo emite una cuenta del equipo. Para tener el
+circuito completo en tu máquina, trabajá contra una **copia local** del
+deployment (nunca se toca `deployments/testnet.json`):
 
 ```bash
-mkdir -p apps/api/.local-data
-cp deployments/testnet.json apps/api/.local-data/testnet-deployment.json
-echo "STELLAR_DEPLOYMENT_FILE=$PWD/apps/api/.local-data/testnet-deployment.json" >> apps/api/.env
-STELLAR_DEPLOYMENT_FILE=$PWD/apps/api/.local-data/testnet-deployment.json \
-  npm run testnet:clone-factory -w @fractachain/api
+mkdir -p packages/api/.local-data
+cp deployments/testnet.json packages/api/.local-data/testnet-deployment.json
+echo "STELLAR_DEPLOYMENT_FILE=$PWD/packages/api/.local-data/testnet-deployment.json" >> .env
+
+npm run testnet:clone-factory                     # factory propia (XLM + USDC registrados)
+npm run testnet:setup-usdc -w @fractachain/api    # emisor USDC + SAC propios, faucet funcionando
+# contratos corregidos (requiere stellar CLI):
+bash scripts/testnet/02-build.sh
+npm run testnet:upload-wasm -w @fractachain/api -- \
+  licitacion=deployments/wasm/fractachain_licitacion.wasm stockVault=deployments/wasm/stock_vault.wasm
 ```
 
 ## Qué no va en Docker
 
 - Contratos Rust / WASM (`contracts/`, `deployments/wasm`)
-- Secretos `S…`, `apps/api/.env`, `agents_secrets.json`
+- Secretos `S…`, `.env`, `agents_secrets.json`
 - `deployments/*.local.json` (actores Friendbot)

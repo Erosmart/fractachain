@@ -2,7 +2,7 @@
   "name": "fractachain",
   "version": "2.0.0",
   "private": true,
-  "description": "Fractachain \u2014 mercado regulado de activos del mundo real (RWA) sobre Stellar / Soroban.",
+  "description": "Fractachain — mercado regulado de activos del mundo real (RWA) sobre Stellar / Soroban.",
   "license": "SEE LICENSE IN LICENSE",
   "workspaces": [
     "apps/*",
@@ -13,20 +13,20 @@
     "npm": ">=10"
   },
   "scripts": {
-    "dev": "concurrently -k -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
-    "dev:api": "npm run dev -w @fractachain/api",
-    "dev:web": "npm run dev -w @fractachain/web",
+    "dev": "npm run dev -w @fractachain/web",
+    "dev:api-only": "npm run dev -w @fractachain/api",
     "build": "npm run build -w @fractachain/api && npm run build -w @fractachain/web",
-    "start:api": "npm run start -w @fractachain/api",
-    "start:web": "npm run start -w @fractachain/web",
+    "start": "npm run start -w @fractachain/web",
     "test": "npm run test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run build -w @fractachain/api && npm run typecheck --workspaces --if-present",
     "format": "prettier --write \"apps/*/src/**/*.{ts,tsx,astro,css}\" \"packages/*/src/**/*.ts\"",
     "format:check": "prettier --check \"apps/*/src/**/*.{ts,tsx,astro,css}\" \"packages/*/src/**/*.ts\"",
-    "contracts:test": "cargo test --manifest-path contracts/Cargo.toml"
+    "contracts:test": "cargo test --manifest-path contracts/Cargo.toml",
+    "testnet:deploy-licitacion": "npm run deploy:licitacion -w @fractachain/api",
+    "testnet:deploy-forward-warrant": "npm run deploy:forward-warrant -w @fractachain/api",
+    "testnet:clone-factory": "npm run testnet:clone-factory -w @fractachain/api"
   },
   "devDependencies": {
-    "concurrently": "^10.0.6",
     "prettier": "^3.9.10",
     "prettier-plugin-astro": "^1.1.2"
   }

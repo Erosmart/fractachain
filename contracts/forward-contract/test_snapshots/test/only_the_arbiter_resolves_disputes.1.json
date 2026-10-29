@@ -533,6 +533,30 @@
               "key": {
                 "vec": [
                   {
+                    "symbol": "DisputedAt"
+                  }
+                ]
+              },
+              "durability": "persistent",
+              "val": {
+                "u64": "1000"
+              }
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 2073600
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOLZM",
+              "key": {
+                "vec": [
+                  {
                     "symbol": "HarvestDeadline"
                   }
                 ]

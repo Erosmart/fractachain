@@ -3,7 +3,8 @@ use soroban_sdk::{
     contract, contractclient, contractimpl, contracttype, Address, BytesN, Env, String, Symbol,
 };
 use fractachain_core::{
-    bump_instance, bump_persistent, require_positive, token_client, SECONDS_PER_DAY,
+    bump_instance, bump_persistent, bump_persistent_if_present, require_positive, token_client,
+    SECONDS_PER_DAY,
 };
 
 /// Subset of `issuance-factory` used to validate the payment asset.
@@ -76,6 +77,26 @@ fn require_admin(env: &Env, admin: &Address) {
         panic!("Unauthorized custodian");
     }
     admin.require_auth();
+}
+
+/// Renews every vault-wide entry. `set_meta` only covered metadata and the
+/// pause flag, so the registry, sequence counters and the dividend pool could
+/// archive under a quiet vault.
+fn bump_core(env: &Env) {
+    bump_instance(env);
+    for key in [
+        StockKey::Admin,
+        StockKey::PorOracle,
+        StockKey::Registry,
+        StockKey::PaymentToken,
+        StockKey::Metadata,
+        StockKey::MintPaused,
+        StockKey::UnclaimedPool,
+        StockKey::MintSeq,
+        StockKey::PorSeq,
+    ] {
+        bump_persistent_if_present(env, &key);
+    }
 }
 
 fn meta(env: &Env) -> StockMetadata {
@@ -191,9 +212,7 @@ impl StockVaultContract {
         env.storage().persistent().set(&StockKey::Registry, &registry);
         env.storage().persistent().set(&StockKey::PaymentToken, &payment_token);
         set_meta(&env, &metadata);
-        bump_persistent(&env, &StockKey::Admin);
-        bump_persistent(&env, &StockKey::PorOracle);
-        bump_persistent(&env, &StockKey::PaymentToken);
+        bump_core(&env);
     }
 
     pub fn transfer_admin(env: Env, admin: Address, new_admin: Address) {
@@ -204,6 +223,7 @@ impl StockVaultContract {
             panic!("Custodian cannot audit its own reserve");
         }
         env.storage().persistent().set(&StockKey::Admin, &new_admin);
+        bump_core(&env);
         env.events()
             .publish((Symbol::new(&env, "admin"), admin), new_admin);
     }
@@ -228,6 +248,7 @@ impl StockVaultContract {
             }
         }
         env.storage().persistent().set(&StockKey::PaymentToken, &new_token);
+        bump_core(&env);
         env.events()
             .publish((Symbol::new(&env, "payment_token"), admin), new_token);
     }
@@ -246,7 +267,6 @@ impl StockVaultContract {
     ) {
         require_admin(&env, &admin);
         require_positive(amount);
-        bump_instance(&env);
         let paused: bool = env.storage().persistent().get(&StockKey::MintPaused).unwrap_or(false);
         if paused {
             panic!("Mint paused: undercollateralized PoR");
@@ -287,6 +307,7 @@ impl StockVaultContract {
             .unwrap_or(0)
             + 1;
         env.storage().persistent().set(&StockKey::MintSeq, &seq);
+        bump_core(&env);
         env.storage().persistent().set(
             &StockKey::MintProof(seq),
             &(to.clone(), amount, cv_deposit_hash.clone()),
@@ -305,6 +326,7 @@ impl StockVaultContract {
     ) {
         caller.require_auth();
         require_positive(amount);
+        bump_core(&env);
         let balance = balance_of(&env, &caller);
         if balance < amount {
             panic!("Insufficient stock balance to redeem");
@@ -350,6 +372,21 @@ impl StockVaultContract {
             .checked_mul(DIV_SCALE)
             .expect("dividend overflow")
             / m.total_tokens_minted;
+        // The most this deposit can ever pay out: holders are owed
+        // `balance * accum_delta / DIV_SCALE` (rounded down per holder), and
+        // balances sum to `total_tokens_minted`, so the sum of claims is at
+        // most `minted * dividend_per_token / DIV_SCALE` — rounded *up* here
+        // to stay an upper bound across several deposits. The rest of
+        // `total_payment` is rounding dust no holder can ever claim; it used
+        // to stay counted in `UnclaimedPool` forever, so it could never be
+        // swept either.
+        let claimable = {
+            let scaled = m
+                .total_tokens_minted
+                .checked_mul(dividend_per_token)
+                .expect("dividend overflow");
+            (scaled + DIV_SCALE - 1) / DIV_SCALE
+        };
         m.dividend_per_token_accum = m
             .dividend_per_token_accum
             .checked_add(dividend_per_token)
@@ -363,9 +400,9 @@ impl StockVaultContract {
             .unwrap_or(0);
         env.storage().persistent().set(
             &StockKey::UnclaimedPool,
-            &pool.checked_add(total_payment).expect("overflow"),
+            &pool.checked_add(claimable).expect("overflow"),
         );
-        bump_persistent(&env, &StockKey::UnclaimedPool);
+        bump_core(&env);
 
         let token = payment_token(&env);
         token_client(&env, &token).transfer(&admin, &env.current_contract_address(), &total_payment);
@@ -377,6 +414,7 @@ impl StockVaultContract {
 
     pub fn claim_dividends(env: Env, investor: Address) -> i128 {
         investor.require_auth();
+        bump_core(&env);
         accrue(&env, &investor);
 
         let payout: i128 = env
@@ -439,6 +477,7 @@ impl StockVaultContract {
             .unwrap_or(0)
             + 1;
         env.storage().persistent().set(&StockKey::PorSeq, &seq);
+        bump_core(&env);
         env.storage()
             .persistent()
             .set(&StockKey::PorProof(seq), &audit_hash);
@@ -453,6 +492,7 @@ impl StockVaultContract {
     pub fn sweep_unallocated(env: Env, admin: Address, to: Address, amount: i128) {
         require_admin(&env, &admin);
         require_positive(amount);
+        bump_core(&env);
         let token = payment_token(&env);
         let held = token_client(&env, &token).balance(&env.current_contract_address());
         let committed: i128 = env
@@ -478,6 +518,28 @@ impl StockVaultContract {
 
     pub fn get_payment_token(env: Env) -> Address {
         payment_token(&env)
+    }
+
+    /// Registry (issuance factory) this vault trusts for payment assets.
+    /// Integrators should check it is the canonical factory: it is chosen by
+    /// whoever initializes the instance.
+    pub fn get_registry(env: Env) -> Address {
+        env.storage().persistent().get(&StockKey::Registry).unwrap()
+    }
+
+    /// Stored custodian/admin, readable right after `initialize_stock` so a
+    /// deployer can detect a front-run initialization.
+    pub fn get_admin(env: Env) -> Address {
+        env.storage().persistent().get(&StockKey::Admin).unwrap()
+    }
+
+    /// Payment-token balance committed to holders (what `sweep_unallocated`
+    /// can never touch).
+    pub fn get_unclaimed_pool(env: Env) -> i128 {
+        env.storage()
+            .persistent()
+            .get(&StockKey::UnclaimedPool)
+            .unwrap_or(0)
     }
 
     pub fn get_por_oracle(env: Env) -> Address {

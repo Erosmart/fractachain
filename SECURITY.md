@@ -5,7 +5,7 @@
 No abras un issue público. Escribí a los mantenedores del repositorio
 (Erosmart / Fractachain) con:
 
-- descripción y componente afectado (`apps/api`, `apps/web`, `contracts/…`),
+- descripción y componente afectado (`apps/web`, `packages/api`, `contracts/…`),
 - pasos para reproducir o prueba de concepto,
 - impacto estimado.
 
@@ -21,10 +21,10 @@ problema que permita suplantar usuarios, saltear el KYC o mover activos.
 
 ## Reglas para contribuir
 
-- **Secretos:** nunca en git ni en imágenes Docker. `apps/api/.env` y
+- **Secretos:** nunca en git ni en imágenes Docker. `.env` (raíz) y
   `agents_secrets.json` están en `.gitignore`/`.dockerignore`. En producción el
   API no arranca sin `AUTH_SECRET` y `WALLET_PEPPER` propios.
-- **Entrada:** todo body pasa por un esquema zod (`apps/api/src/http/schemas`).
+- **Entrada:** todo body pasa por un esquema zod (`packages/api/src/http/schemas`).
 - **Autorización:** declarada por ruta (`requireAuth` / `requireAdmin`); los
   servicios vuelven a chequear la propiedad de cada recurso.
 - **Transacciones firmadas por usuarios:** sólo se reenvían si

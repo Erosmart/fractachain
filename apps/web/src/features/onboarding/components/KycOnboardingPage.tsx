@@ -3,6 +3,7 @@ import { Camera } from 'lucide-react';
 import { withIsland } from '@/components/island/withIsland';
 import { container } from '@/core/container';
 import { errorMessage } from '@/core/errors';
+import { ApiError } from '@/core/http/HttpClient';
 import { imageToDataUrl } from '@/core/media/imageToDataUrl';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/hooks/useI18n';
@@ -20,6 +21,8 @@ function KycOnboardingPage() {
   const [cuit, setCuit] = useState('');
   const [selfie, setSelfie] = useState('');
   const [error, setError] = useState('');
+  const [needsEmail, setNeedsEmail] = useState(false);
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent'>('idle');
   const [busy, setBusy] = useState(false);
   const [showKycModal, setShowKycModal] = useState(true);
 
@@ -35,6 +38,7 @@ function KycOnboardingPage() {
   const submit = async (e: SubmitEvent) => {
     e.preventDefault();
     setError('');
+    setNeedsEmail(false);
     setBusy(true);
     try {
       await submitKyc({
@@ -45,9 +49,22 @@ function KycOnboardingPage() {
       });
       navigator.navigate('/onboarding/pending');
     } catch (err) {
-      setError(errorMessage(err));
+      const unverified = err instanceof ApiError && err.code === 'EMAIL_NOT_VERIFIED';
+      setNeedsEmail(unverified);
+      setError(unverified ? errorMessage(err, t('verify.kycNeedsEmail')) : errorMessage(err));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const resendVerification = async () => {
+    setResendState('sending');
+    try {
+      await container.services.security.resendVerification();
+      setResendState('sent');
+    } catch (err) {
+      setError(errorMessage(err));
+      setResendState('idle');
     }
   };
 
@@ -99,7 +116,11 @@ function KycOnboardingPage() {
         <div className="space-y-2">
           <span className="text-sm font-bold">
             {t('onboarding.selfie')}
-            {isWalletAccount && <span className="ml-2 text-xs font-normal text-neutral-500">({t('onboarding.selfieOptional')})</span>}
+            {isWalletAccount && (
+              <span className="ml-2 text-xs font-normal text-neutral-500">
+                ({t('onboarding.selfieOptional')})
+              </span>
+            )}
           </span>
           <button
             type="button"
@@ -127,7 +148,25 @@ function KycOnboardingPage() {
             }}
           />
         </div>
-        {error && <p className="text-sm text-red-700">{error}</p>}
+        {error && (
+          <p className="text-sm text-red-700" role="alert">
+            {error}
+          </p>
+        )}
+        {needsEmail && (
+          <button
+            type="button"
+            onClick={() => void resendVerification()}
+            disabled={resendState !== 'idle'}
+            className="text-sm font-display font-bold underline disabled:opacity-60"
+          >
+            {resendState === 'sent'
+              ? t('verify.sent')
+              : resendState === 'sending'
+                ? t('verify.sending')
+                : t('verify.resend')}
+          </button>
+        )}
         <button
           type="submit"
           disabled={busy || (!isWalletAccount && !selfie)}
@@ -137,7 +176,12 @@ function KycOnboardingPage() {
         </button>
       </form>
       {showKycModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="kyc-modal-title">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="kyc-modal-title"
+        >
           <div className="max-w-sm w-full rounded-3xl bg-white p-6 space-y-4 shadow-2xl">
             <h2 id="kyc-modal-title" className="text-xl font-extrabold font-display">
               {t('onboarding.kycModalTitle')}

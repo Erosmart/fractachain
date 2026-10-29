@@ -11,7 +11,7 @@ Fecha: 2026-09-20 · Caps pitch: soft=hard=100 XLM (un ticket de 100 puede cerra
      `npm run deploy:licitacion -w @fractachain/api`
    - Eso escribe admin secret, bindea `IPO-SOJA-PERGAMINO-2026` y actualiza `deployments/testnet.json`.
 4. Probar on-chain (opcional): script `prove:contribute` si existe en package.json; si no, aporte desde la UI.
-5. `npm run dev` en la raíz (API :4000 + web :3000).
+5. `npm run dev` en la raíz (web + API en :3000).
 
 ## Guion 90 segundos
 

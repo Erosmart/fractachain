@@ -1,17 +1,29 @@
 import type { AuthApi } from '../api/AuthApi';
-import type { SessionResponse } from '../api/types';
+import { isTwoFactorChallenge, type LoginResponse, type SessionResponse } from '../api/types';
 import type { IGoogleAuthProvider } from '../firebase/FirebaseAuthProvider';
 import type { UsdcFundingService } from '../wallet/UsdcFundingService';
 import type { IWalletSigner } from '../wallet/WalletSigner';
-import type { SessionStore } from './SessionStore';
+import type { SessionStore, TwoFactorChallenge } from './SessionStore';
 import { normalizeUser, type SessionUser } from './SessionUser';
+
+/** Outcome of a login attempt: signed in, or waiting for the second factor. */
+export type LoginResult =
+  { status: 'signed-in'; user: SessionUser } | { status: 'two-factor'; challenge: TwoFactorChallenge };
+
+/** What to do once the session exists (the USDC trustline step depends on the entry point). */
+type AfterLogin = 'fund-if-wallet' | 'fund' | 'none';
 
 /**
  * Sign-in / sign-out use cases. Owns no state: it orchestrates the API, the
  * wallet and the Google provider, and writes the outcome to the session store.
+ *
+ * The credential is the HttpOnly cookie the API sets; nothing here ever
+ * handles a token. When an account has 2FA, every entry point stops at a
+ * challenge kept in the store, and {@link completeTwoFactor} finishes it.
  */
 export class AuthService {
   private bootstrapped = false;
+  private afterTwoFactor: AfterLogin = 'none';
 
   constructor(
     private readonly api: AuthApi,
@@ -21,57 +33,93 @@ export class AuthService {
     private readonly usdc: UsdcFundingService,
   ) {}
 
-  /** Re-validates a persisted session once per page load. Idempotent. */
+  /** Re-validates a cached session once per page load. Idempotent. */
   readonly bootstrap = (): void => {
     if (this.bootstrapped || typeof window === 'undefined') return;
     this.bootstrapped = true;
-    if (this.session.getToken()) void this.refresh();
+    if (this.session.getSnapshot().user) void this.refresh();
   };
 
-  readonly loginWithEmail = (email: string, password: string, name?: string): Promise<SessionUser> =>
+  readonly loginWithEmail = (email: string, password: string, name?: string): Promise<LoginResult> =>
+    // Wallets already set up: custodial ones are funded server-side without a
+    // popup; self-custody signs the USDC trustline once if it is missing.
+    this.withLoading(async () =>
+      this.conclude(await this.api.loginWithEmail(email, password, name), 'fund-if-wallet'),
+    );
+
+  readonly loginWithWallet = (): Promise<LoginResult> =>
+    // One more Freighter signature inside the login opens the USDC trustline
+    // and triggers the grant; without it the wallet cannot receive USDC.
+    this.withLoading(async () =>
+      this.conclude(await this.api.loginWithFreighter(await this.signer.signLoginChallenge()), 'fund'),
+    );
+
+  readonly loginWithGoogle = (): Promise<LoginResult> =>
+    this.withLoading(async () =>
+      this.conclude(await this.api.loginWithFirebase(await this.google.signIn()), 'none'),
+    );
+
+  /** Sets a new password from an emailed link; the API signs the user in (or asks for 2FA). */
+  readonly resetPassword = (token: string, password: string): Promise<LoginResult> =>
+    this.withLoading(async () =>
+      this.conclude(await this.api.resetPassword(token, password), 'fund-if-wallet'),
+    );
+
+  /** Second step of a login with the TOTP (or recovery) code. */
+  readonly completeTwoFactor = (code: string): Promise<SessionUser> =>
     this.withLoading(async () => {
-      const user = this.apply(await this.api.loginWithEmail(email, password, name));
-      // Wallets already set up: custodial ones are funded server-side without a
-      // popup; self-custody signs the USDC trustline once if it is missing.
-      if (user.publicKey && user.custodyMode) await this.usdc.ensureReady().catch(() => undefined);
+      const pending = this.session.getSnapshot().pendingTwoFactor;
+      if (!pending) throw new Error('two-factor challenge missing');
+      const user = this.apply(await this.api.verifyTwoFactor(pending.challenge, code.replace(/\s+/g, '')));
+      await this.runAfterLogin(user, this.afterTwoFactor);
       return user;
     });
 
-  readonly loginWithWallet = (): Promise<SessionUser> =>
-    this.withLoading(async () => {
-      const payload = await this.signer.signLoginChallenge();
-      const user = this.apply(await this.api.loginWithFreighter(payload));
-      // One more Freighter signature inside the login opens the USDC trustline
-      // and triggers the grant; without it the wallet cannot receive USDC.
-      await this.usdc.ensureReady().catch(() => undefined);
-      return user;
-    });
+  readonly cancelTwoFactor = (): void => {
+    this.session.setPendingTwoFactor(null);
+  };
 
-  readonly loginWithGoogle = (): Promise<SessionUser> =>
-    this.withLoading(async () => this.apply(await this.api.loginWithFirebase(await this.google.signIn())));
-
-  /** Revokes the token server-side (best effort) and always clears the local session. */
+  /** Revokes the session server-side (best effort) and always clears the local one. */
   readonly logout = (): void => {
-    const token = this.session.getSnapshot().token;
-    if (token) void this.api.logout(token).catch(() => undefined);
+    void this.api.logout().catch(() => undefined);
     void this.google.signOut();
     this.session.clear();
   };
 
   /** Pulls the latest user; a 401 already cleared the session via the HTTP client. */
   readonly refresh = async (): Promise<void> => {
-    const token = this.session.getToken();
-    if (!token) return;
+    if (!this.session.getSnapshot().user) return;
     try {
-      this.session.updateUser(normalizeUser(await this.api.me(token)));
+      this.session.updateUser(normalizeUser(await this.api.me()));
     } catch {
-      // offline or transient: keep the local copy until the next refresh
+      // offline or transient: keep the cached copy until the next refresh
     }
   };
 
+  private async conclude(response: LoginResponse, after: AfterLogin): Promise<LoginResult> {
+    if (isTwoFactorChallenge(response)) {
+      const challenge: TwoFactorChallenge = {
+        challenge: response.challenge,
+        expiresAt: response.expiresAt ?? null,
+      };
+      this.afterTwoFactor = after;
+      this.session.setPendingTwoFactor(challenge);
+      return { status: 'two-factor', challenge };
+    }
+    const user = this.apply(response);
+    await this.runAfterLogin(user, after);
+    return { status: 'signed-in', user };
+  }
+
+  private async runAfterLogin(user: SessionUser, after: AfterLogin): Promise<void> {
+    const wantsFunding =
+      after === 'fund' || (after === 'fund-if-wallet' && Boolean(user.publicKey && user.custodyMode));
+    if (wantsFunding) await this.usdc.ensureReady().catch(() => undefined);
+  }
+
   private apply(response: SessionResponse): SessionUser {
     const user = normalizeUser(response.user);
-    this.session.setSession(response.token, user, response.expiresAt ?? null);
+    this.session.setSession(user, response.expiresAt ?? null);
     return user;
   }
 

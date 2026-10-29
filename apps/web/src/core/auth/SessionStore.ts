@@ -1,25 +1,41 @@
-import type { ITokenProvider, IUnauthorizedHandler } from '../http/HttpClient';
+import type { IPolicyViolationHandler, IUnauthorizedHandler, PolicyViolationCode } from '../http/HttpClient';
 import { Store } from '../store/Store';
+import type { ISessionCache } from './SessionCache';
 import type { SessionUser } from './SessionUser';
-import type { ITokenStorage } from './TokenStorage';
+
+/** A login that still needs the second factor (TOTP or recovery code). */
+export interface TwoFactorChallenge {
+  challenge: string;
+  /** When the challenge stops being accepted (ISO), if the API said. */
+  expiresAt: string | null;
+}
+
+/** Account-level refusal the API reported (e.g. admin route without 2FA). */
+export interface SecurityNotice {
+  code: PolicyViolationCode;
+  message: string;
+}
 
 export interface SessionState {
   user: SessionUser | null;
-  token: string | null;
   expiresAt: string | null;
-  /** True until the persisted session has been read (and while a login is in flight). */
+  /** True until the cached session has been read (and while a login is in flight). */
   isLoading: boolean;
   /** Self-custody secret shown exactly once after the wallet is generated. */
   revealedSecret: string | null;
+  /** Password/wallet/Google step passed; waiting for the second factor. */
+  pendingTwoFactor: TwoFactorChallenge | null;
+  notice: SecurityNotice | null;
 }
 
 /** What islands render on the server and during hydration: nobody is known yet. */
 export const SERVER_SESSION: SessionState = Object.freeze({
   user: null,
-  token: null,
   expiresAt: null,
   isLoading: true,
   revealedSecret: null,
+  pendingTwoFactor: null,
+  notice: null,
 });
 
 /** Longest delay `setTimeout` accepts (~24.8 days). */
@@ -28,52 +44,58 @@ const MAX_TIMER_MS = 2_147_483_647;
 /**
  * Single source of truth for "who is signed in", shared by every island.
  *
- * Implements {@link ITokenProvider} so the HTTP client reads the token from
- * here, and {@link IUnauthorizedHandler} so a 401 anywhere ends the session.
+ * The credential is the HttpOnly session cookie; this store only holds the
+ * user the API returned. It implements {@link IUnauthorizedHandler} so a 401
+ * anywhere ends the session, and {@link IPolicyViolationHandler} so account
+ * refusals (2FA required, email not verified) surface once, app-wide.
  */
-export class SessionStore extends Store<SessionState> implements ITokenProvider, IUnauthorizedHandler {
+export class SessionStore
+  extends Store<SessionState>
+  implements IUnauthorizedHandler, IPolicyViolationHandler
+{
   private expiryTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
-    private readonly storage: ITokenStorage,
+    private readonly cache: ISessionCache,
     private readonly now: () => number = () => Date.now(),
   ) {
     super({ ...SERVER_SESSION });
   }
 
-  /** Reads the persisted session once; expired sessions are discarded on the spot. */
+  /** Reads the cached session once; expired sessions are discarded on the spot. */
   hydrate(): void {
-    const saved = this.storage.load();
+    const saved = this.cache.load();
     if (saved && !this.isPast(saved.expiresAt)) {
-      this.setState({ token: saved.token, user: saved.user, expiresAt: saved.expiresAt, isLoading: false });
+      this.setState({ user: saved.user, expiresAt: saved.expiresAt, isLoading: false });
       this.scheduleExpiry(saved.expiresAt);
     } else {
-      if (saved) this.storage.clear();
+      if (saved) this.cache.clear();
       this.setState({ isLoading: false });
     }
   }
 
-  getToken(): string | null {
-    const { token, expiresAt } = this.getSnapshot();
-    if (!token) return null;
+  /** A user is known and their session has not expired. */
+  isAuthenticated(): boolean {
+    const { user, expiresAt } = this.getSnapshot();
+    if (!user) return false;
     if (this.isPast(expiresAt)) {
       this.clear();
-      return null;
+      return false;
     }
-    return token;
+    return true;
   }
 
-  setSession(token: string, user: SessionUser, expiresAt: string | null = null): void {
-    this.storage.save({ token, user, expiresAt });
-    this.setState({ token, user, expiresAt, isLoading: false });
+  setSession(user: SessionUser, expiresAt: string | null = null): void {
+    this.cache.save({ user, expiresAt });
+    this.setState({ user, expiresAt, isLoading: false, pendingTwoFactor: null, notice: null });
     this.scheduleExpiry(expiresAt);
   }
 
-  /** Replaces the user while keeping the current token. */
+  /** Replaces the user of the current session (no-op when signed out). */
   updateUser(user: SessionUser): void {
-    const { token, expiresAt } = this.getSnapshot();
-    if (!token) return;
-    this.storage.save({ token, user, expiresAt });
+    const { user: current, expiresAt } = this.getSnapshot();
+    if (!current) return;
+    this.cache.save({ user, expiresAt });
     this.setState({ user });
   }
 
@@ -85,15 +107,35 @@ export class SessionStore extends Store<SessionState> implements ITokenProvider,
     this.setState({ revealedSecret: secret });
   }
 
+  setPendingTwoFactor(pendingTwoFactor: TwoFactorChallenge | null): void {
+    this.setState({ pendingTwoFactor });
+  }
+
+  dismissNotice(): void {
+    this.setState({ notice: null });
+  }
+
   clear(): void {
     if (this.expiryTimer) clearTimeout(this.expiryTimer);
     this.expiryTimer = null;
-    this.storage.clear();
-    this.setState({ user: null, token: null, expiresAt: null, isLoading: false, revealedSecret: null });
+    this.cache.clear();
+    this.setState({
+      user: null,
+      expiresAt: null,
+      isLoading: false,
+      revealedSecret: null,
+      pendingTwoFactor: null,
+      notice: null,
+    });
   }
 
   onUnauthorized(): void {
-    this.clear();
+    if (this.getSnapshot().user) this.clear();
+    else this.setState({ isLoading: false });
+  }
+
+  onPolicyViolation(code: PolicyViolationCode, message: string): void {
+    this.setState({ notice: { code, message } });
   }
 
   private isPast(expiresAt: string | null): boolean {

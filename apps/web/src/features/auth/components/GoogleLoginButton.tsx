@@ -11,7 +11,12 @@ interface GoogleLoginButtonProps {
   variant?: 'light' | 'dark';
 }
 
-export default function GoogleLoginButton({ label, onSuccess, className = '', variant = 'light' }: GoogleLoginButtonProps) {
+export default function GoogleLoginButton({
+  label,
+  onSuccess,
+  className = '',
+  variant = 'light',
+}: GoogleLoginButtonProps) {
   const { loginWithGoogle, isLoading } = useAuth();
   const { t } = useI18n();
   const [error, setError] = useState('');
@@ -19,8 +24,9 @@ export default function GoogleLoginButton({ label, onSuccess, className = '', va
   const handleLogin = async () => {
     setError('');
     try {
-      const user = await loginWithGoogle();
-      onSuccess?.(user);
+      const result = await loginWithGoogle();
+      // With 2FA the Navbar dialog takes over and redirects when done.
+      if (result.status === 'signed-in') onSuccess?.(result.user);
     } catch (err) {
       setError(errorMessage(err, t('misc.googleUnavailable')));
     }

@@ -21,7 +21,8 @@ const { api, wallet } = container;
 
 /** Offering page: dossier, live on-chain state and every investor action. */
 function MarketDetailPage({ listingId }: { listingId: string }) {
-  const { user, token, refreshUser, approveToken, claimTokens, distributeTokens, finalizeOffering, refundContribution } = useAuth();
+  const { user, refreshUser, approveToken, claimTokens, distributeTokens, finalizeOffering, refundContribution } = useAuth();
+  const sessionId = user?.id ?? null;
   const { t } = useI18n();
   const [listing, setListing] = useState<ListingDetail | null>(null);
   const [validation, setValidation] = useState<ValidationPack | null>(null);
@@ -45,13 +46,13 @@ function MarketDetailPage({ listingId }: { listingId: string }) {
     load()
       .catch(() => undefined)
       .finally(() => setLoaded(true));
-  }, [load, token]);
+  }, [load, sessionId]);
 
   const invest = async () => {
     setNotice('');
     const xlm = listing?.dossier?.paymentKind === 'XLM';
     const onChainLive = Boolean(listing?.onChain?.live);
-    if (!token) {
+    if (!sessionId) {
       setNotice(t(xlm ? 'market.loginToContributeXlm' : 'market.loginToContribute'));
       return;
     }
@@ -98,7 +99,7 @@ function MarketDetailPage({ listingId }: { listingId: string }) {
 
   const runFinalize = async () => {
     setNotice('');
-    if (!token) {
+    if (!sessionId) {
       setNotice(t('market.loginToFinalize'));
       return;
     }
@@ -119,7 +120,7 @@ function MarketDetailPage({ listingId }: { listingId: string }) {
 
   const runRefund = async () => {
     setNotice('');
-    if (!token) {
+    if (!sessionId) {
       setNotice(t('market.loginToRefund'));
       return;
     }

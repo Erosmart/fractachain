@@ -3,8 +3,8 @@ use soroban_sdk::{
     contract, contractclient, contractimpl, contracttype, Address, BytesN, Env, Symbol,
 };
 use fractachain_core::{
-    bump_instance, bump_persistent, pct_bps, prorated_interest, require_positive, token_client,
-    MAX_RATE_BPS, SECONDS_PER_DAY,
+    bump_instance, bump_persistent, bump_persistent_if_present, pct_bps, prorated_interest,
+    require_positive, token_client, MAX_RATE_BPS, SECONDS_PER_DAY,
 };
 
 /// Subset of `issuance-factory` this vault depends on to decide who it trusts.
@@ -90,6 +90,27 @@ fn bump_all(env: &Env) {
     bump_persistent(env, &WarrantKey::StartTs);
     bump_persistent(env, &WarrantKey::Status);
     bump_persistent(env, &WarrantKey::CollateralHolder);
+    // Only exist once the loan is funded / liquidated; they were bumped once
+    // at write time and then left to archive over a long term.
+    bump_persistent_if_present(env, &WarrantKey::Lender);
+    bump_persistent_if_present(env, &WarrantKey::DueDate);
+    bump_persistent_if_present(env, &WarrantKey::DebtAtLiquidation);
+    bump_persistent_if_present(env, &WarrantKey::SurplusOwedToProducer);
+}
+
+/// Whether the attesting warrantera is still accredited in the registry.
+///
+/// Accreditation is checked at `initialize`, but the registry can revoke it
+/// later. A revoked attestor's word must not unlock new money (`fund_loan`)
+/// nor let it seize collateral (`execute_liquidation`).
+fn warrantera_accredited(env: &Env) -> bool {
+    let registry: Address = env.storage().persistent().get(&WarrantKey::Registry).unwrap();
+    let oracle: Address = env
+        .storage()
+        .persistent()
+        .get(&WarrantKey::OracleWarrantera)
+        .unwrap();
+    RegistryClient::new(env, &registry).is_warrantera(&oracle)
 }
 
 #[contractimpl]
@@ -175,6 +196,9 @@ impl WarrantVaultContract {
         if now > offer_expiry {
             panic!("Warrant offer expired: re-attest collateral");
         }
+        if !warrantera_accredited(&env) {
+            panic!("Warrantera accreditation revoked: collateral attestation no longer valid");
+        }
 
         // The term is measured from disbursement. Deriving `DueDate` at
         // `initialize` let a lender wait out the clock and then fund and
@@ -258,6 +282,11 @@ impl WarrantVaultContract {
         if caller != lender && caller != oracle {
             panic!("Only lender or warrantera can liquidate");
         }
+        // The lender's right to the collateral survives a revocation; the
+        // warrantera's power to trigger it does not.
+        if caller == oracle && caller != lender && !warrantera_accredited(&env) {
+            panic!("Warrantera accreditation revoked");
+        }
 
         let now = env.ledger().timestamp();
         let due: u64 = env.storage().persistent().get(&WarrantKey::DueDate).unwrap();
@@ -290,6 +319,17 @@ impl WarrantVaultContract {
         bump_all(&env);
         env.events()
             .publish((Symbol::new(&env, "liquidate"), lender), (debt, surplus));
+    }
+
+    /// Registry this vault trusts for accreditation and payment assets. It is
+    /// chosen by whoever initializes the instance: a lender should check it is
+    /// the canonical issuance factory before funding.
+    pub fn get_registry(env: Env) -> Address {
+        env.storage().persistent().get(&WarrantKey::Registry).unwrap()
+    }
+
+    pub fn get_producer(env: Env) -> Address {
+        env.storage().persistent().get(&WarrantKey::Producer).unwrap()
     }
 
     pub fn get_status(env: Env) -> WarrantStatus {

@@ -2,10 +2,14 @@ import type { CustodyMode, Holding, KycStatus, PublicAccount } from '@fractachai
 
 /**
  * The signed-in user as the UI sees it: the API's `PublicAccount` plus the
- * legacy alias `custodialWallet` some screens still read.
+ * account-security flags (v2.1) and the legacy alias `custodialWallet` some
+ * screens still read.
  */
 export interface SessionUser extends PublicAccount {
   custodialWallet?: string;
+  twoFactorEnabled: boolean;
+  /** `false` only for email/password accounts that have not confirmed their address. */
+  emailVerified: boolean;
 }
 
 type Raw = Record<string, unknown>;
@@ -44,11 +48,16 @@ export function normalizeUser(input: unknown): SessionUser {
     custodialWallet: publicKey || undefined,
     authProvider: str(raw.authProvider) || undefined,
     holdings: Array.isArray(raw.holdings) ? (raw.holdings as Holding[]) : [],
-    trustlines: Array.isArray(raw.trustlines) ? (raw.trustlines as unknown[]).filter((t): t is string => typeof t === 'string') : [],
+    trustlines: Array.isArray(raw.trustlines)
+      ? (raw.trustlines as unknown[]).filter((t): t is string => typeof t === 'string')
+      : [],
     cashUsdc: num(raw.cashUsdc),
     xlmBalance: num(raw.xlmBalance),
     faucetFunded: Boolean(raw.faucetFunded),
     isAdmin: Boolean(raw.isAdmin),
+    twoFactorEnabled: raw.twoFactorEnabled === true,
+    // Older API builds do not send the flag: never nag users about it then.
+    emailVerified: raw.emailVerified !== false,
     uid: str(raw.uid) || undefined,
     createdAt: str(raw.createdAt) || undefined,
   };

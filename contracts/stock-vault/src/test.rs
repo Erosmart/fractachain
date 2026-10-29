@@ -397,3 +397,80 @@ fn unauthorized_caller_cannot_mint() {
         )
         .is_err());
 }
+
+/// Info (security review 2026-10): truncation leaves dust no holder can ever
+/// claim. It used to stay counted as owed forever, so it could not be swept;
+/// now only the provable upper bound of claims is committed.
+#[test]
+fn unclaimable_dividend_dust_can_be_swept() {
+    let f = setup();
+    attest(&f, 3_000_000);
+    let holders = [
+        Address::generate(&f.env),
+        Address::generate(&f.env),
+        Address::generate(&f.env),
+    ];
+    for h in holders.iter() {
+        mint(&f, h, 1_000_000);
+    }
+    // 10 over 3M tokens: 3 per million-token holder, 1 unit of dust.
+    f.client.deposit_dividends(&f.admin, &10);
+    assert_eq!(f.client.get_unclaimed_pool(), 9);
+    for h in holders.iter() {
+        assert_eq!(f.client.claim_dividends(h), 3);
+    }
+    assert_eq!(f.client.get_unclaimed_pool(), 0);
+
+    let treasury = Address::generate(&f.env);
+    assert!(f.client.try_sweep_unallocated(&f.admin, &treasury, &2).is_err());
+    f.client.sweep_unallocated(&f.admin, &treasury, &1);
+    assert_eq!(TokenClient::new(&f.env, &f.token_id).balance(&treasury), 1);
+}
+
+/// The committed pool must still cover every claim across several deposits.
+#[test]
+fn committed_dividends_always_cover_the_claims() {
+    let f = setup();
+    attest(&f, 7);
+    let a = Address::generate(&f.env);
+    let b = Address::generate(&f.env);
+    mint(&f, &a, 3);
+    mint(&f, &b, 4);
+    for amount in [5, 11, 13] {
+        f.client.deposit_dividends(&f.admin, &amount);
+    }
+    let owed = f.client.get_claimable(&a) + f.client.get_claimable(&b);
+    assert!(f.client.get_unclaimed_pool() >= owed);
+    let paid = f.client.claim_dividends(&a) + f.client.claim_dividends(&b);
+    assert_eq!(paid, owed);
+}
+
+/// SC-02 / SC-06: integrators can verify the trusted registry and the stored
+/// custodian of an instance.
+#[test]
+fn registry_and_admin_are_readable() {
+    let f = setup();
+    assert_eq!(f.client.get_registry(), f.registry);
+    assert_eq!(f.client.get_admin(), f.admin);
+}
+
+/// SC-12: the registry and the sequence counters were never TTL-extended.
+#[test]
+fn vault_wide_entries_keep_their_ttl() {
+    use soroban_sdk::testutils::storage::Persistent as _;
+    let f = setup();
+    attest(&f, 10);
+    mint(&f, &Address::generate(&f.env), 5);
+    let id = f.client.address.clone();
+    for key in [
+        crate::StockKey::Registry,
+        crate::StockKey::MintSeq,
+        crate::StockKey::PorSeq,
+        crate::StockKey::Admin,
+    ] {
+        let ttl = f
+            .env
+            .as_contract(&id, || f.env.storage().persistent().get_ttl(&key));
+        assert!(ttl > fractachain_core::BUMP_THRESHOLD, "TTL not extended: {ttl}");
+    }
+}

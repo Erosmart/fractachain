@@ -112,6 +112,13 @@ pub fn revoke_investor(env: &Env, investor: &Address) {
         env.storage()
             .persistent()
             .set(&KycKey::Investor(investor.clone()), &info);
+        // Same TTL as every other write of this record, so the revocation
+        // stays readable (and auditable) for as long as the approval was.
+        env.storage().persistent().extend_ttl(
+            &KycKey::Investor(investor.clone()),
+            fractachain_core::BUMP_THRESHOLD,
+            fractachain_core::BUMP_TO,
+        );
     }
 }
 

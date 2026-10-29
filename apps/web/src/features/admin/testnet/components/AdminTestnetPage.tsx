@@ -15,7 +15,8 @@ const { api } = container;
 
 /** Network settings, settlement policy and the regulated-asset issuer flags. */
 function AdminTestnet() {
-  const { token } = useSession();
+  const { user } = useSession();
+  const sessionId = user?.id ?? null;
   const { t } = useI18n();
   const [mode, setMode] = useState<TestnetMode>('deploy');
   const [friendbot, setFriendbot] = useState(true);
@@ -28,7 +29,7 @@ function AdminTestnet() {
   const [deployment, setDeployment] = useState<TestnetDeployment | null>(null);
 
   const load = useCallback(() => {
-    if (!token) return;
+    if (!sessionId) return;
     api.admin
       .testnet()
       .then((data) => {
@@ -43,7 +44,7 @@ function AdminTestnet() {
         if (data.settleAt) setSettleAt(toDatetimeLocal(data.settleAt));
       })
       .catch(() => undefined);
-  }, [token]);
+  }, [sessionId]);
 
   useEffect(load, [load]);
 

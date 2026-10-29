@@ -3,6 +3,7 @@ import { Wallet } from 'lucide-react';
 import { withIsland } from '@/components/island/withIsland';
 import BrandLogo from '@/components/ui/BrandLogo';
 import WalletAddress from '@/components/ui/WalletAddress';
+import type { LoginResult } from '@/core/auth/AuthService';
 import { afterAuthPath } from '@/core/auth/onboardingPath';
 import type { SessionUser } from '@/core/auth/SessionUser';
 import { container } from '@/core/container';
@@ -23,12 +24,16 @@ function LoginPage() {
   const [notice, setNotice] = useState('');
 
   const goAfterAuth = (u: SessionUser) => navigator.navigate(afterAuthPath(u, navigator.searchParam('next')));
+  /** A 2FA account stops here: the dialog (mounted in the Navbar) finishes the login. */
+  const onResult = (result: LoginResult) => {
+    if (result.status === 'signed-in') goAfterAuth(result.user);
+  };
 
   const handleEmail = async (e: SubmitEvent) => {
     e.preventDefault();
     setError('');
     try {
-      goAfterAuth(await loginWithEmail(email, password, name));
+      onResult(await loginWithEmail(email, password, name));
     } catch (err) {
       setError(errorMessage(err, t('misc.loginFail')));
     }
@@ -37,7 +42,7 @@ function LoginPage() {
   const handleWallet = async () => {
     setError('');
     try {
-      goAfterAuth(await loginWithWallet());
+      onResult(await loginWithWallet());
     } catch (err) {
       setError(errorMessage(err, t('misc.loginWalletFail')));
     }
@@ -55,7 +60,9 @@ function LoginPage() {
           </div>
         )}
         <div className="p-4 rounded-2xl crystal-card text-left space-y-1">
-          <p className="text-[11px] uppercase tracking-wider text-neutral-500 font-display font-bold">{t('nav.yourWallet')}</p>
+          <p className="text-[11px] uppercase tracking-wider text-neutral-500 font-display font-bold">
+            {t('nav.yourWallet')}
+          </p>
           <WalletAddress address={user.publicKey} />
         </div>
         {user.custodyMode !== 'SELF' && (
@@ -74,7 +81,11 @@ function LoginPage() {
         )}
         {notice && <p className="text-sm text-green-700">{notice}</p>}
         {error && <p className="text-sm text-red-700">{error}</p>}
-        <button type="button" onClick={() => goAfterAuth(user)} className="px-6 py-3 rounded-2xl bg-black text-white font-display font-bold">
+        <button
+          type="button"
+          onClick={() => goAfterAuth(user)}
+          className="px-6 py-3 rounded-2xl bg-black text-white font-display font-bold"
+        >
           {t('auth.continue')}
         </button>
         <button type="button" onClick={logout} className="block mx-auto text-sm text-neutral-500">
@@ -104,7 +115,12 @@ function LoginPage() {
           disabled={isLoading}
           className="w-full py-3 rounded-2xl border border-black/15 bg-white font-display font-bold flex items-center justify-center gap-2 hover:bg-black/[0.03] transition-colors"
         >
-          <BrandLogo slug="freighter" alt="Freighter" className="h-4 w-auto object-contain" fallback={<Wallet size={18} />} />
+          <BrandLogo
+            slug="freighter"
+            alt="Freighter"
+            className="h-4 w-auto object-contain"
+            fallback={<Wallet size={18} />}
+          />
           {isLoading ? t('auth.walletLoading') : t('auth.wallet')}
         </button>
         {error && <p className="text-sm text-red-700">{error}</p>}
@@ -138,9 +154,18 @@ function LoginPage() {
             className="w-full px-3 py-2.5 rounded-xl border border-black/10 bg-white"
           />
           {error && <p className="text-sm text-red-700">{error}</p>}
-          <button type="submit" disabled={isLoading} className="w-full py-3 rounded-2xl bg-black text-white font-display font-bold">
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full py-3 rounded-2xl bg-black text-white font-display font-bold"
+          >
             {isLoading ? t('auth.entering') : t('auth.continue')}
           </button>
+          <p className="text-center">
+            <a href="/forgot-password" className="text-xs text-neutral-600 underline">
+              {t('pwd.forgotLink')}
+            </a>
+          </p>
         </form>
       </div>
     </div>

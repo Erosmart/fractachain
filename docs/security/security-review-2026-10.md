@@ -128,36 +128,45 @@ las wallets. Ahora producción exige un valor propio y existe
 `WALLET_PEPPER_PREVIOUS`: lo cifrado con la clave anterior se abre y se
 re-cifra con la nueva al primer uso.
 
-## Riesgos aceptados y recomendaciones
+## Endurecimiento adicional (implementado)
 
-1. **Custodia de claves en el mismo host.** Las wallets custodiales se cifran
-   con AES-256-GCM, pero la clave vive en una variable de entorno del mismo
-   servidor: comprometer el host compromete esas wallets. Para mainnet:
-   envelope encryption con KMS/HSM (AWS KMS, GCP KMS) o MPC, y límites de
-   retiro.
-2. **Tokens en `localStorage`.** Una XSS podría robar la sesión. Mitigado con
-   CSP estricta, expiración y revocación; lo ideal es mover la sesión a una
-   cookie `HttpOnly; Secure; SameSite=Strict` con el API bajo el mismo sitio.
-3. **Sin verificación de email** para cuentas email/contraseña (no hay SMTP).
-   Recomendado antes de producción, junto con 2FA para admins.
-4. **KYC auto-aprobado en testnet** (no hay proveedor). `KYC_AUTO_APPROVE=false`
-   lo desactiva; en producción hace falta un proveedor real.
-5. **Un solo proceso dueño del store.** El lock es en memoria: con varias
-   réplicas hay que pasar a Postgres con transacciones / `SELECT … FOR UPDATE`.
-6. **Factory compartida de testnet** no tiene registrado el `usdcSac` actual
-   como medio de pago: `initialize_stock` falla y no se pueden desplegar vaults
-   nuevos con ella. Solución on-chain: el admin de la factory llama
-   `set_payment_asset(1, <usdcSac>)`. Para desarrollo sin esa clave:
-   `npm run testnet:clone-factory -w @fractachain/api` (ver guía).
+Lo que la primera versión de este informe dejaba como recomendación, ya
+implementado y con tests (`packages/api/test/http/security-features.test.ts`):
+
+| Tema | Implementación |
+|---|---|
+| Sesión robable por XSS (`localStorage`) | La web y el API comparten origen: la sesión vive en una cookie `HttpOnly; SameSite=Strict` (`__Host-` + `Secure` en producción). El navegador nunca ve el token. **CSRF:** las escrituras con cookie exigen `X-Requested-With: fractachain` y mismo origen. |
+| Sin segundo factor | **2FA TOTP** (RFC 6238, apps de autenticación): alta con QR, 10 códigos de recuperación de un solo uso, anti-replay por paso de tiempo, secreto cifrado con AES-GCM. Login en dos pasos (`challenge` + código). **Obligatorio para el panel de admin en producción** (`ADMIN_REQUIRE_2FA`). |
+| Emails sin verificar | Link firmado (24 h) al registrarse; en producción el KYC exige email confirmado (`REQUIRE_EMAIL_VERIFICATION`). Envío por SMTP (`SMTP_URL`) o al log en desarrollo. |
+| Sin recuperación de cuenta | **Reseteo de contraseña** por email: respuesta idéntica exista o no la cuenta (sin enumeración), link de 30 min que muere al cambiar la contraseña, y el reseteo **cierra todas las sesiones**. También "cerrar todas las sesiones" a pedido. |
+| Sin trazabilidad | **Auditoría** append-only (`audit.json`, espejada en Postgres): logins y fallos, 2FA, reseteos, exportación de clave custodial, vistas de selfies de KYC y todas las acciones de admin, con actor, IP, request id y resultado. Nunca guarda secretos. Panel `/admin/audit`. |
+| Lock solo en memoria | `ILockProvider`: con `DATABASE_URL`, **advisory locks de Postgres** (`pg_advisory_lock`) para pagos y aportes; varias réplicas no pueden pagar dos veces. |
+| Wallet healing en cada request | El auto-fondeo (Friendbot/Horizon) corre como mucho cada 5 min por wallet. |
+
+## Riesgos que quedan (requieren decisiones o servicios externos)
+
+1. **Custodia de claves en el mismo host.** Las wallets custodiales (y los
+   secretos 2FA) se cifran con AES-256-GCM con una clave del entorno. Para
+   mainnet: envelope encryption con KMS/HSM (AWS KMS, GCP KMS) o MPC, y
+   límites de retiro. Requiere cuenta cloud y política de custodia.
+2. **KYC auto-aprobado en testnet** (no hay proveedor). `KYC_AUTO_APPROVE=false`
+   lo desactiva; en producción hace falta contratar un proveedor (Onfido,
+   Veriff, Renaper vía integrador…).
+3. **Factory compartida de testnet** sin el `usdcSac` actual registrado: su
+   admin tiene que llamar `set_payment_asset(1, <usdcSac>)`. Para desarrollo:
+   `testnet:clone-factory` + `testnet:setup-usdc`.
+4. **Contratos ya desplegados:** las correcciones aplican a instancias nuevas
+   tras subir el WASM (`scripts/testnet/02-build.sh` + `testnet:upload-wasm`).
 
 ## Contratos Soroban
 
 Revisión de lectura de los seis crates (`fractachain-licitacion`, `issuance-factory`,
-`stock-vault`, `warrant-vault`, `forward-contract`, `fractachain-core`). Las
-correcciones de bajo riesgo se aplicaron con su test de regresión
-(`cargo test`: **110 tests OK**). Las que cambian el diseño (quién despliega,
-cómo se calcula el precio equitativo) quedan como recomendación: requieren
-decisión de producto/legal y un redeploy de WASM.
+`stock-vault`, `warrant-vault`, `forward-contract`, `fractachain-core`). Todos
+los hallazgos están corregidos con su test de regresión (`cargo test`:
+**135 tests OK**), además de los ítems informativos (`set_price_per_unit`
+reinicia el precio equitativo; el polvo de redondeo de dividendos se puede
+barrer). Quedan como mejora de diseño: fijar la factory on-chain y migrar a
+`__constructor`.
 
 > Los contratos ya desplegados en testnet **no cambian** hasta subir el WASM
 > nuevo (`scripts/testnet/02-build.sh` + `03-deploy.sh`) y actualizar los hashes
@@ -166,17 +175,17 @@ decisión de producto/legal y un redeploy de WASM.
 | # | Sev. | Contrato · función | Hallazgo | Estado |
 |---|---|---|---|---|
 | SC-01 | Alta | licitación · `fill_order` | Auto-fill (`buyer == seller`) sin costo (fee truncado a 0 bajo 400) subía `HighestPrice`, el piso que paga toda OPA/squeeze-out | ✅ Auto-fill bloqueado + fee redondeado hacia arriba (tests `an_order_cannot_be_filled_by_its_own_seller`, `small_fills_still_pay_the_platform_fee`) |
-| SC-02 | Alta | warrant-vault · `initialize` (también forward, stock-vault) | `registry` lo elige quien inicializa: un registry falso responde `is_warrantera = true` y se financia colateral inexistente | ⚠️ Recomendado: fijar la factory (constructor del deployer o despliegue desde la factory) y exponer `get_registry`; el API debería verificar el registry de cada instancia |
-| SC-03 | Alta | licitación · control 50 % (Art. 87/88) | Registro de OPA único que nunca se resetea; `contribute`/`fill_order` miran saldo libre (no `OrderEscrow`); suspensión de votos perezosa | ⚠️ Recomendado: registro por adquirente, usar `total_holding` en todos los caminos (incluido `cancel_sale_order`) y evaluar la suspensión al leer votos |
-| SC-04 | Media | licitación · `execute_squeeze_out` | Sobrescribe `rec.acquirer`: un nuevo adquirente podía cobrar el escrow de la OPA anterior con `reclaim_opa_escrow` | ⚠️ Recomendado: escrow indexado por dueño o devolución al adquirente original antes de sobrescribir |
+| SC-02 | Alta | warrant-vault · `initialize` (también forward, stock-vault) | `registry` lo elige quien inicializa: un registry falso responde `is_warrantera = true` y se financia colateral inexistente | ✅ `get_registry` (+ `get_parties`/`get_producer`) en los tres contratos; el API y los scripts verifican el registry de cada instancia; warrant re-chequea `is_warrantera` al fondear y un warrantera revocado no liquida. ⚠️ Fijar la factory on-chain queda como cambio de diseño |
+| SC-03 | Alta | licitación · control 50 % (Art. 87/88) | Registro de OPA único que nunca se resetea; `contribute`/`fill_order` miran saldo libre (no `OrderEscrow`); suspensión de votos perezosa | ✅ El registro pasa a quien controla hoy; tenencia total (libre + escrow) en `contribute`, `fill_order`, `cancel_sale_order` y `accept_opa`; `has_votes` aplica la sanción vencida y `enforce_opa_deadline` la persiste |
+| SC-04 | Media | licitación · `execute_squeeze_out` | Sobrescribe `rec.acquirer`: un nuevo adquirente podía cobrar el escrow de la OPA anterior con `reclaim_opa_escrow` | ✅ `OpaEscrowOwner`: el escrow sólo vuelve a su dueño y se devuelve antes de cualquier relevo |
 | SC-05 | Media | licitación · `launch_opa` / `accept_opa` | Funcionaban en estado `Open`: un aceptante cobraba la OPA y además el `refund` si la emisión fallaba | ✅ Exigen `Successful` (test `a_tender_offer_waits_for_a_successful_issuance`) |
-| SC-06 | Media | todos · `initialize` | Deploy e init en transacciones separadas: front-running del init (p. ej. vault con admin/oráculo del atacante). `03-deploy.sh` guarda el ID antes de inicializar | ⚠️ Recomendado: `__constructor` (soportado desde SDK 22) o init atómico desde la factory; verificar estado tras el init en los scripts. El API ya despliega + inicializa en el mismo flujo y falla si el init falla |
+| SC-06 | Media | todos · `initialize` | Deploy e init en transacciones separadas: front-running del init (p. ej. vault con admin/oráculo del atacante). `03-deploy.sh` guarda el ID antes de inicializar | ✅ `get_admin` en licitación y stock-vault; el API, los CLIs y `03-deploy.sh` verifican admin/registry después del init y descartan la instancia si no coinciden. ⚠️ Migrar a `__constructor` queda como mejora |
 | SC-07 | Media | forward · `transfer_position` | El árbitro podía comprar la posición del comprador y fallar su propia disputa | ✅ Rechazado (test `the_arbiter_cannot_buy_the_position`) |
-| SC-08 | Baja | licitación · `cancel_sale_order` | Tras un squeeze-out, cancelar una orden vuelve a acreditar RWA (saldo fantasma; no cobrable hoy) | ⚠️ Recomendado: chequeo de estado / cerrar órdenes en el squeeze-out |
+| SC-08 | Baja | licitación · `cancel_sale_order` | Tras un squeeze-out, cancelar una orden vuelve a acreditar RWA (saldo fantasma; no cobrable hoy) | ✅ Sólo con el mercado en `Successful` |
 | SC-09 | Baja | licitación · `verify_investor` (kyc.rs) | Renovar el KYC restauraba votos suspendidos por Art. 88 | ✅ Conserva `voting_rights` (test `kyc_renewal_keeps_a_suspended_vote_suspended`) |
 | SC-10 | Baja | warrant-vault · `execute_liquidation` | En `now == due + gracia` el préstamo era pagable y liquidable a la vez (front-running del prestamista) | ✅ Liquidación desde el segundo siguiente (test `repayment_and_liquidation_do_not_overlap_at_the_grace_boundary`) |
-| SC-11 | Baja | forward · `mark_delivered` / disputas | Sin límite temporal para marcar entrega ni timeout de disputa: escrow congelado si el árbitro desaparece | ⚠️ Recomendado: ventana para `mark_delivered` y timeout de disputa con salida por defecto |
-| SC-12 | Baja | licitación, stock-vault, warrant-vault | Claves `persistent` sin `extend_ttl` (Admin, State, TotalRaised, OpaEscrow, MintSeq…): pueden archivarse (se restauran pagando, no se pierden fondos) | ⚠️ Recomendado: extender TTL en cada escritura/lectura crítica |
+| SC-11 | Baja | forward · `mark_delivered` / disputas | Sin límite temporal para marcar entrega ni timeout de disputa: escrow congelado si el árbitro desaparece | ✅ `mark_delivered` cierra cuando abre el refund; `refund_unresolved_dispute` tras 30 días sin fallo; una sola disputa por entrega |
+| SC-12 | Baja | licitación, stock-vault, warrant-vault | Claves `persistent` sin `extend_ttl` (Admin, State, TotalRaised, OpaEscrow, MintSeq…): pueden archivarse (se restauran pagando, no se pierden fondos) | ✅ `bump_core` en cada entry point y `bump_persistent_if_present` en core |
 
 **Lo que está bien resuelto:** todos los caminos de admin comparan contra el
 admin guardado y llaman `require_auth`; la factory rota admin con doble firma;

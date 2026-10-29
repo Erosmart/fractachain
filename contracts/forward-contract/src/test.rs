@@ -415,3 +415,81 @@ fn the_arbiter_cannot_buy_the_position() {
         .try_transfer_position(&f.buyer, &f.arbiter, &90_000)
         .is_err());
 }
+
+/// SC-11 (security review 2026-10): the producer could mark delivery at any
+/// time, including the instant the buyer's refund opened, forcing a dispute.
+#[test]
+fn delivery_cannot_be_marked_once_the_refund_window_opens() {
+    let f = setup();
+    init_default(&f);
+    f.env.ledger().set_timestamp(DEADLINE + 15 * DAY);
+    assert!(f.client.try_mark_delivered(&f.producer).is_err());
+    let before = balance(&f, &f.buyer);
+    f.client.refund_on_non_delivery(&f.buyer);
+    assert_eq!(balance(&f, &f.buyer) - before, 100_000);
+}
+
+#[test]
+fn delivery_can_be_marked_until_the_last_second_of_grace() {
+    let f = setup();
+    init_default(&f);
+    f.env.ledger().set_timestamp(DEADLINE + 15 * DAY - 1);
+    f.client.mark_delivered(&f.producer);
+    assert!(f.client.try_refund_on_non_delivery(&f.buyer).is_err());
+}
+
+/// SC-11: a dispute had no timeout, so an absent arbiter froze the escrow.
+#[test]
+fn an_unresolved_dispute_refunds_the_buyer_after_the_timeout() {
+    let f = setup();
+    init_default(&f);
+    f.client.mark_delivered(&f.producer);
+    f.client.dispute_delivery(&f.buyer);
+
+    f.env.ledger().set_timestamp(T0 + 30 * DAY);
+    assert!(f.client.try_refund_unresolved_dispute(&f.buyer).is_err());
+
+    f.env.ledger().set_timestamp(T0 + 30 * DAY + 1);
+    let before = balance(&f, &f.buyer);
+    f.client.refund_unresolved_dispute(&f.buyer);
+    assert_eq!(balance(&f, &f.buyer) - before, 100_000);
+    assert_eq!(f.client.get_state(), ForwardState::Cancelled);
+    // The forward is settled: the arbiter can no longer rule on it.
+    assert!(f.client.try_resolve_dispute(&f.arbiter, &true).is_err());
+}
+
+/// SC-11: re-disputing would restart the arbiter's window indefinitely.
+#[test]
+fn a_delivery_can_only_be_disputed_once() {
+    let f = setup();
+    init_default(&f);
+    f.client.mark_delivered(&f.producer);
+    f.client.dispute_delivery(&f.buyer);
+    assert!(f.client.try_dispute_delivery(&f.buyer).is_err());
+}
+
+/// SC-02 / SC-06: registry and parties are readable for verification.
+#[test]
+fn registry_and_parties_are_readable() {
+    let f = setup();
+    init_default(&f);
+    assert_eq!(f.client.get_registry(), f.registry);
+    assert_eq!(f.client.get_parties(), (f.producer.clone(), f.buyer.clone(), f.arbiter.clone()));
+}
+
+/// SC-12: dispute bookkeeping was outside `bump_all`.
+#[test]
+fn dispute_entries_keep_their_ttl() {
+    use soroban_sdk::testutils::storage::Persistent as _;
+    let f = setup();
+    init_default(&f);
+    f.client.mark_delivered(&f.producer);
+    f.client.dispute_delivery(&f.buyer);
+    let id = f.client.address.clone();
+    for key in [crate::ForwardKey::DeliveredAt, crate::ForwardKey::DisputedAt, crate::ForwardKey::Disputed] {
+        let ttl = f
+            .env
+            .as_contract(&id, || f.env.storage().persistent().get_ttl(&key));
+        assert!(ttl > fractachain_core::BUMP_THRESHOLD, "TTL not extended: {ttl}");
+    }
+}

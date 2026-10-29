@@ -86,11 +86,11 @@ La home lo presenta como marco ya vigente: "100% regulado", "opera bajo el sandb
 
 ## 5. Arquitectura
 
-Inversor / productor → Astro SSR (:3000) → API Express (:4000) → Stellar classic (testnet: cuentas G…, XLM, SDEX, USDC de plataforma `GCASKV…`) y Soroban 28 (factory, licitación, stock).
+Inversor / productor → servidor único (:3000: Astro SSR + API Express en `/api`) → Stellar classic (testnet: cuentas G…, XLM, SDEX, USDC de plataforma `GCASKV…`) y Soroban 28 (factory, licitación, stock).
 
 - Contratos (`contracts/`): workspace Cargo, soroban-sdk 28.0.0, target `wasm32v1-none`. `issuance-factory` registra cada instancia. `fractachain-core` es librería y no se despliega.
-- API (`apps/api/`): Express 5 + TypeScript por capas (dominio / aplicación / infraestructura / HTTP) con inyección de dependencias. JSON atómico en `data/`, espejo + restore en Postgres si hay `DATABASE_URL`. Firma `contribute` / `finalize` / `refund` cuando el listing es on-chain.
-- Web (`apps/web/`): Astro 7 SSR con islas React 19 y Tailwind. Marketplace, KYC, admin, orderbook.
+- App (`apps/web/`): Astro 7 SSR con islas React 19 y Tailwind, y el API montado en el mismo servidor (`/api`, `/health`). Marketplace, KYC, admin, orderbook. Una sola imagen Docker, un solo servicio.
+- Backend (`packages/api/`): Express 5 + TypeScript por capas (dominio / aplicación / infraestructura / HTTP) con inyección de dependencias. JSON atómico en `data/`, espejo + restore en Postgres si hay `DATABASE_URL`. Firma `contribute` / `finalize` / `refund` cuando el listing es on-chain.
 - Tipos compartidos (`packages/shared/`): el contrato HTTP entre API y web.
 
 Detalle de capas y principios: [`docs/architecture.md`](docs/architecture.md). Seguridad: [`SECURITY.md`](SECURITY.md).
@@ -109,7 +109,8 @@ IDs públicos (sin secretos): `deployments/testnet.json`. Pipeline: `scripts/tes
 | API | Node 22, Express 5, TypeScript estricto, zod, helmet, express-rate-limit, pino, jose, `@stellar/stellar-sdk` ^17.4, `pg` opcional |
 | UI | Astro 7 (SSR, adaptador Node), React 19 (islas), Tailwind 3.4, Freighter API ^6 y `@firebase/auth` (opcionales) |
 | Calidad | npm workspaces, vitest + supertest, `astro check`, Prettier, GitHub Actions (typecheck, tests, build, audit, `cargo test`) |
-| Deploy | Docker `node:22-alpine` (no-root, tini), Compose, Railway (2 servicios) |
+| Seguridad | Sesión en cookie `HttpOnly`+`SameSite=Strict` con CSRF, 2FA TOTP (obligatorio para admins en prod), verificación de email, reseteo de contraseña, auditoría, rate limiting, CSP |
+| Deploy | Una imagen Docker `node:22-alpine` (no-root, tini), Compose, Railway (1 servicio) |
 
 ---
 
@@ -125,7 +126,7 @@ On-chain = contrato `C…` válido de ese listing (cada oferta despliega su prop
 | Orderbook SDEX | Vivo si el listing tiene issuer `G…`; el book combina el par legacy USDC Circle |
 | Aporte USDC de la UI, balance USDC en dashboard | Vivo |
 | CLOB, dividendos | Sandbox |
-| On-ramps de la home (Alfred Pay, MoneyGram, CCTP, Near Intents, oráculos) | Mocks (`apps/api/src/application/mocks/`) |
+| On-ramps de la home (Alfred Pay, MoneyGram, CCTP, Near Intents, oráculos) | Mocks (`packages/api/src/application/mocks/`) |
 | Freighter para aportar | Fuera del flujo principal |
 | KYC | Auto-aprobado en testnet (no es compliance real) |
 
@@ -133,7 +134,7 @@ On-chain = contrato `C…` válido de ese listing (cada oferta despliega su prop
 
 Los `C…` de abajo son los **contract IDs** de los contratos Soroban desplegados en Stellar testnet, tal como quedan en `deployments/testnet.json`. Cada oferta nueva despliega su propio `stock-vault` + `licitacion` desde la factory — los listings viejos comparten las primeras instancias (era de contrato único), pero las emisiones actuales son independientes.
 
-Que el listing tenga un contract ID no significa que opere on-chain: el backend solo invoca al contrato cuando el ID es válido (`isOnChainListing` en `apps/api/src/domain/listing/Listing.ts`). Un listing sin contrato desplegado corre entero en sandbox.
+Que el listing tenga un contract ID no significa que opere on-chain: el backend solo invoca al contrato cuando el ID es válido (`isOnChainListing` en `packages/api/src/domain/listing/Listing.ts`). Un listing sin contrato desplegado corre entero en sandbox.
 
 Testnet (2026-09-20): [factory](https://stellar.expert/explorer/testnet/contract/CDF7VE4JMPQYR6Q76MYFEEG64CZIZLOJLGSUQN5NXTZSP3U5JTWHNJGW) · [licitación](https://stellar.expert/explorer/testnet/contract/CDHKGEJNNFYKXW4XOEDXXE5LOF5HCYVORR2JT7AOK2FAN5B6I65X7JLM) · [stock](https://stellar.expert/explorer/testnet/contract/CD3MZ34ER36Z7WR66YIXH6MIYMY4OGFYVN3S5P7NNXGT6DZXVJUBDGL5).
 
@@ -143,35 +144,38 @@ Pitch en 5 pasos: register → wallet custodial → KYC → `/market` aportar US
 
 ## Correr
 
-Node 22 (`.nvmrc`). Contratos: Rust + `wasm32v1-none`.
+Node 22 (`.nvmrc`). Contratos: Rust + `wasm32v1-none` + `stellar` CLI.
 
 ```bash
-npm install                                   # instala api + web + shared (workspaces)
-cp apps/api/.env.example apps/api/.env        # completá AUTH_SECRET y WALLET_PEPPER
-cp apps/web/.env.example apps/web/.env        # PUBLIC_API_URL=http://localhost:4000
-npm run dev                                   # API :4000 + web :3000
-# o: docker compose up --build
+npm install
+cp .env.example .env      # completá AUTH_SECRET y WALLET_PEPPER (openssl rand -hex 32)
+npm run dev               # http://localhost:3000 — web + API en el mismo proceso
+# producción local:
+npm run build && npm start
+# o con Docker:
+docker compose up --build
 ```
 
 | Comando | Qué hace |
 |---|---|
-| `npm run dev` | API (`tsx watch`) + web (`astro dev`) en paralelo |
+| `npm run dev` | `astro dev` con el API montado adentro (un puerto, un origen) |
+| `npm run build` / `npm start` | build de API + web y servidor único de producción |
 | `npm test` | tests de API y web |
 | `npm run typecheck` | `tsc` (API) + `astro check` (web) |
-| `npm run build` | build de producción de ambos |
 | `npm run contracts:test` | `cargo test` de los contratos |
+| `npm run testnet:*` | scripts de testnet (deploy de licitación, forward/warrant, factory/USDC propios) |
 
 Estructura del repo:
 
 ```
-apps/api        API REST (Express 5, capas + DI)        → apps/api/README.md
-apps/web        Web (Astro 7 SSR + islas React)          → apps/web/README.md
-packages/shared Tipos del contrato HTTP
-contracts/      Soroban 28 (Cargo workspace)
-deployments/    IDs públicos de testnet
-scripts/testnet Pipeline de deploy de contratos
-tools/agents    Agentes de mercado para testnet
-docs/           Arquitectura, seguridad, guías, runbooks, pitch
+apps/web         La app: Astro 7 SSR + API en el mismo servidor     → apps/web/README.md
+packages/api     Backend por capas (librería, también corre solo)   → packages/api/README.md
+packages/shared  Tipos del contrato HTTP
+contracts/       Soroban 28 (Cargo workspace)
+deployments/     IDs públicos de testnet
+scripts/testnet  Pipeline de deploy de contratos
+tools/agents     Agentes de mercado para testnet
+docs/            Arquitectura, seguridad, guías, runbooks, pitch
 ```
 
 Pipeline testnet: [`scripts/testnet/README.md`](scripts/testnet/README.md) · pitch: [`docs/pitch/hackathon.md`](docs/pitch/hackathon.md) · demo: [`docs/runbooks/demo-p0.md`](docs/runbooks/demo-p0.md).

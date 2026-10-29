@@ -2,38 +2,34 @@ import { useEffect, useState, type ImgHTMLAttributes, type ReactNode } from 'rea
 import { container } from '@/core/container';
 
 interface AuthenticatedImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'src'> {
-  /** API path (or absolute URL) of an image that requires the session token. */
+  /** API path of an image only the signed-in owner or an admin may see (KYC selfies). */
   path: string;
   fallback?: ReactNode;
 }
 
 /**
- * `<img src>` cannot send `Authorization`, so protected images (KYC selfies)
- * are fetched with the session token and shown through a short-lived object URL.
+ * Image behind the session. The API is same-origin and the session is a
+ * cookie, so a plain `<img>` already carries the credential — no blob/object
+ * URL dance. Falls back when the API refuses (401/403/404).
  */
-export default function AuthenticatedImage({ path, fallback = null, alt = '', ...img }: AuthenticatedImageProps) {
-  const [url, setUrl] = useState<string | null>(null);
+export default function AuthenticatedImage({
+  path,
+  fallback = null,
+  alt = '',
+  ...img
+}: AuthenticatedImageProps) {
   const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    let objectUrl: string | null = null;
-    let alive = true;
-    setFailed(false);
-    container.http
-      .blob(path)
-      .then((blob) => {
-        if (!alive) return;
-        objectUrl = URL.createObjectURL(blob);
-        setUrl(objectUrl);
-      })
-      .catch(() => alive && setFailed(true));
-    return () => {
-      alive = false;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-      setUrl(null);
-    };
-  }, [path]);
-
-  if (failed || !url) return <>{fallback}</>;
-  return <img {...img} alt={alt} src={url} decoding="async" />;
+  useEffect(() => setFailed(false), [path]);
+  if (failed) return <>{fallback}</>;
+  return (
+    <img
+      {...img}
+      alt={alt}
+      src={container.http.url(path)}
+      decoding="async"
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+    />
+  );
 }

@@ -17,6 +17,9 @@ function FooterAdminLinks() {
         <li>
           <a href="/admin/kyc" className="hover:text-black">{t('nav.kyc')}</a>
         </li>
+        <li>
+          <a href="/admin/audit" className="hover:text-black">{t('admAudit.nav')}</a>
+        </li>
       </ul>
     </div>
   );

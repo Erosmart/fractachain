@@ -13,7 +13,7 @@ const { api, wallet } = container;
 
 /** Custody overview: the user's Stellar account, balances and the testnet USDC faucet. */
 function WalletPage() {
-  const { user, token, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [balance, setBalance] = useState<string | null>(null);
@@ -39,7 +39,7 @@ function WalletPage() {
   useEffect(loadState, [loadState]);
 
   const fundUsdc = async () => {
-    if (!token) return;
+    if (!user) return;
     setFunding(true);
     setFundNotice('');
     try {

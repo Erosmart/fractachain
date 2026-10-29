@@ -24,6 +24,11 @@ describe('AppConfig.apiBaseUrl', () => {
     expect(cfg('https://api.fracta.example/v1').apiBaseUrl(at('https://app.fracta.example/'))).toBe('https://api.fracta.example/v1');
   });
 
+  it('uses the page origin when the API is served by the same server', () => {
+    expect(cfg('').apiBaseUrl(at('http://192.168.0.14:3000/market'))).toBe('http://192.168.0.14:3000');
+    expect(cfg('').apiBaseUrl(null)).toBe('');
+  });
+
   it('reports Firebase as configured only with the mandatory keys', () => {
     expect(cfg('http://localhost:4000').firebaseConfigured).toBe(false);
   });

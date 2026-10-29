@@ -29,7 +29,8 @@ export class AppConfig {
 
   static fromEnv(env: ImportMetaEnv = import.meta.env): AppConfig {
     return new AppConfig({
-      apiUrl: env.PUBLIC_API_URL || 'http://localhost:4000',
+      // Empty = the API is served by this same server (default: unified deployment).
+      apiUrl: env.PUBLIC_API_URL || '',
       stellarRpcUrl: env.PUBLIC_STELLAR_RPC_URL || 'https://soroban-testnet.stellar.org',
       networkPassphrase: env.PUBLIC_STELLAR_NETWORK_PASSPHRASE || TESTNET_PASSPHRASE,
       firebase: {
@@ -61,7 +62,8 @@ export class AppConfig {
   }
 
   /**
-   * Base URL of the API as seen from the current page.
+   * Base URL of the API as seen from the current page. With no
+   * `PUBLIC_API_URL` the API lives on the same origin as the page.
    *
    * A loopback API URL is rewritten to the page's own host when the app is
    * opened from another device on the LAN (e.g. a phone hitting
@@ -69,6 +71,8 @@ export class AppConfig {
    */
   apiBaseUrl(location: Pick<Location, 'hostname' | 'protocol' | 'origin'> | null = AppConfig.currentLocation()): string {
     const fallback = this.values.apiUrl.replace(/\/+$/, '');
+    // Same-origin API (web and API in one server): the page's own origin.
+    if (!fallback) return location?.origin ?? '';
     if (!location) return fallback;
     try {
       const configured = new URL(fallback, location.origin);

@@ -49,6 +49,23 @@ where
         .extend_ttl(key, BUMP_THRESHOLD, BUMP_TO);
 }
 
+/// Renews a `persistent` entry only if it exists.
+///
+/// `extend_ttl` on a missing key is an error, and several keys (OPA records,
+/// escrows, loan dates…) only appear mid-lifecycle. Entry points call this for
+/// their whole critical footprint so a long-lived position never archives
+/// just because nobody happened to write that particular key recently.
+pub fn bump_persistent_if_present<K>(env: &Env, key: &K)
+where
+    K: IntoVal<Env, Val>,
+{
+    if env.storage().persistent().has(key) {
+        env.storage()
+            .persistent()
+            .extend_ttl(key, BUMP_THRESHOLD, BUMP_TO);
+    }
+}
+
 pub fn token_client<'a>(env: &'a Env, token: &Address) -> token::Client<'a> {
     token::Client::new(env, token)
 }

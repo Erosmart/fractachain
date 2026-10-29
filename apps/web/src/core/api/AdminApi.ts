@@ -2,6 +2,8 @@ import type { Listing, SettlePolicy } from '@fractachain/shared';
 import type { IHttpClient } from '../http/HttpClient';
 import { CHAIN_TIMEOUT_MS, DEPLOY_TIMEOUT_MS, enc } from './timeouts';
 import type {
+  AuditEntry,
+  AuditQuery,
   ChainActionResult,
   DemoDossier,
   DividendResult,
@@ -27,6 +29,16 @@ const SLOW_ACTIONS: ReadonlySet<ListingAction> = new Set(['deploy', 'licitacion'
 /** Admin-only endpoints: issuance, Merval catalog, testnet settings, compliance. */
 export class AdminApi {
   constructor(private readonly http: IHttpClient) {}
+
+  /** Security/admin audit trail, newest first. */
+  async audit(query: AuditQuery = {}): Promise<AuditEntry[]> {
+    const params = new URLSearchParams();
+    params.set('limit', String(query.limit ?? 200));
+    if (query.action?.trim()) params.set('action', query.action.trim());
+    if (query.actor?.trim()) params.set('actor', query.actor.trim());
+    const data = await this.http.get<unknown>(`/api/admin/audit?${params.toString()}`);
+    return Array.isArray(data) ? (data as AuditEntry[]) : [];
+  }
 
   async listings(): Promise<Listing[]> {
     const data = await this.http.get<unknown>('/api/listings');

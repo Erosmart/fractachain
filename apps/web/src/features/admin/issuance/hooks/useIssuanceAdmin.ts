@@ -16,7 +16,8 @@ const { api } = container;
  * components only render and dispatch.
  */
 export function useIssuanceAdmin() {
-  const { token } = useSession();
+  const { user } = useSession();
+  const sessionId = user?.id ?? null;
   const { t } = useI18n();
   const [form, setForm] = useState<DossierForm>(EMPTY_DOSSIER);
   const [listings, setListings] = useState<Listing[]>([]);
@@ -44,7 +45,7 @@ export function useIssuanceAdmin() {
   }, []);
 
   useEffect(() => {
-    if (!token) return;
+    if (!sessionId) return;
     void load();
     api.admin
       .testnet()
@@ -58,7 +59,7 @@ export function useIssuanceAdmin() {
         if (issuer) setForm((f) => (f.issuerPublicKey ? f : { ...f, issuerPublicKey: issuer }));
       })
       .catch(() => undefined);
-  }, [token, load]);
+  }, [sessionId, load]);
 
   const setField = useCallback(<K extends keyof DossierForm>(key: K, value: DossierForm[K]) => {
     setForm((f) => ({ ...f, [key]: value }));

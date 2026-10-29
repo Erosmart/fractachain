@@ -23,7 +23,8 @@ function Avatar({ rec, className }: { rec: KycRecord; className: string }) {
 
 /** Compliance queue: review and approve / reject investor KYC. */
 function AdminKyc() {
-  const { token } = useSession();
+  const { user } = useSession();
+  const sessionId = user?.id ?? null;
   const { t } = useI18n();
   const [records, setRecords] = useState<KycRecord[]>([]);
   const [filterStatus, setFilterStatus] = useState<Filter>('PENDING');
@@ -32,11 +33,11 @@ function AdminKyc() {
   const [busy, setBusy] = useState<string | null>(null);
 
   const fetchRecords = useCallback(async () => {
-    if (!token) return;
+    if (!sessionId) return;
     setRecords(await api.kyc.list().catch(() => []));
-  }, [token]);
+  }, [sessionId]);
 
-  useVisibleInterval(fetchRecords, 4000, Boolean(token), token);
+  useVisibleInterval(fetchRecords, 4000, Boolean(sessionId), sessionId);
 
   const update = async (id: string, status: 'APPROVED' | 'REJECTED') => {
     setBusy(id);

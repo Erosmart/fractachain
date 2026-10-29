@@ -18,7 +18,7 @@ const { api, wallet, navigator } = container;
 /** Secondary market: Stellar DEX book when the listing trades there, sandbox matcher otherwise. */
 function Orderbook() {
   const { t } = useI18n();
-  const { user, token, refreshUser, approveToken } = useAuth();
+  const { user, refreshUser, approveToken } = useAuth();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [listingId, setListingId] = useState(() => navigator.searchParam('listing') || '');
   const [book, setBook] = useState<Book | null>(null);
@@ -79,7 +79,7 @@ function Orderbook() {
     if (!listingId && markets[0]) setListingId(markets[0].listingId);
   }, [markets, listingId]);
 
-  useVisibleInterval(() => loadBook(listingId), 4000, Boolean(listingId), `${listingId}:${token || ''}`);
+  useVisibleInterval(() => loadBook(listingId), 4000, Boolean(listingId), `${listingId}:${user?.id ?? ''}`);
 
   useEffect(() => {
     if (book?.lastPrice) setPrice(book.lastPrice);

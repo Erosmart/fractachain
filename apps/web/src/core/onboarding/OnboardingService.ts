@@ -42,6 +42,6 @@ export class OnboardingService {
   };
 
   private requireSession(): void {
-    if (!this.session.getToken()) throw new Error(this.t('err.signIn'));
+    if (!this.session.isAuthenticated()) throw new Error(this.t('err.signIn'));
   }
 }

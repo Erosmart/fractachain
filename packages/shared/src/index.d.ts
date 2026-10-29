@@ -70,6 +70,10 @@ export interface PublicAccount {
   xlmBalance?: number;
   faucetFunded?: boolean;
   isAdmin: boolean;
+  /** TOTP second factor active on this account. */
+  twoFactorEnabled: boolean;
+  /** The email address was confirmed (Google accounts are verified by Google). */
+  emailVerified: boolean;
   uid?: string;
   authProvider?: string;
   createdAt?: string;
@@ -82,6 +86,33 @@ export interface SessionPayload {
   expiresAt: string;
   user: PublicAccount;
   message?: string;
+}
+
+/**
+ * Answer of a login endpoint when the account has 2FA: no session yet. The
+ * client sends the code with the challenge to `POST /api/auth/2fa/verify`.
+ */
+export interface TwoFactorChallengePayload {
+  success: true;
+  twoFactorRequired: true;
+  challenge: string;
+  /** ISO timestamp after which the challenge must be restarted from the login. */
+  expiresAt: string;
+}
+
+export type LoginPayload = SessionPayload | TwoFactorChallengePayload;
+
+export interface AuditEntry {
+  id: string;
+  at: string;
+  actorId: string | null;
+  actorEmail: string | null;
+  action: string;
+  target: string | null;
+  ip: string | null;
+  requestId: string | null;
+  outcome: 'success' | 'failure';
+  details?: Record<string, unknown>;
 }
 
 export interface WalletSignaturePayload {

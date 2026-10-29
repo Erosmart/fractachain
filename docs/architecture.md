@@ -1,13 +1,17 @@
 # Arquitectura (v2 · rama `macroupdate`)
 
-Monorepo con **npm workspaces**. Tres piezas desplegables y una de contratos:
+Monorepo con **npm workspaces** y **una sola aplicación desplegable**: el
+servidor Node de `apps/web` sirve las páginas Astro y el API en el mismo
+proceso, puerto y origen.
 
 ```
 fractachain/
 ├── apps/
-│   ├── api/                 API REST · Express 5 + TypeScript (por capas)
-│   └── web/                 Web · Astro 7 (SSR, adaptador Node) + islas React 19
+│   └── web/                 La app: Astro 7 (SSR, adaptador Node en modo middleware)
+│       ├── server/main.mjs  Entry de producción: /api y /health → API · resto → Astro
+│       └── integrations/    Monta el API dentro de `astro dev` (un solo proceso también en desarrollo)
 ├── packages/
+│   ├── api/                 Backend por capas (librería) · Express 5 + TypeScript
 │   └── shared/              Contrato de tipos HTTP compartido (solo .d.ts)
 ├── contracts/               Workspace Cargo · Soroban 28 (sin cambios funcionales)
 ├── deployments/             IDs públicos de testnet (sin secretos)
@@ -17,7 +21,7 @@ fractachain/
 └── .github/workflows/ci.yml Typecheck + tests + build + audit + cargo test
 ```
 
-## API (`apps/api`)
+## API (`packages/api`)
 
 Arquitectura en capas con inversión de dependencias: cada capa sólo conoce a
 la de abajo a través de **interfaces**, y las clases concretas se instancian
@@ -25,7 +29,8 @@ en un único **composition root** (`src/container.ts`).
 
 ```
 src/
-├── main.ts                  arranque, apagado ordenado (SIGTERM), job de settlement
+├── main.ts                  API sola (la app la corre dentro del servidor web)
+├── platform/                startPlatform(), createRootApp(), carga de .env, apagado ordenado
 ├── container.ts             composition root (DI manual, sin magia)
 ├── config/env.ts            configuración tipada y validada con zod (fail-fast en prod)
 ├── shared/                  errores tipados, logger (pino + redacción), clock, KeyedMutex
@@ -37,7 +42,9 @@ src/
 │   ├── kyc/                 KycRecord, GafiPolicy, horario bancario
 │   └── stellar/             direcciones y stroops (value objects)
 ├── application/             casos de uso (un servicio por responsabilidad)
-│   ├── auth/AuthService           email · Google (Firebase verificado) · Freighter
+│   ├── auth/AuthService           email · Google (Firebase verificado) · Freighter · desafío 2FA
+│   ├── security/…                 TwoFactorService (TOTP), EmailVerificationService, PasswordResetService
+│   ├── audit/AuditTrail           registro de auditoría (acciones admin + eventos de seguridad)
 │   ├── account/…                  AccountService (ledger), WalletService, CustodialKeyService, AccountBootstrapper
 │   ├── kyc/KycService             onboarding, cola de compliance, selfies
 │   ├── listing/…                  ListingLedger (agregado), IssuanceWorkflowService, ListingPresenter
@@ -48,7 +55,8 @@ src/
 │   └── custody/ issuance/ testnet/ demo/ mocks/
 ├── infrastructure/          adaptadores (implementan los puertos)
 │   ├── persistence/         IDocumentStore → JSON atómico + espejo Postgres; repositorios
-│   ├── security/            scrypt, tokens HMAC con expiración/revocación, AES-GCM, Firebase JWKS, SEP-53
+│   ├── security/            scrypt, tokens HMAC con expiración/revocación, AES-GCM, Firebase JWKS, SEP-53, TOTP, tokens de un solo uso
+│   ├── mail/                IMailer: SMTP (nodemailer) o log en desarrollo
 │   ├── stellar/             Horizon, Soroban RPC, SDEX, faucet USDC, contratos, keyring, política de XDR firmados
 │   └── storage/             selfies (validación por magic bytes)
 ├── http/                    Express: app, controllers (clases), middlewares, DTOs zod
@@ -72,8 +80,9 @@ src/
 HTTP ─▶ requestContext (X-Request-Id, access log)
      ─▶ helmet (headers) ─▶ CORS allowlist ─▶ rate limit global
      ─▶ express.json (100 kB; 8 MB solo en /api/kyc/onboard)
-     ─▶ AuthMiddleware.attach (Bearer fc2.… → req.account)
-     ─▶ Controller: guard (requireAuth/requireAdmin) → rate limit específico → DTO zod
+     ─▶ AuthMiddleware.attach (cookie HttpOnly o Bearer fc2.… → req.account)
+     ─▶ AuthMiddleware.csrf (con cookie: header X-Requested-With + mismo origen)
+     ─▶ Controller: guard (requireAuth / requireAdmin + 2FA) → rate limit → auditoría → DTO zod
      ─▶ Service (dominio + puertos) ─▶ Adaptadores (JSON/PG, Horizon, Soroban)
      ─▶ errorHandler: AppError → status + {success:false,message,code}; resto → 500 genérico
 ```
@@ -89,16 +98,15 @@ relacionales es reemplazar los repositorios, no los servicios.
 
 ### Concurrencia
 
-Un único proceso es dueño del store. Los flujos que leen el ledger, esperan a
-la red y vuelven a escribir (pagar tokens pendientes, bookear un aporte con
-lecturas antes/después del contrato) se serializan por `cuenta:listing` con
-`KeyedMutex`, así un reintento o una doble request nunca paga dos veces.
-Para escalar a varias réplicas hace falta un lock distribuido (ver
-`docs/security/security-review-2026-10.md`, recomendaciones).
+Los flujos que leen el ledger, esperan a la red y vuelven a escribir (pagar
+tokens pendientes, bookear un aporte con lecturas antes/después del contrato)
+se serializan por `cuenta:listing` detrás de `ILockProvider`: en un proceso,
+un mutex en memoria; con `DATABASE_URL`, **advisory locks de Postgres**
+(`pg_advisory_lock`), así varias réplicas tampoco pueden pagar dos veces.
 
 ## Web (`apps/web`)
 
-Astro 7 en modo **SSR** (adaptador Node standalone) con **islas React** sólo
+Astro 7 en modo **SSR** (adaptador Node en modo middleware) con **islas React** sólo
 donde hay interacción. Las secciones de marketing de la home se renderizan en
 el servidor (cero JS). Ver `apps/web/README.md` para el detalle de capas
 (`core/` con config, cliente HTTP, APIs por contexto, stores observables,
@@ -110,7 +118,9 @@ singleton (`core/store/Store.ts`) consumidos con `useSyncExternalStore`.
 
 ## Contratos (`contracts/`)
 
-Sin cambios funcionales en esta rama. Workspace Cargo con `issuance-factory`,
-`fractachain-licitacion`, `stock-vault`, `forward-contract`, `warrant-vault` y
-`fractachain-core` (librería). La revisión de seguridad está en
-`docs/security/security-review-2026-10.md`.
+Workspace Cargo con `issuance-factory`, `fractachain-licitacion`,
+`stock-vault`, `forward-contract`, `warrant-vault` y `fractachain-core`
+(librería). Esta rama corrige todos los hallazgos de la revisión de seguridad
+(`docs/security/security-review-2026-10.md`) con tests de regresión
+(`cargo test`: 135). Los WASM se compilan con `stellar contract build`
+(`scripts/testnet/02-build.sh`).

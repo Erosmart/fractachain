@@ -1,17 +1,24 @@
 # @fractachain/web
 
-Frontend de Fractachain: **Astro 7 (SSR, adaptador Node standalone)** con **islas React 19**.
-Reemplaza a la app Next.js 14; las URLs, el copy y el diseño son los mismos.
+La aplicación de Fractachain: **Astro 7 (SSR, adaptador Node en modo middleware)** con
+**islas React 19**, y el **API montado en el mismo servidor** (`/api/*`, `/health`).
+Un proceso, un puerto, un origen. Reemplaza a la app Next.js 14 y al servidor Express
+separado; las URLs, el copy y el diseño son los mismos.
 
 ```bash
-npm run dev -w @fractachain/web        # http://localhost:3000 (API en PUBLIC_API_URL)
-npm run build -w @fractachain/web      # dist/server/entry.mjs
-npm run start -w @fractachain/web      # sirve el build (HOST/PORT)
-npm run typecheck -w @fractachain/web  # astro check
-npm run test -w @fractachain/web       # vitest
+npm run dev                             # (raíz) http://localhost:3000 — astro dev + API adentro
+npm run build && npm start              # (raíz) build de API + web y servidor único
+npm run typecheck -w @fractachain/web   # astro check
+npm run test -w @fractachain/web        # vitest
 ```
 
-Variables: ver `.env.example` (`PUBLIC_*`, se incrustan al compilar).
+- `server/main.mjs` — entry de producción: `startPlatform({ web: { handler, clientDir } })`
+  de `@fractachain/api` arma el servidor raíz (API → assets → Astro).
+- `integrations/platform.mjs` — en `astro dev` carga el API (TypeScript vía `tsx`) y lo
+  agrega como middleware de Vite. Cambios en `packages/api` requieren reiniciar el dev server.
+
+Variables: un solo `.env` en la raíz del repo (`.env.example`). `PUBLIC_*` se incrusta al
+compilar; `PUBLIC_API_URL` vacío = API en el mismo origen.
 
 ## Estructura
 

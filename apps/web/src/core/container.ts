@@ -3,6 +3,7 @@
  * constructor — no class reaches for a global. Islands import from this module,
  * so all islands on a page share the same stores and services.
  */
+import { AccountSecurityService } from './account/AccountSecurityService';
 import { AdminApi } from './api/AdminApi';
 import { AuthApi } from './api/AuthApi';
 import { CustodyApi } from './api/CustodyApi';
@@ -15,7 +16,7 @@ import { READ_TIMEOUT_MS } from './api/timeouts';
 import { WalletApi } from './api/WalletApi';
 import { AuthService } from './auth/AuthService';
 import { SessionStore } from './auth/SessionStore';
-import { LocalStorageTokenStorage, MemoryTokenStorage } from './auth/TokenStorage';
+import { LocalStorageSessionCache, MemorySessionCache } from './auth/SessionCache';
 import { AppConfig } from './config/AppConfig';
 import { FirebaseAuthProvider } from './firebase/FirebaseAuthProvider';
 import { FetchHttpClient } from './http/FetchHttpClient';
@@ -37,13 +38,13 @@ const themeStore = new ThemeStore();
 /** Translator bound to the live locale, for code outside React (errors thrown by services). */
 const t: Translate = (key, vars) => translate(localeStore.locale, key, vars);
 
-const sessionStore = new SessionStore(isBrowser ? new LocalStorageTokenStorage() : new MemoryTokenStorage());
+const sessionStore = new SessionStore(isBrowser ? new LocalStorageSessionCache() : new MemorySessionCache());
 if (isBrowser) sessionStore.hydrate();
 
 const http = new FetchHttpClient({
   baseUrl: () => config.apiBaseUrl(),
-  tokens: sessionStore,
   unauthorized: sessionStore,
+  policy: sessionStore,
   defaultTimeoutMs: READ_TIMEOUT_MS,
   messages: {
     network: () => t('err.apiDown'),
@@ -72,6 +73,7 @@ const usdcFunding = new UsdcFundingService(api.wallet, walletSigner);
 const google = new FirebaseAuthProvider(config.firebase, config.firebaseConfigured, t);
 
 const authService = new AuthService(api.auth, sessionStore, walletSigner, google, usdcFunding);
+const securityService = new AccountSecurityService(api.auth, sessionStore);
 const onboardingService = new OnboardingService(api.auth, api.kyc, sessionStore, walletSigner, usdcFunding, t);
 const investorService = new InvestorService(
   api.listings,
@@ -91,7 +93,12 @@ export const container = Object.freeze({
   navigator: new Navigator(),
   stores: Object.freeze({ session: sessionStore, locale: localeStore, theme: themeStore }),
   wallet: Object.freeze({ signer: walletSigner, relay, usdcFunding }),
-  services: Object.freeze({ auth: authService, onboarding: onboardingService, investor: investorService }),
+  services: Object.freeze({
+    auth: authService,
+    security: securityService,
+    onboarding: onboardingService,
+    investor: investorService,
+  }),
 });
 
 export type Container = typeof container;

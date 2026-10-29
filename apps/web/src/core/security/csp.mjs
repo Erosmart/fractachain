@@ -48,7 +48,9 @@ function originOf(raw) {
  * @param {string | undefined} apiUrl
  */
 function apiSources(apiUrl) {
-  const origin = originOf(apiUrl) ?? 'http://localhost:4000';
+  // No PUBLIC_API_URL: the API is served from this same origin ('self').
+  const origin = originOf(apiUrl);
+  if (!origin) return [];
   const url = new URL(origin);
   const sources = [origin];
   if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {

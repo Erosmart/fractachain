@@ -15,7 +15,8 @@ const money = (n: number, digits = 2) => formatAmount(n, digits);
 
 /** Investor portfolio: balances, positions marked to market and pending actions. */
 function Dashboard() {
-  const { user, token, approveToken, claimTokens, distributeTokens, claimDividends, refundContribution, fetchWalletSecret } = useAuth();
+  const { user, approveToken, claimTokens, distributeTokens, claimDividends, refundContribution, fetchWalletSecret } = useAuth();
+  const sessionId = user?.id ?? null;
   const { t } = useI18n();
   const [book, setBook] = useState<Portfolio | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -47,10 +48,10 @@ function Dashboard() {
   };
 
   const load = useCallback(async () => {
-    if (!token) return;
+    if (!sessionId) return;
     const data = await container.api.portfolio.get().catch(() => null);
     if (data) setBook(data);
-  }, [token]);
+  }, [sessionId]);
 
   useEffect(() => {
     void load();
@@ -95,7 +96,7 @@ function Dashboard() {
   // button tops them up to the grant. Custodial is silent; self-custody signs
   // one changeTrust in Freighter (the only signature the chain accepts).
   const fundUsdc = async () => {
-    if (!token) return;
+    if (!sessionId) return;
     setFundingUsdc(true);
     setUsdcNotice('');
     try {

@@ -10,29 +10,36 @@ const messages = {
   failed: () => 'failed',
 };
 
-function setup(responder: (url: string, init: RequestInit) => Response | Promise<Response>, token: string | null = 'tok') {
-  const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => responder(String(input), init ?? {}));
+function setup(responder: (url: string, init: RequestInit) => Response | Promise<Response>) {
+  const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) =>
+    responder(String(input), init ?? {}),
+  );
   const unauthorized = { onUnauthorized: vi.fn() };
+  const policy = { onPolicyViolation: vi.fn() };
   const client = new FetchHttpClient({
     baseUrl: () => 'http://api.test',
-    tokens: { getToken: () => token },
     unauthorized,
+    policy,
     messages,
     fetchImpl: fetchImpl as unknown as typeof fetch,
   });
-  return { client, fetchImpl, unauthorized };
+  return { client, fetchImpl, unauthorized, policy };
 }
+
+const headersOf = (init: RequestInit | undefined) => (init?.headers ?? {}) as Record<string, string>;
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
 describe('FetchHttpClient', () => {
-  it('unwraps `data` and sends the bearer token to the API', async () => {
+  it('unwraps `data` and authenticates with the session cookie plus the CSRF header', async () => {
     const { client, fetchImpl } = setup(() => json(200, { success: true, data: { n: 1 } }));
     await expect(client.get<{ n: number }>('/api/x')).resolves.toEqual({ n: 1 });
     const [url, init] = fetchImpl.mock.calls[0];
     expect(url).toBe('http://api.test/api/x');
-    expect((init!.headers as Record<string, string>).Authorization).toBe('Bearer tok');
+    expect(init!.credentials).toBe('same-origin');
+    expect(headersOf(init)['X-Requested-With']).toBe('fractachain');
+    expect(headersOf(init).Authorization).toBeUndefined();
   });
 
   it('serializes POST bodies as JSON', async () => {
@@ -46,7 +53,12 @@ describe('FetchHttpClient', () => {
 
   it('turns `{ success:false }` envelopes into ApiError with code and issues', async () => {
     const { client } = setup(() =>
-      json(400, { success: false, message: 'Monto inválido', code: 'VALIDATION_FAILED', issues: [{ path: 'amount', message: 'x' }] }),
+      json(400, {
+        success: false,
+        message: 'Monto inválido',
+        code: 'VALIDATION_FAILED',
+        issues: [{ path: 'amount', message: 'x' }],
+      }),
     );
     const err = await client.post('/api/z', {}).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ApiError);
@@ -60,28 +72,59 @@ describe('FetchHttpClient', () => {
     expect(unauthorized.onUnauthorized).toHaveBeenCalledOnce();
   });
 
-  it('does not end a session on a 401 to an anonymous call', async () => {
-    const { client, unauthorized } = setup(() => json(401, { success: false, message: 'Credenciales inválidas' }), null);
-    await expect(client.post('/api/auth/email', {})).rejects.toBeInstanceOf(ApiError);
+  it('does not end a session on a 401 to an anonymous call (wrong password, wrong 2FA code)', async () => {
+    const { client, unauthorized } = setup(() =>
+      json(401, { success: false, message: 'Credenciales inválidas' }),
+    );
+    await expect(
+      client.send('/api/auth/email', { method: 'POST', body: {}, auth: 'none' }),
+    ).rejects.toBeInstanceOf(ApiError);
     expect(unauthorized.onUnauthorized).not.toHaveBeenCalled();
   });
 
-  it('never leaks the token to another origin', async () => {
+  it('sends neither credentials nor the CSRF header to another origin', async () => {
     const { client, fetchImpl } = setup(() => new Response(new Blob(['x']), { status: 200 }));
     await client.blob('https://evil.example/selfie.png');
-    expect((fetchImpl.mock.calls[0][1]!.headers as Record<string, string>).Authorization).toBeUndefined();
+    const init = fetchImpl.mock.calls[0][1];
+    expect(init!.credentials).toBe('same-origin');
+    expect(headersOf(init)['X-Requested-With']).toBeUndefined();
+    expect(headersOf(init).Authorization).toBeUndefined();
+  });
+
+  it('reports account policy refusals (403 TWO_FACTOR_REQUIRED) but not ordinary 403s', async () => {
+    const twoFa = setup(() =>
+      json(403, { success: false, code: 'TWO_FACTOR_REQUIRED', message: 'Activá 2FA' }),
+    );
+    await expect(twoFa.client.get('/api/listings')).rejects.toMatchObject({
+      status: 403,
+      code: 'TWO_FACTOR_REQUIRED',
+    });
+    expect(twoFa.policy.onPolicyViolation).toHaveBeenCalledWith('TWO_FACTOR_REQUIRED', 'Activá 2FA');
+
+    const forbidden = setup(() => json(403, { success: false, code: 'FORBIDDEN', message: 'No' }));
+    await expect(forbidden.client.get('/api/listings')).rejects.toMatchObject({ status: 403 });
+    expect(forbidden.policy.onPolicyViolation).not.toHaveBeenCalled();
   });
 
   it('maps 429, non-JSON and network failures to readable messages', async () => {
-    await expect(setup(() => json(429, {})).client.get('/a')).rejects.toMatchObject({ message: 'slow down', status: 429 });
-    await expect(setup(() => new Response('<html>502</html>', { status: 502 })).client.get('/a')).rejects.toMatchObject({
+    await expect(setup(() => json(429, {})).client.get('/a')).rejects.toMatchObject({
+      message: 'slow down',
+      status: 429,
+    });
+    await expect(
+      setup(() => new Response('<html>502</html>', { status: 502 })).client.get('/a'),
+    ).rejects.toMatchObject({
       message: 'bad response',
       code: 'BAD_RESPONSE',
     });
     const offline = setup(() => {
       throw new TypeError('Failed to fetch');
     });
-    await expect(offline.client.get('/a')).rejects.toMatchObject({ code: 'NETWORK', message: 'network down', isNetwork: true });
+    await expect(offline.client.get('/a')).rejects.toMatchObject({
+      code: 'NETWORK',
+      message: 'network down',
+      isNetwork: true,
+    });
   });
 
   it('aborts slow requests with a timeout error', async () => {
@@ -91,6 +134,9 @@ describe('FetchHttpClient', () => {
           init.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
         }),
     );
-    await expect(client.get('/slow', { timeoutMs: 20 })).rejects.toMatchObject({ code: 'TIMEOUT', message: 'too slow' });
+    await expect(client.get('/slow', { timeoutMs: 20 })).rejects.toMatchObject({
+      code: 'TIMEOUT',
+      message: 'too slow',
+    });
   });
 });

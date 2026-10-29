@@ -22,6 +22,32 @@ export interface SessionResponse {
   message?: string;
 }
 
+/** Login step passed, second factor pending: no cookie and no user yet. */
+export interface TwoFactorChallengeResponse {
+  success: true;
+  twoFactorRequired: true;
+  challenge: string;
+  expiresAt?: string;
+}
+
+/** Every login endpoint answers one of these two. */
+export type LoginResponse = SessionResponse | TwoFactorChallengeResponse;
+
+export function isTwoFactorChallenge(res: LoginResponse): res is TwoFactorChallengeResponse {
+  return (res as Partial<TwoFactorChallengeResponse>).twoFactorRequired === true;
+}
+
+/** Pending TOTP enrollment: shown as a QR (otpauth URL) and as a typed secret. */
+export interface TwoFactorSetup {
+  secret: string;
+  otpauthUrl: string;
+}
+
+export interface TwoFactorEnableResult {
+  recoveryCodes: string[];
+  user: unknown;
+}
+
 export interface CustodyResponse {
   success: true;
   user: unknown;
@@ -401,3 +427,29 @@ export interface NewStockInput {
 }
 
 export type { PublicAccount };
+
+/* ---------------------------- audit ---------------------------- */
+
+export type AuditOutcome = 'success' | 'failure';
+
+/** One administrative or security-relevant action, as recorded by the API. */
+export interface AuditEntry {
+  id: string;
+  at: string;
+  actorId: string | null;
+  actorEmail: string | null;
+  action: string;
+  target: string | null;
+  ip: string | null;
+  requestId: string | null;
+  outcome: AuditOutcome;
+  details?: Record<string, unknown>;
+}
+
+export interface AuditQuery {
+  limit?: number;
+  /** Action prefix, e.g. `kyc.` or `auth.login`. */
+  action?: string;
+  /** Free text matched against the actor. */
+  actor?: string;
+}

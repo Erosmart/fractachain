@@ -1,9 +1,12 @@
 import {
   ApiError,
+  CSRF_HEADER,
+  CSRF_HEADER_VALUE,
+  isPolicyViolationCode,
   type ApiEnvelope,
   type HttpMessages,
   type IHttpClient,
-  type ITokenProvider,
+  type IPolicyViolationHandler,
   type IUnauthorizedHandler,
   type RequestOptions,
 } from './HttpClient';
@@ -11,14 +14,21 @@ import {
 export interface FetchHttpClientDeps {
   /** Resolved per request: the base URL depends on the page host (LAN rewrite). */
   baseUrl: () => string;
-  tokens: ITokenProvider;
   messages: HttpMessages;
   unauthorized?: IUnauthorizedHandler;
+  policy?: IPolicyViolationHandler;
   fetchImpl?: typeof fetch;
   defaultTimeoutMs?: number;
 }
 
-/** `fetch`-based implementation of {@link IHttpClient}. */
+/**
+ * `fetch`-based implementation of {@link IHttpClient}.
+ *
+ * Authentication rides on the `fc_session` cookie (HttpOnly, SameSite=Strict)
+ * that the API sets at login: JavaScript never sees a credential, so an XSS
+ * cannot exfiltrate the session. Every request to the API carries the CSRF
+ * header; nothing is ever attached to third-party URLs.
+ */
 export class FetchHttpClient implements IHttpClient {
   private readonly fetchImpl: typeof fetch;
   private readonly defaultTimeoutMs: number;
@@ -33,7 +43,10 @@ export class FetchHttpClient implements IHttpClient {
     return `${this.deps.baseUrl()}${path.startsWith('/') ? path : `/${path}`}`;
   }
 
-  async send<TBody extends ApiEnvelope = ApiEnvelope>(path: string, options: RequestOptions = {}): Promise<TBody> {
+  async send<TBody extends ApiEnvelope = ApiEnvelope>(
+    path: string,
+    options: RequestOptions = {},
+  ): Promise<TBody> {
     const response = await this.execute(path, options, 'application/json');
     const raw = await response.text();
     let body: TBody;
@@ -43,12 +56,10 @@ export class FetchHttpClient implements IHttpClient {
       throw new ApiError(this.deps.messages.badResponse(), response.status, 'BAD_RESPONSE');
     }
     if (!response.ok || body.success === false) {
-      throw new ApiError(
-        body.message || body.error || this.fallbackMessage(response.status),
-        response.status,
-        body.code,
-        body.issues,
-      );
+      const message = body.message || body.error || this.fallbackMessage(response.status);
+      if (response.status === 403 && isPolicyViolationCode(body.code))
+        this.deps.policy?.onPolicyViolation(body.code, message);
+      throw new ApiError(message, response.status, body.code, body.issues);
     }
     return body;
   }
@@ -58,7 +69,11 @@ export class FetchHttpClient implements IHttpClient {
     return body.data as T;
   }
 
-  async post<T>(path: string, body?: unknown, options: Omit<RequestOptions, 'method' | 'body'> = {}): Promise<T> {
+  async post<T>(
+    path: string,
+    body?: unknown,
+    options: Omit<RequestOptions, 'method' | 'body'> = {},
+  ): Promise<T> {
     const envelope = await this.send<ApiEnvelope<T>>(path, { ...options, method: 'POST', body: body ?? {} });
     return envelope.data as T;
   }
@@ -72,11 +87,9 @@ export class FetchHttpClient implements IHttpClient {
   private async execute(path: string, options: RequestOptions, accept: string): Promise<Response> {
     const method = options.method ?? 'GET';
     const target = this.url(path);
-    // The bearer token only ever travels to the API itself, never to a third-party URL.
-    const sameOrigin = this.isApiOrigin(target);
-    const token = options.auth === 'none' || !sameOrigin ? null : (options.token ?? this.deps.tokens.getToken());
+    const toApi = this.isApiOrigin(target);
     const headers: Record<string, string> = { Accept: accept };
-    if (token) headers.Authorization = `Bearer ${token}`;
+    if (toApi) headers[CSRF_HEADER] = CSRF_HEADER_VALUE;
     const hasBody = method !== 'GET' && options.body !== undefined;
     if (hasBody) headers['Content-Type'] = 'application/json';
 
@@ -96,9 +109,11 @@ export class FetchHttpClient implements IHttpClient {
         headers,
         body: hasBody ? JSON.stringify(options.body) : undefined,
         signal: controller.signal,
-        credentials: 'omit',
+        // The session cookie only ever travels to our own origin.
+        credentials: 'same-origin',
       });
-      if (response.status === 401 && token) this.deps.unauthorized?.onUnauthorized();
+      if (response.status === 401 && toApi && options.auth !== 'none')
+        this.deps.unauthorized?.onUnauthorized();
       return response;
     } catch (err) {
       if (timedOut) throw new ApiError(this.deps.messages.timeout(), 0, 'TIMEOUT');
@@ -112,8 +127,8 @@ export class FetchHttpClient implements IHttpClient {
 
   private isApiOrigin(target: string): boolean {
     try {
-      const base = this.deps.baseUrl();
-      return new URL(target, base).origin === new URL(base, 'http://localhost').origin;
+      const base = this.deps.baseUrl() || (typeof window !== 'undefined' ? window.location.origin : '');
+      return new URL(target, base).origin === new URL(base).origin;
     } catch {
       return false;
     }

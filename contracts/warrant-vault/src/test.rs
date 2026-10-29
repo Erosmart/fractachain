@@ -23,6 +23,11 @@ impl MockRegistry {
         env.storage().instance().set(&1u32, &token);
     }
 
+    /// Simulates the factory revoking the warrantera's accreditation.
+    pub fn revoke_warrantera(env: Env) {
+        env.storage().instance().remove(&0u32);
+    }
+
     pub fn is_warrantera(env: Env, who: Address) -> bool {
         env.storage()
             .instance()
@@ -346,4 +351,60 @@ fn repayment_and_liquidation_do_not_overlap_at_the_grace_boundary() {
     f.env.ledger().set_timestamp(T0 + 25 * DAY + 1);
     f.client.execute_liquidation(&f.lender);
     assert_eq!(f.client.get_status(), WarrantStatus::Liquidated);
+}
+
+/// SC-02 (security review 2026-10): the registry is caller-chosen at
+/// initialize, so it must be inspectable before funding.
+#[test]
+fn the_trusted_registry_and_producer_are_readable() {
+    let f = setup();
+    init_default(&f, 30);
+    assert_eq!(f.client.get_registry(), f.registry);
+    assert_eq!(f.client.get_producer(), f.producer);
+}
+
+/// Info: a warrantera revoked after attesting could still unlock a loan
+/// against its own attestation.
+#[test]
+fn a_revoked_warrantera_attestation_cannot_be_funded() {
+    let f = setup();
+    init_default(&f, 30);
+    MockRegistryClient::new(&f.env, &f.registry).revoke_warrantera();
+    assert!(f.client.try_fund_loan(&f.lender).is_err());
+}
+
+/// Info: a revoked warrantera kept the power to liquidate; the lender keeps
+/// its right to the collateral.
+#[test]
+fn a_revoked_warrantera_cannot_liquidate_but_the_lender_can() {
+    let f = setup();
+    init_default(&f, 10);
+    f.client.fund_loan(&f.lender);
+    MockRegistryClient::new(&f.env, &f.registry).revoke_warrantera();
+    f.env.ledger().set_timestamp(T0 + 26 * DAY);
+    assert!(f.client.try_execute_liquidation(&f.oracle).is_err());
+    f.client.execute_liquidation(&f.lender);
+    assert_eq!(f.client.get_status(), WarrantStatus::Liquidated);
+}
+
+/// SC-12: `Lender` and `DueDate` were bumped once at funding and then left to
+/// archive over the loan term.
+#[test]
+fn loan_entries_keep_their_ttl() {
+    use soroban_sdk::testutils::storage::Persistent as _;
+    let f = setup();
+    init_default(&f, 30);
+    f.client.fund_loan(&f.lender);
+    // Let the loan entries' TTL fall below the renewal threshold.
+    let elapsed = fractachain_core::BUMP_TO - fractachain_core::BUMP_THRESHOLD + 10;
+    f.env.ledger().with_mut(|l| l.sequence_number += elapsed);
+    f.env.ledger().set_timestamp(T0 + 10 * DAY);
+    f.client.repay_loan(&f.producer);
+    let id = f.client.address.clone();
+    for key in [crate::WarrantKey::Lender, crate::WarrantKey::DueDate] {
+        let ttl = f
+            .env
+            .as_contract(&id, || f.env.storage().persistent().get_ttl(&key));
+        assert!(ttl > fractachain_core::BUMP_THRESHOLD, "TTL not extended: {ttl}");
+    }
 }

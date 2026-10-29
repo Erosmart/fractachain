@@ -33,6 +33,34 @@ invoke() {
     "$@"
 }
 
+# Read-only call (simulation only): prints the JSON result.
+view() {
+  local id="$1"
+  shift
+  stellar contract invoke \
+    --id "$id" \
+    --source-account "$DEPLOYER_ID" \
+    --network "$NETWORK" \
+    --send=no \
+    -- \
+    "$@" | tr -d '\r"' | tail -n 1
+}
+
+# Deploy and initialize are separate transactions, so anyone watching the
+# network can initialize a fresh instance first and own it. Every instance is
+# checked right after init (and when reused): its stored admin must be ours.
+require_admin() {
+  local id="$1" label="$2"
+  local stored
+  stored="$(view "$id" get_admin || true)"
+  if [[ "$stored" != "$DEPLOYER_PK" ]]; then
+    echo "ERROR: $label $id tiene admin '$stored', esperado $DEPLOYER_PK." >&2
+    echo "       Posible initialize adelantado por un tercero: NO se guarda el ID. Redeployá." >&2
+    exit 1
+  fi
+  echo "    admin verificado ($label)"
+}
+
 deploy_wasm() {
   local wasm="$1"
   stellar contract deploy \
@@ -86,11 +114,13 @@ echo "== 2. Factory"
 FACTORY_ID="$(read_state factory)"
 if [[ "$FACTORY_ID" == C* ]]; then
   echo "    reusing factory $FACTORY_ID"
+  require_admin "$FACTORY_ID" factory
 else
   FACTORY_ID="$(deploy_wasm "$FACTORY_WASM")"
   echo "    factory  $FACTORY_ID"
-  save_state factory "$FACTORY_ID"
   invoke "$FACTORY_ID" initialize --admin "$DEPLOYER_PK"
+  require_admin "$FACTORY_ID" factory
+  save_state factory "$FACTORY_ID"
 fi
 invoke "$FACTORY_ID" set_payment_asset --admin "$DEPLOYER_PK" --kind "$KIND_USDC" --token "$USDC_SAC"
 invoke "$FACTORY_ID" set_payment_asset --admin "$DEPLOYER_PK" --kind "$KIND_XLM" --token "$XLM_SAC"
@@ -99,10 +129,10 @@ echo "== 3. Stock vault + licitación demo"
 STOCK_ID="$(read_state stockVault)"
 if [[ "$STOCK_ID" == C* ]]; then
   echo "    reusing stock $STOCK_ID"
+  require_admin "$STOCK_ID" "stock vault"
 else
   STOCK_ID="$(deploy_wasm "$STOCK_WASM")"
   echo "    stock    $STOCK_ID"
-  save_state stockVault "$STOCK_ID"
   invoke "$STOCK_ID" initialize_stock \
     --admin "$DEPLOYER_PK" \
     --por_oracle "$POR_PK" \
@@ -112,15 +142,22 @@ else
     --company_name "Fractachain Demo SA" \
     --isin ARDEMOTEST01 \
     --custodian_cuit "30712345678"
+  require_admin "$STOCK_ID" "stock vault"
+  # The vault must trust *our* factory, not one the initializer picked.
+  if [[ "$(view "$STOCK_ID" get_registry)" != "$FACTORY_ID" ]]; then
+    echo "ERROR: el stock vault no apunta a la factory $FACTORY_ID" >&2
+    exit 1
+  fi
+  save_state stockVault "$STOCK_ID"
 fi
 
 LIC_ID="$(read_state licitacion)"
 if [[ "$LIC_ID" == C* ]]; then
   echo "    reusing licitacion $LIC_ID"
+  require_admin "$LIC_ID" licitacion
 else
   LIC_ID="$(deploy_wasm "$LIC_WASM")"
   echo "    licitacion $LIC_ID"
-  save_state licitacion "$LIC_ID"
   DEADLINE=$(( $(date +%s) + 30*86400 ))
   LEGAL_INFO='{"fideicomiso_hash":"0101010101010101010101010101010101010101010101010101010101010101","cnv_record_id":"CNV-TESTNET-1","legal_terms_uri":"https://fractachain.example/legal"}'
   invoke "$LIC_ID" initialize \
@@ -132,6 +169,8 @@ else
     --deadline "$DEADLINE" \
     --price_per_unit 10 \
     --legal_info "$LEGAL_INFO"
+  require_admin "$LIC_ID" licitacion
+  save_state licitacion "$LIC_ID"
 fi
 
 invoke "$FACTORY_ID" register_product \
