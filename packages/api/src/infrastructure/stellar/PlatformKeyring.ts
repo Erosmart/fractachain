@@ -45,7 +45,9 @@ export class PlatformKeyring {
   private requireKeypair(name: string, expected?: string): Keypair {
     const kp = this.keypairFrom(name);
     if (!kp) {
-      throw new NotConfiguredError(`Falta ${name} en apps/api/.env (la S… de esa cuenta). No la subas a git.`);
+      throw new NotConfiguredError(
+        `Falta ${name} en apps/api/.env (la S… de esa cuenta). No la subas a git.`,
+      );
     }
     if (expected && kp.publicKey() !== expected) {
       throw new NotConfiguredError(`${name} no corresponde a ${expected} (dio ${kp.publicKey()}).`);
@@ -103,7 +105,13 @@ export class PlatformKeyring {
 
   async usdcIssuer(): Promise<Keypair> {
     const want = this.usdcIssuerPublicKey();
-    for (const name of [SECRET.usdcIssuer, SECRET.issuer, SECRET.platformIssuer, SECRET.deployer, SECRET.licitacionAdmin]) {
+    for (const name of [
+      SECRET.usdcIssuer,
+      SECRET.issuer,
+      SECRET.platformIssuer,
+      SECRET.deployer,
+      SECRET.licitacionAdmin,
+    ]) {
       const kp = this.keypairFrom(name);
       if (want && kp?.publicKey() === want) return kp;
     }
@@ -125,7 +133,10 @@ export class PlatformKeyring {
   /** Admin of licitación / vault instances: the deployer, else a provisioned admin. */
   async licitacionAdmin(): Promise<Keypair> {
     if (this.hasDeployer()) return this.deployer();
-    return this.keypairFrom(SECRET.licitacionAdmin) ?? this.provision(SECRET.licitacionAdmin, 'admin de licitación');
+    return (
+      this.keypairFrom(SECRET.licitacionAdmin) ??
+      this.provision(SECRET.licitacionAdmin, 'admin de licitación')
+    );
   }
 
   /** Signals that on-chain KYC enforcement (trustline authorization) is possible. */
@@ -135,7 +146,9 @@ export class PlatformKeyring {
 
   private async provision(name: string, label: string): Promise<Keypair> {
     if (!this.allowProvisioning) {
-      throw new NotConfiguredError(`Falta ${name}: fuera de testnet las claves de plataforma no se generan solas.`);
+      throw new NotConfiguredError(
+        `Falta ${name}: fuera de testnet las claves de plataforma no se generan solas.`,
+      );
     }
     const kp = Keypair.random();
     for (let attempt = 0; attempt < 3; attempt++) {

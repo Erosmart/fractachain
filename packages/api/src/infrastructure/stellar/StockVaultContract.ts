@@ -25,14 +25,23 @@ export class StockVaultContract {
 
   /** Soroban `Symbol`: a-zA-Z0-9_, max 32 chars. */
   private static symbol(code: string): string {
-    return String(code || '').toUpperCase().replace(/[^A-Z0-9_]/g, '').slice(0, 32) || 'TOKEN';
+    return (
+      String(code || '')
+        .toUpperCase()
+        .replace(/[^A-Z0-9_]/g, '')
+        .slice(0, 32) || 'TOKEN'
+    );
   }
 
   /** Caja de Valores attestation as the BytesN<32> the contract expects. */
   private static cvHash(listing: Listing): Buffer {
     const raw = String(listing.cvDepositHash || '');
     const buf = Buffer.from(raw, 'hex');
-    return buf.length === 32 ? buf : createHash('sha256').update(raw || listing.id).digest();
+    return buf.length === 32
+      ? buf
+      : createHash('sha256')
+          .update(raw || listing.id)
+          .digest();
   }
 
   /**
@@ -42,10 +51,13 @@ export class StockVaultContract {
    */
   async deployForListing(listing: Listing): Promise<{ contractId: string; hash: string | null }> {
     const d = this.deployments.load();
-    const wasmHash = d?.stockVaultWasmHash || (isContractId(d?.stockVault) ? await this.soroban.wasmHashOf(d!.stockVault!) : '');
+    const wasmHash =
+      d?.stockVaultWasmHash ||
+      (isContractId(d?.stockVault) ? await this.soroban.wasmHashOf(d!.stockVault!) : '');
     if (!wasmHash) throw new NotConfiguredError('deployments/testnet.json no tiene el WASM del stock vault');
     const paymentToken = d?.usdcSac;
-    if (!isContractId(paymentToken)) throw new NotConfiguredError('Falta usdcSac en deployments/testnet.json');
+    if (!isContractId(paymentToken))
+      throw new NotConfiguredError('Falta usdcSac en deployments/testnet.json');
 
     const admin = await this.keyring.licitacionAdmin();
     const oracle = await this.keyring.porOracle();
@@ -100,11 +112,16 @@ export class StockVaultContract {
   }
 
   /** Mints backed tokens on the listing's vault to the issuer (custody float). */
-  async mintBacked(listing: Listing, amount: number): Promise<{ hash: string | null; to: string; contractId: string } | null> {
+  async mintBacked(
+    listing: Listing,
+    amount: number,
+  ): Promise<{ hash: string | null; to: string; contractId: string } | null> {
     if (!isContractId(listing.stockContract)) return null;
     const admin = await this.keyring.licitacionAdmin();
     const client = await this.soroban.client(listing.stockContract, admin);
-    const to = isStellarPublicKey(listing.dossier.issuerPublicKey) ? listing.dossier.issuerPublicKey : admin.publicKey();
+    const to = isStellarPublicKey(listing.dossier.issuerPublicKey)
+      ? listing.dossier.issuerPublicKey
+      : admin.publicKey();
     const { hash } = await this.soroban.invoke(client, 'mint_backed_stock', {
       admin: admin.publicKey(),
       to,

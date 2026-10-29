@@ -28,7 +28,9 @@ export class IssuanceWorkflowService {
     const body = { ...dossier };
     if (!String(body.issuerPublicKey || '').trim()) {
       body.issuerPublicKey =
-        (await this.keyring.ensurePlatformIssuer().catch(() => null))?.publicKey() || this.keyring.platformIssuerPublicKey() || '';
+        (await this.keyring.ensurePlatformIssuer().catch(() => null))?.publicKey() ||
+        this.keyring.platformIssuerPublicKey() ||
+        '';
     }
     return this.listings.create(body);
   }
@@ -39,10 +41,15 @@ export class IssuanceWorkflowService {
     // attestation and every mint proof reference the same deposit.
     listing.cvDepositHash = this.listings.cvDepositHash(listing);
     const vault = this.stockVault.canDeploy() ? await this.stockVault.deployForListing(listing) : null;
-    const updated = this.listings.markDeployed(listingId, vault ? { contractId: vault.contractId } : undefined);
+    const updated = this.listings.markDeployed(
+      listingId,
+      vault ? { contractId: vault.contractId } : undefined,
+    );
     return {
       ...updated,
-      onChain: vault ? { hash: vault.hash, contractId: vault.contractId, explorer: this.explorer.tx(vault.hash) } : null,
+      onChain: vault
+        ? { hash: vault.hash, contractId: vault.contractId, explorer: this.explorer.tx(vault.hash) }
+        : null,
     };
   }
 
@@ -61,7 +68,11 @@ export class IssuanceWorkflowService {
     const { listing: draft, deadlineMs } = this.listings.prepareOpen(listingId, opts);
     // Each offering gets its own instance, initialized with the company wallet as fiduciary.
     const onChain = this.licitacion.canDeploy()
-      ? await this.licitacion.deployForListing(draft, deadlineMs, this.treasuries.secretFor(draft.dossier.proceedsWallet))
+      ? await this.licitacion.deployForListing(
+          draft,
+          deadlineMs,
+          this.treasuries.secretFor(draft.dossier.proceedsWallet),
+        )
       : undefined;
     const listing = this.listings.markOpen(listingId, opts, onChain);
     return {

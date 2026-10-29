@@ -28,9 +28,12 @@ export function useIssuanceAdmin() {
   const [settleAt, setSettleAt] = useState('');
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => () => {
-    if (flashTimer.current) clearTimeout(flashTimer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (flashTimer.current) clearTimeout(flashTimer.current);
+    },
+    [],
+  );
 
   const flash = useCallback((message: string) => {
     setNotice(message);
@@ -39,7 +42,10 @@ export function useIssuanceAdmin() {
   }, []);
 
   const load = useCallback(async () => {
-    const [ls, st] = await Promise.all([api.admin.listings().catch(() => null), api.admin.stocks().catch(() => null)]);
+    const [ls, st] = await Promise.all([
+      api.admin.listings().catch(() => null),
+      api.admin.stocks().catch(() => null),
+    ]);
     if (ls) setListings(ls);
     if (st) setStocks(st);
   }, []);
@@ -110,7 +116,9 @@ export function useIssuanceAdmin() {
     try {
       const data = await api.admin.listingAction(id, action, body);
       const hash = data.onChain?.hash;
-      flash(`${t('admIss.flashAct', { path: action, status: String(data.status ?? '') })}${hash ? ` · ${hash}` : ''}`);
+      flash(
+        `${t('admIss.flashAct', { path: action, status: String(data.status ?? '') })}${hash ? ` · ${hash}` : ''}`,
+      );
       void load();
     } catch (err) {
       flash(errorMessage(err));
@@ -138,12 +146,20 @@ export function useIssuanceAdmin() {
 
   const saveSettle = (id: string) => act(id, 'settle', settleBody());
 
-  const closeListing = (listing: Listing) => act(listing.id, listing.dossier.paymentKind === 'XLM' ? 'finalize' : 'close');
+  const closeListing = (listing: Listing) =>
+    act(listing.id, listing.dossier.paymentKind === 'XLM' ? 'finalize' : 'close');
 
   const payDividend = async (id: string, amountUsdc: number) => {
     try {
       const data = await api.admin.payDividend(id, amountUsdc);
-      flash(t('admIss.flashDividend', { id: data.id, total: data.totalUsdc, n: data.holdersPaid, per: data.perShare }));
+      flash(
+        t('admIss.flashDividend', {
+          id: data.id,
+          total: data.totalUsdc,
+          n: data.holdersPaid,
+          per: data.perShare,
+        }),
+      );
       void load();
     } catch (err) {
       flash(errorMessage(err));
@@ -152,7 +168,10 @@ export function useIssuanceAdmin() {
 
   const emitStock = async (stock: NewStockInput) => {
     try {
-      const data = await api.admin.createStock({ ...stock, tokenTicker: stock.tokenTicker || `t${stock.ticker}` });
+      const data = await api.admin.createStock({
+        ...stock,
+        tokenTicker: stock.tokenTicker || `t${stock.ticker}`,
+      });
       flash(t('admIss.flashStock', { t: data.tokenTicker }));
       void load();
       return true;

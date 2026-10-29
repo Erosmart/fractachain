@@ -12,6 +12,8 @@ const locale = Astro.locals.locale;
 <BaseLayout title={translate(locale, 'nav.login')}>
   <meta slot="head" http-equiv="refresh" content="0; url=/login" />
   <p class="py-16 text-center text-neutral-500">
-    <a href="/login" class="underline">{translate(locale, 'misc.registerSame')}</a>
+    <a href="/login" class="underline">
+      {translate(locale, 'misc.registerSame')}
+    </a>
   </p>
 </BaseLayout>

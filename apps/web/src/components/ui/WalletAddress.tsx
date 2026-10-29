@@ -25,9 +25,13 @@ export default function WalletAddress({ address, compact = false }: { address?: 
       title={address}
       className={`inline-flex items-center gap-1.5 font-mono text-xs max-w-full min-w-0 ${compact ? '' : 'break-all text-left w-full'}`}
     >
-      <span className={`min-w-0 ${compact ? 'truncate' : 'select-all break-all'}`}>{compact ? short : address}</span>
+      <span className={`min-w-0 ${compact ? 'truncate' : 'select-all break-all'}`}>
+        {compact ? short : address}
+      </span>
       {copied ? <Check className="w-3.5 h-3.5 shrink-0" /> : <Copy className="w-3.5 h-3.5 shrink-0" />}
-      <span className="font-sans text-[10px] uppercase tracking-wide shrink-0">{copied ? t('misc.copied') : t('misc.copy')}</span>
+      <span className="font-sans text-[10px] uppercase tracking-wide shrink-0">
+        {copied ? t('misc.copied') : t('misc.copy')}
+      </span>
     </button>
   );
 }

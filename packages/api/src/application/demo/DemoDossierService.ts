@@ -17,10 +17,30 @@ import type { DeploymentRegistryLike } from '../../infrastructure/stellar/types'
 import type { ListingLedger } from '../listing/ListingLedger';
 
 const COMPANIES = [
-  { legal: 'Pampa Digital Agro', trade: 'PampaDigital', sector: 'Agro', use: 'Capital de trabajo para la campaña de soja y expansión del acopio.' },
-  { legal: 'Litoral Energías Renovables', trade: 'LitoralEnergía', sector: 'Energía', use: 'Refinanciación de parque solar y capital de trabajo.' },
-  { legal: 'Andina Finanzas', trade: 'AndinaFin', sector: 'Finanzas', use: 'Fondeo de la línea de créditos PyME tokenizados.' },
-  { legal: 'Sur Infraestructura', trade: 'SurInfra', sector: 'Infraestructura', use: 'Obra complementaria del nodo logístico sur.' },
+  {
+    legal: 'Pampa Digital Agro',
+    trade: 'PampaDigital',
+    sector: 'Agro',
+    use: 'Capital de trabajo para la campaña de soja y expansión del acopio.',
+  },
+  {
+    legal: 'Litoral Energías Renovables',
+    trade: 'LitoralEnergía',
+    sector: 'Energía',
+    use: 'Refinanciación de parque solar y capital de trabajo.',
+  },
+  {
+    legal: 'Andina Finanzas',
+    trade: 'AndinaFin',
+    sector: 'Finanzas',
+    use: 'Fondeo de la línea de créditos PyME tokenizados.',
+  },
+  {
+    legal: 'Sur Infraestructura',
+    trade: 'SurInfra',
+    sector: 'Infraestructura',
+    use: 'Obra complementaria del nodo logístico sur.',
+  },
 ];
 
 export interface DemoDossierResult {
@@ -52,7 +72,10 @@ export class DemoDossierService implements ITreasurySecrets {
     const pick = COMPANIES[randomInt(0, COMPANIES.length)];
     const ticker = this.uniqueTicker();
     const year = new Date().getFullYear();
-    const issuer = (await this.keyring.ensurePlatformIssuer().catch(() => null))?.publicKey() || this.deployments.load()?.issuer || '';
+    const issuer =
+      (await this.keyring.ensurePlatformIssuer().catch(() => null))?.publicKey() ||
+      this.deployments.load()?.issuer ||
+      '';
     const treasury = Keypair.random();
     const funding = await this.friendbot.fund(treasury.publicKey());
     this.treasurySecrets.set(treasury.publicKey(), treasury.secret());

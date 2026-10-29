@@ -21,7 +21,8 @@ runCli(async () => {
   requireLocalDeploymentFile(config);
 
   const issuer = Keypair.random();
-  if (!(await friendbot.fund(issuer.publicKey())).funded) throw new Error('Friendbot no fondeó el emisor USDC');
+  if (!(await friendbot.fund(issuer.publicKey())).funded)
+    throw new Error('Friendbot no fondeó el emisor USDC');
   const asset = new Asset(config.stellar.usdcCode, issuer.publicKey());
   const sac = asset.contractId(config.stellar.networkPassphrase);
   await soroban.submitHostFunction(Operation.createStellarAssetContract({ asset }), issuer);
@@ -32,8 +33,15 @@ runCli(async () => {
 
   const admin = await keyring.licitacionAdmin();
   const factory = await soroban.client(soroban.factoryId(), admin);
-  await soroban.invoke(factory, 'set_payment_asset', { admin: admin.publicKey(), kind: USDC_PAYMENT_KIND, token: sac });
+  await soroban.invoke(factory, 'set_payment_asset', {
+    admin: admin.publicKey(),
+    kind: USDC_PAYMENT_KIND,
+    token: sac,
+  });
 
-  deployments.save({ usdcSac: sac, usdcClassic: { code: config.stellar.usdcCode, issuer: issuer.publicKey() } });
+  deployments.save({
+    usdcSac: sac,
+    usdcClassic: { code: config.stellar.usdcCode, issuer: issuer.publicKey() },
+  });
   logger.info('USDC propio listo', { issuer: issuer.publicKey(), sac, factory: soroban.factoryId() });
 });

@@ -18,46 +18,48 @@ const marks = [
   </div>
 
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
-    {
-      marks.map((m) => (
-        <div class="flex items-center gap-3 min-w-0">
-          <img src={`/brands/${m.slug}.png`} alt={m.alt} class="h-12 w-12 object-contain shrink-0" loading="lazy" decoding="async" />
-          <div class="leading-tight min-w-0">
-            <div class="font-section font-extrabold text-black text-xs sm:text-sm">{m.title}</div>
-            <div class="text-[11px] text-neutral-500">{m.sub}</div>
-          </div>
+    {marks.map((m) => (
+      <div class="flex items-center gap-3 min-w-0">
+        <img
+          src={`/brands/${m.slug}.png`}
+          alt={m.alt}
+          class="h-12 w-12 object-contain shrink-0"
+          loading="lazy"
+          decoding="async"
+        />
+        <div class="leading-tight min-w-0">
+          <div class="font-section font-extrabold text-black text-xs sm:text-sm">{m.title}</div>
+          <div class="text-[11px] text-neutral-500">{m.sub}</div>
         </div>
-      ))
-    }
+      </div>
+    ))}
   </div>
 
   <div class="space-y-4 pt-2">
     <h3 class="font-section text-lg sm:text-xl font-extrabold text-black">{copy.stepsTitle}</h3>
     <ol class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-      {
-        copy.steps.map(([title, desc], i) => (
-          <li class="p-4 sm:p-5 rounded-2xl bg-white/70 border border-black/10 space-y-2">
-            <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-black text-white text-[11px] font-lcd font-bold">{i + 1}</span>
-            <div class="text-sm font-display font-bold text-black">{title}</div>
-            <p class="text-xs text-neutral-600 leading-relaxed">{desc}</p>
-          </li>
-        ))
-      }
+      {copy.steps.map(([title, desc], i) => (
+        <li class="p-4 sm:p-5 rounded-2xl bg-white/70 border border-black/10 space-y-2">
+          <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-black text-white text-[11px] font-lcd font-bold">
+            {i + 1}
+          </span>
+          <div class="text-sm font-display font-bold text-black">{title}</div>
+          <p class="text-xs text-neutral-600 leading-relaxed">{desc}</p>
+        </li>
+      ))}
     </ol>
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
-    {
-      copy.cards.map(([title, desc], i) => {
-        const Icon = icons[i];
-        return (
-          <div class="space-y-2">
-            <Icon className="w-5 h-5" />
-            <h3 class="font-section font-extrabold text-black">{title}</h3>
-            <p class="text-sm text-neutral-600 leading-relaxed">{desc}</p>
-          </div>
-        );
-      })
-    }
+    {copy.cards.map(([title, desc], i) => {
+      const Icon = icons[i];
+      return (
+        <div class="space-y-2">
+          <Icon className="w-5 h-5" />
+          <h3 class="font-section font-extrabold text-black">{title}</h3>
+          <p class="text-sm text-neutral-600 leading-relaxed">{desc}</p>
+        </div>
+      );
+    })}
   </div>
 </section>

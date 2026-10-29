@@ -5,7 +5,10 @@ import { ValidationError } from '../../shared/errors';
 function toValidationError(error: z.ZodError): ValidationError {
   const issues = error.issues.map((i) => ({ path: i.path.join('.'), message: i.message }));
   const first = issues[0];
-  return new ValidationError(first ? `Dato inválido: ${first.path || 'body'} — ${first.message}` : 'Datos inválidos', issues);
+  return new ValidationError(
+    first ? `Dato inválido: ${first.path || 'body'} — ${first.message}` : 'Datos inválidos',
+    issues,
+  );
 }
 
 /** Parses and replaces `req.body` with the schema output (unknown keys stripped). */

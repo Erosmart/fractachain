@@ -26,8 +26,12 @@ function PendingKycPage() {
   return (
     <div className="max-w-lg mx-auto py-16 text-center space-y-5">
       <Clock className="w-10 h-10 mx-auto" />
-      <h1 className="text-3xl font-extrabold font-display">{rejected ? t('onboarding.rejectedTitle') : t('onboarding.pendingTitle')}</h1>
-      <p className="text-neutral-600">{rejected ? t('onboarding.rejectedBody') : t('onboarding.pendingBody')}</p>
+      <h1 className="text-3xl font-extrabold font-display">
+        {rejected ? t('onboarding.rejectedTitle') : t('onboarding.pendingTitle')}
+      </h1>
+      <p className="text-neutral-600">
+        {rejected ? t('onboarding.rejectedBody') : t('onboarding.pendingBody')}
+      </p>
       <p className="text-sm text-neutral-500">{t('onboarding.pendingHint')}</p>
       <button type="button" onClick={logout} className="text-sm text-neutral-500">
         {t('auth.logout')}

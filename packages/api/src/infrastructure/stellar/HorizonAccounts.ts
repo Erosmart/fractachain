@@ -62,7 +62,9 @@ export class HorizonAccounts {
       fee: String(Number(BASE_FEE) * 100),
       networkPassphrase: this.clients.networkPassphrase(),
     })
-      .addOperation(Operation.payment({ destination: publicKey, asset: Asset.native(), amount: String(this.xlmTopUp) }))
+      .addOperation(
+        Operation.payment({ destination: publicKey, asset: Asset.native(), amount: String(this.xlmTopUp) }),
+      )
       .setTimeout(60)
       .build();
     tx.sign(payer);

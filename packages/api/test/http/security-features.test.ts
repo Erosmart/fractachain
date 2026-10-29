@@ -76,11 +76,15 @@ afterAll(() => fs.rmSync(dataDir, { recursive: true, force: true }));
 
 const api = () => request(container.app);
 const sessionCookie = (res: request.Response) =>
-  (res.headers['set-cookie'] as unknown as string[] | undefined)?.find((c) => c.startsWith(`${COOKIE}=`))?.split(';')[0];
+  (res.headers['set-cookie'] as unknown as string[] | undefined)
+    ?.find((c) => c.startsWith(`${COOKIE}=`))
+    ?.split(';')[0];
 
 describe('cookie session + CSRF', () => {
   it('sets an HttpOnly SameSite=Strict cookie and accepts it for reads', async () => {
-    const res = await api().post('/api/auth/email').send({ email: 'cookie@example.com', password: 'cookie-pass-1' });
+    const res = await api()
+      .post('/api/auth/email')
+      .send({ email: 'cookie@example.com', password: 'cookie-pass-1' });
     expect(res.status).toBe(200);
     const raw = (res.headers['set-cookie'] as unknown as string[]).join(';');
     expect(raw).toMatch(/HttpOnly/i);
@@ -91,7 +95,9 @@ describe('cookie session + CSRF', () => {
   });
 
   it('refuses cookie-authenticated writes without the CSRF header or from another origin', async () => {
-    const login = await api().post('/api/auth/email').send({ email: 'csrf@example.com', password: 'csrf-pass-12' });
+    const login = await api()
+      .post('/api/auth/email')
+      .send({ email: 'csrf@example.com', password: 'csrf-pass-12' });
     const cookie = sessionCookie(login)!;
     const bare = await api().post('/api/auth/logout').set('Cookie', cookie);
     expect(bare.status).toBe(403);
@@ -102,7 +108,10 @@ describe('cookie session + CSRF', () => {
       .set('X-Requested-With', 'fractachain')
       .set('Origin', 'https://evil.example');
     expect(foreign.status).toBe(403);
-    const ok = await api().post('/api/auth/logout').set('Cookie', cookie).set('X-Requested-With', 'fractachain');
+    const ok = await api()
+      .post('/api/auth/logout')
+      .set('Cookie', cookie)
+      .set('X-Requested-With', 'fractachain');
     expect(ok.status).toBe(200);
     expect((ok.headers['set-cookie'] as unknown as string[]).join(';')).toMatch(/fc_session=;/);
     expect((await api().get('/api/auth/me').set('Cookie', cookie)).status).toBe(401);
@@ -111,10 +120,15 @@ describe('cookie session + CSRF', () => {
 
 describe('email verification and password reset', () => {
   it('sends a verification link and gates KYC until it is used', async () => {
-    const login = await api().post('/api/auth/email').send({ email: 'vera@example.com', password: 'vera-pass-12' });
+    const login = await api()
+      .post('/api/auth/email')
+      .send({ email: 'vera@example.com', password: 'vera-pass-12' });
     const bearer = `Bearer ${login.body.token}`;
     await api().post('/api/auth/wallet').set('Authorization', bearer).send({ mode: 'SELF' });
-    const blocked = await api().post('/api/kyc/onboard').set('Authorization', bearer).send({ legalName: 'Vera', cuit: '20123456789', email: 'x' });
+    const blocked = await api()
+      .post('/api/kyc/onboard')
+      .set('Authorization', bearer)
+      .send({ legalName: 'Vera', cuit: '20123456789', email: 'x' });
     expect(blocked.status).toBe(403);
     expect(blocked.body.code).toBe('EMAIL_NOT_VERIFIED');
 
@@ -125,10 +139,16 @@ describe('email verification and password reset', () => {
   });
 
   it('resets the password through the emailed link and kills old sessions', async () => {
-    const login = await api().post('/api/auth/email').send({ email: 'rita@example.com', password: 'rita-old-pass' });
+    const login = await api()
+      .post('/api/auth/email')
+      .send({ email: 'rita@example.com', password: 'rita-old-pass' });
     const oldToken = login.body.token as string;
-    expect((await api().post('/api/auth/password/forgot').send({ email: 'nobody@example.com' })).status).toBe(200);
-    expect((await api().post('/api/auth/password/forgot').send({ email: 'rita@example.com' })).status).toBe(200);
+    expect((await api().post('/api/auth/password/forgot').send({ email: 'nobody@example.com' })).status).toBe(
+      200,
+    );
+    expect((await api().post('/api/auth/password/forgot').send({ email: 'rita@example.com' })).status).toBe(
+      200,
+    );
     const token = mailer.lastLinkTo('rita@example.com', '/reset-password');
 
     clock.t += 1_000;
@@ -136,8 +156,13 @@ describe('email verification and password reset', () => {
     expect(reset.status).toBe(200);
     expect(sessionCookie(reset)).toBeDefined();
     expect((await api().get('/api/auth/me').set('Authorization', `Bearer ${oldToken}`)).status).toBe(401);
-    expect((await api().post('/api/auth/password/reset').send({ token, password: 'another-pass-1' })).status).toBe(400);
-    expect((await api().post('/api/auth/email').send({ email: 'rita@example.com', password: 'rita-new-pass' })).status).toBe(200);
+    expect(
+      (await api().post('/api/auth/password/reset').send({ token, password: 'another-pass-1' })).status,
+    ).toBe(400);
+    expect(
+      (await api().post('/api/auth/email').send({ email: 'rita@example.com', password: 'rita-new-pass' }))
+        .status,
+    ).toBe(200);
   });
 });
 
@@ -157,7 +182,9 @@ describe('two-factor authentication', () => {
     const { secret, otpauthUrl } = setup.body.data;
     adminSecret = secret;
     expect(otpauthUrl).toContain('otpauth://totp/');
-    expect((await api().post('/api/auth/2fa/enable').set('Authorization', bearer).send({ code: '000000' })).status).toBe(401);
+    expect(
+      (await api().post('/api/auth/2fa/enable').set('Authorization', bearer).send({ code: '000000' })).status,
+    ).toBe(401);
     const enabled = await api()
       .post('/api/auth/2fa/enable')
       .set('Authorization', bearer)
@@ -172,7 +199,10 @@ describe('two-factor authentication', () => {
     expect(step1.body.twoFactorRequired).toBe(true);
     expect(step1.body.token).toBeUndefined();
     expect(sessionCookie(step1)).toBeUndefined();
-    expect((await api().post('/api/auth/2fa/verify').send({ challenge: step1.body.challenge, code: '123456' })).status).toBe(401);
+    expect(
+      (await api().post('/api/auth/2fa/verify').send({ challenge: step1.body.challenge, code: '123456' }))
+        .status,
+    ).toBe(401);
 
     clock.t += 30_000; // the enrollment step cannot be replayed
     const step2 = await api()
@@ -185,9 +215,15 @@ describe('two-factor authentication', () => {
     // Recovery codes work exactly once.
     const step3 = await api().post('/api/auth/email').send({ email: ADMIN, password: ADMIN_PASSWORD });
     const recovery = enabled.body.data.recoveryCodes[0];
-    expect((await api().post('/api/auth/2fa/verify').send({ challenge: step3.body.challenge, code: recovery })).status).toBe(200);
+    expect(
+      (await api().post('/api/auth/2fa/verify').send({ challenge: step3.body.challenge, code: recovery }))
+        .status,
+    ).toBe(200);
     const step4 = await api().post('/api/auth/email').send({ email: ADMIN, password: ADMIN_PASSWORD });
-    expect((await api().post('/api/auth/2fa/verify').send({ challenge: step4.body.challenge, code: recovery })).status).toBe(401);
+    expect(
+      (await api().post('/api/auth/2fa/verify').send({ challenge: step4.body.challenge, code: recovery }))
+        .status,
+    ).toBe(401);
   });
 
   it('records security events in the audit trail', async () => {
@@ -197,11 +233,22 @@ describe('two-factor authentication', () => {
       .post('/api/auth/2fa/verify')
       .send({ challenge: step1.body.challenge, code: totp.codeAt(adminSecret, totp.currentStep()) });
     expect(login.status).toBe(200);
-    const audit = await api().get('/api/admin/audit?limit=50').set('Authorization', `Bearer ${login.body.token}`);
+    const audit = await api()
+      .get('/api/admin/audit?limit=50')
+      .set('Authorization', `Bearer ${login.body.token}`);
     expect(audit.status).toBe(200);
     const actions = audit.body.data.map((e: { action: string }) => e.action);
-    expect(actions).toEqual(expect.arrayContaining(['auth.login.email', 'auth.2fa.enable', 'auth.login.2fa', 'auth.password.reset']));
-    const failed = audit.body.data.find((e: { action: string; outcome: string }) => e.action === 'auth.login.2fa' && e.outcome === 'failure');
+    expect(actions).toEqual(
+      expect.arrayContaining([
+        'auth.login.email',
+        'auth.2fa.enable',
+        'auth.login.2fa',
+        'auth.password.reset',
+      ]),
+    );
+    const failed = audit.body.data.find(
+      (e: { action: string; outcome: string }) => e.action === 'auth.login.2fa' && e.outcome === 'failure',
+    );
     expect(failed).toBeDefined();
     expect(JSON.stringify(audit.body.data)).not.toMatch(/admin-bootstrap-pass|recoveryCodes/);
   });

@@ -24,7 +24,11 @@ runCli(async () => {
   requireLocalDeploymentFile(config);
   const pairs = process.argv.slice(2).map((arg) => arg.split('='));
   if (!pairs.length || pairs.some(([name, file]) => !FIELDS[name] || !file)) {
-    throw new Error(`Uso: upload-wasm ${Object.keys(FIELDS).map((k) => `${k}=<archivo.wasm>`).join(' ')}`);
+    throw new Error(
+      `Uso: upload-wasm ${Object.keys(FIELDS)
+        .map((k) => `${k}=<archivo.wasm>`)
+        .join(' ')}`,
+    );
   }
   const uploader = await keyring.licitacionAdmin();
   const update: Partial<TestnetDeployment> = {};

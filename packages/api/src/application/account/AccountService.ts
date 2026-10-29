@@ -110,8 +110,10 @@ export class AccountService {
       throw new DomainError('Primero aprobá el token (trustline) para poder recibirlo');
     }
     const holding = findHolding(account, listingId);
-    if (!holding || (holding.tokensOwed || 0) <= 0) throw new DomainError('No hay tokens pendientes de reclamo');
-    if (holding.refundedAt) throw new DomainError('Ese aporte ya se reembolsó on-chain; no hay unidades para anotar');
+    if (!holding || (holding.tokensOwed || 0) <= 0)
+      throw new DomainError('No hay tokens pendientes de reclamo');
+    if (holding.refundedAt)
+      throw new DomainError('Ese aporte ya se reembolsó on-chain; no hay unidades para anotar');
     holding.tokens += holding.tokensOwed;
     holding.tokensOwed = 0;
     this.accounts.save(account);
@@ -162,7 +164,8 @@ export class AccountService {
   reduceHolding(accountId: string, listingId: string, tokens: number): void {
     const account = this.require(accountId);
     const holding = findHolding(account, listingId);
-    if (!holding || holding.tokens + EPSILON < tokens) throw new DomainError('No hay tokens suficientes para vender');
+    if (!holding || holding.tokens + EPSILON < tokens)
+      throw new DomainError('No hay tokens suficientes para vender');
     const ratio = tokens / holding.tokens;
     holding.tokens -= tokens;
     holding.usdcAmount = Math.max(0, holding.usdcAmount * (1 - ratio));

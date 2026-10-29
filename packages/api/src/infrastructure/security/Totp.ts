@@ -109,6 +109,14 @@ export class RecoveryCodes {
   }
 
   static hash(code: string): string {
-    return crypto.createHash('sha256').update(code.trim().toUpperCase().replace(/[^A-Z2-7]/g, '')).digest('hex');
+    return crypto
+      .createHash('sha256')
+      .update(
+        code
+          .trim()
+          .toUpperCase()
+          .replace(/[^A-Z2-7]/g, ''),
+      )
+      .digest('hex');
   }
 }

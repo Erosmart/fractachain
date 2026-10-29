@@ -38,31 +38,28 @@ const stellarIcons: LucideIcon[] = [Zap, DollarSign, Globe2, ShieldCheck, KeyRou
 
 <BaseLayout>
   <div class="space-y-10 sm:space-y-16 lg:space-y-24">
-    <section
-      class="relative mx-auto flex min-h-0 sm:min-h-[calc(100svh-5.75rem)] max-w-5xl flex-col items-center justify-start sm:justify-center py-8 sm:py-10 pb-6 sm:pb-10 text-center"
-    >
+    <section class="relative mx-auto flex min-h-0 sm:min-h-[calc(100svh-5.75rem)] max-w-5xl flex-col items-center justify-start sm:justify-center py-8 sm:py-10 pb-6 sm:pb-10 text-center">
       <HeroBackground />
 
       <div class="relative z-10 flex w-full flex-col items-center gap-4 sm:gap-5">
-        <div
-          class="inline-flex max-w-full flex-wrap items-center justify-center gap-2 px-4 py-2 rounded-full bg-white/70 border border-black/10 text-neutral-600 text-xs font-display font-bold uppercase tracking-[0.14em]"
-        >
+        <div class="inline-flex max-w-full flex-wrap items-center justify-center gap-2 px-4 py-2 rounded-full bg-white/70 border border-black/10 text-neutral-600 text-xs font-display font-bold uppercase tracking-[0.14em]">
           <Sparkles className="w-4 h-4 shrink-0" />
           <span class="text-left">{messages.home.badge}</span>
         </div>
         <DynamicHeroText client:load locale={locale} />
         <p class="hero-lead text-neutral-600 mx-auto px-1 text-[0.95rem] sm:text-[1.2rem] leading-relaxed">
           <span class="block">
-            {messages.home.leadBefore} <strong class="text-black font-bold">{messages.home.leadStrong}</strong>{' '}
-            {messages.home.leadL1End}
+            {messages.home.leadBefore}{' '}
+            <strong class="text-black font-bold">{messages.home.leadStrong}</strong> {messages.home.leadL1End}
           </span>
           <span class="block">
-            {messages.home.leadL2Pre}<strong class="text-black font-semibold">{messages.home.leadStrongCap}</strong>{
-              messages.home.leadL2Post
-            }
+            {messages.home.leadL2Pre}
+            <strong class="text-black font-semibold">{messages.home.leadStrongCap}</strong>
+            {messages.home.leadL2Post}
           </span>
           <span class="block">
-            {messages.home.leadL3Pre}<strong class="text-black font-semibold">{messages.home.leadStrong90}</strong>
+            {messages.home.leadL3Pre}
+            <strong class="text-black font-semibold">{messages.home.leadStrong90}</strong>
           </span>
         </p>
         <div class="flex w-full flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap items-stretch sm:items-center justify-center gap-2.5 pt-1 px-1">
@@ -101,23 +98,23 @@ const stellarIcons: LucideIcon[] = [Zap, DollarSign, Globe2, ShieldCheck, KeyRou
               <Globe2 className="w-4 h-4" />
               {messages.partners.stellar.kicker}
             </div>
-            <h2 class="font-section text-2xl sm:text-3xl font-extrabold text-black">{messages.partners.stellar.title}</h2>
+            <h2 class="font-section text-2xl sm:text-3xl font-extrabold text-black">
+              {messages.partners.stellar.title}
+            </h2>
           </div>
           <p class="text-sm text-neutral-600 max-w-md">{messages.partners.stellar.body}</p>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {
-            messages.partners.stellar.items.map(([title, desc], i) => {
-              const Icon = stellarIcons[i];
-              return (
-                <div class="p-5 rounded-2xl crystal-card space-y-3">
-                  <Icon className="w-5 h-5 text-[#4ea743]" />
-                  <div class="text-sm font-display font-bold text-black">{title}</div>
-                  <p class="text-xs text-neutral-600 leading-relaxed">{desc}</p>
-                </div>
-              );
-            })
-          }
+          {messages.partners.stellar.items.map(([title, desc], i) => {
+            const Icon = stellarIcons[i];
+            return (
+              <div class="p-5 rounded-2xl crystal-card space-y-3">
+                <Icon className="w-5 h-5 text-[#4ea743]" />
+                <div class="text-sm font-display font-bold text-black">{title}</div>
+                <p class="text-xs text-neutral-600 leading-relaxed">{desc}</p>
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -126,36 +123,32 @@ const stellarIcons: LucideIcon[] = [Zap, DollarSign, Globe2, ShieldCheck, KeyRou
       <section class="space-y-5 sm:space-y-6">
         <h2 class="font-section text-2xl sm:text-3xl font-extrabold">{messages.home.soon}</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-          {
-            messages.home.soonItems.map(([title, desc], i) => {
-              const Icon = soonIcons[i];
-              return (
-                <div class="p-5 sm:p-6 rounded-2xl sm:rounded-3xl crystal-card space-y-3">
-                  <Icon className="w-5 h-5" />
-                  <h4 class="font-section font-extrabold">{title}</h4>
-                  <p class="text-sm text-neutral-600">{desc}</p>
-                </div>
-              );
-            })
-          }
+          {messages.home.soonItems.map(([title, desc], i) => {
+            const Icon = soonIcons[i];
+            return (
+              <div class="p-5 sm:p-6 rounded-2xl sm:rounded-3xl crystal-card space-y-3">
+                <Icon className="w-5 h-5" />
+                <h4 class="font-section font-extrabold">{title}</h4>
+                <p class="text-sm text-neutral-600">{desc}</p>
+              </div>
+            );
+          })}
         </div>
       </section>
 
       <section class="p-5 sm:p-8 rounded-2xl sm:rounded-3xl crystal-card grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-        {
-          messages.home.badges.map(([title, sub], i) => {
-            const Icon = badgeIcons[i];
-            return (
-              <div class="flex items-center gap-3 min-w-0">
-                <Icon className="w-6 h-6 shrink-0" />
-                <div class="min-w-0">
-                  <div class="text-sm font-display font-bold">{title}</div>
-                  <div class="text-[11px] text-neutral-500">{sub}</div>
-                </div>
+        {messages.home.badges.map(([title, sub], i) => {
+          const Icon = badgeIcons[i];
+          return (
+            <div class="flex items-center gap-3 min-w-0">
+              <Icon className="w-6 h-6 shrink-0" />
+              <div class="min-w-0">
+                <div class="text-sm font-display font-bold">{title}</div>
+                <div class="text-[11px] text-neutral-500">{sub}</div>
               </div>
-            );
-          })
-        }
+            </div>
+          );
+        })}
       </section>
     </div>
   </div>

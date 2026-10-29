@@ -25,10 +25,19 @@ export class PasswordResetService {
   ) {}
 
   async request(email: string): Promise<void> {
-    const account = this.repo.findByEmail(String(email || '').trim().toLowerCase());
+    const account = this.repo.findByEmail(
+      String(email || '')
+        .trim()
+        .toLowerCase(),
+    );
     // Only password accounts can reset; Google/wallet accounts have nothing to reset.
     if (!account?.passwordHash) return;
-    const { token } = this.tokens.issue('password-reset', account.id, RESET_TTL_MS, SignedTokenCodec.fingerprint(account.passwordHash));
+    const { token } = this.tokens.issue(
+      'password-reset',
+      account.id,
+      RESET_TTL_MS,
+      SignedTokenCodec.fingerprint(account.passwordHash),
+    );
     const link = `${this.appUrl}/reset-password?token=${encodeURIComponent(token)}`;
     try {
       await this.mailer.send({
@@ -43,12 +52,16 @@ export class PasswordResetService {
 
   /** Sets the new password and revokes every existing session. Returns the account id. */
   async reset(token: string, password: string): Promise<string> {
-    const claims = this.tokens.verify('password-reset', token, (sub) => SignedTokenCodec.fingerprint(this.repo.findById(sub)?.passwordHash));
-    if (!claims) throw new ValidationError('El link para cambiar la contraseña es inválido o venció. Pedí uno nuevo.');
+    const claims = this.tokens.verify('password-reset', token, (sub) =>
+      SignedTokenCodec.fingerprint(this.repo.findById(sub)?.passwordHash),
+    );
+    if (!claims)
+      throw new ValidationError('El link para cambiar la contraseña es inválido o venció. Pedí uno nuevo.');
     const problem = PasswordPolicy.assertAcceptable(password);
     if (problem) throw new ValidationError(problem);
     const account = this.repo.findById(claims.sub);
-    if (!account) throw new ValidationError('El link para cambiar la contraseña es inválido o venció. Pedí uno nuevo.');
+    if (!account)
+      throw new ValidationError('El link para cambiar la contraseña es inválido o venció. Pedí uno nuevo.');
     account.passwordHash = await this.hasher.hash(password);
     // Proving control of the inbox also proves the email.
     account.emailVerifiedAt = account.emailVerifiedAt || this.clock.isoNow();

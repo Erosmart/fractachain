@@ -9,7 +9,9 @@ function keysOf(value: unknown, prefix = ''): string[] {
 
 describe('i18n', () => {
   it('interpolates named placeholders and keeps unknown ones visible', () => {
-    expect(interpolate('Hola {name}, tenés {n} USDC', { name: 'Ana', n: 10 })).toBe('Hola Ana, tenés 10 USDC');
+    expect(interpolate('Hola {name}, tenés {n} USDC', { name: 'Ana', n: 10 })).toBe(
+      'Hola Ana, tenés 10 USDC',
+    );
     expect(interpolate('Falta {x}', {})).toBe('Falta {x}');
     expect(interpolate('Sin variables')).toBe('Sin variables');
   });

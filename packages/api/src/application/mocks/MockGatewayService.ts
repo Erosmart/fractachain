@@ -17,15 +17,43 @@ const COMMODITIES = {
   soja: { crop: 'Soja (Rosario)', priceUsd: 350.0, unit: 'USD/ton', marketReference: 'Matba Rofex' },
   maiz: { crop: 'Maíz', priceUsd: 180.0, unit: 'USD/ton', marketReference: 'Matba Rofex' },
   trigo: { crop: 'Trigo Pan', priceUsd: 220.0, unit: 'USD/ton', marketReference: 'Bolsa de Cereales Bs As' },
-  tabaco: { crop: 'Tabaco Virginia', priceUsd: 4500.0, unit: 'USD/ton', marketReference: 'Cámara del Tabaco Salta' },
+  tabaco: {
+    crop: 'Tabaco Virginia',
+    priceUsd: 4500.0,
+    unit: 'USD/ton',
+    marketReference: 'Cámara del Tabaco Salta',
+  },
   tomate: { crop: 'Tomate Redondo', priceUsd: 0.8, unit: 'USD/kg', marketReference: 'Mercado Central Bs As' },
-  cebolla: { crop: 'Cebolla Sintética', priceUsd: 0.45, unit: 'USD/kg', marketReference: 'Mercado Mayorista Mendoza' },
+  cebolla: {
+    crop: 'Cebolla Sintética',
+    priceUsd: 0.45,
+    unit: 'USD/kg',
+    marketReference: 'Mercado Mayorista Mendoza',
+  },
 } as const;
 
 const WEATHER = {
-  salta: { region: 'Valle de Lerma, Salta', crop: 'Tabaco Virginia', rainfallMm: 120, minTempCelsius: 8, hailDetected: false },
-  pampa: { region: 'Pampa Húmeda, Pergamino', crop: 'Soja 1ra', rainfallMm: 95, minTempCelsius: 5, hailDetected: false },
-  mendoza: { region: 'Valle de Uco, Mendoza', crop: 'Vid (Malbec)', rainfallMm: 40, minTempCelsius: -2, hailDetected: true },
+  salta: {
+    region: 'Valle de Lerma, Salta',
+    crop: 'Tabaco Virginia',
+    rainfallMm: 120,
+    minTempCelsius: 8,
+    hailDetected: false,
+  },
+  pampa: {
+    region: 'Pampa Húmeda, Pergamino',
+    crop: 'Soja 1ra',
+    rainfallMm: 95,
+    minTempCelsius: 5,
+    hailDetected: false,
+  },
+  mendoza: {
+    region: 'Valle de Uco, Mendoza',
+    crop: 'Vid (Malbec)',
+    rainfallMm: 40,
+    minTempCelsius: -2,
+    hailDetected: true,
+  },
 } as const;
 
 const INTENT_RATES: Record<IntentAsset, number> = { BTC: 65000, ETH: 3400, SOL: 150, USDT: 1 };
@@ -89,7 +117,9 @@ export class MockGatewayService {
   }
 
   commodity(key: string) {
-    const c = (COMMODITIES as Record<string, (typeof COMMODITIES)[keyof typeof COMMODITIES]>)[key.toLowerCase()];
+    const c = (COMMODITIES as Record<string, (typeof COMMODITIES)[keyof typeof COMMODITIES]>)[
+      key.toLowerCase()
+    ];
     return c ? { ...c, lastUpdated: now() } : undefined;
   }
 

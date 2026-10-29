@@ -53,17 +53,38 @@ import { LogMailer, SmtpMailer, type IMailer } from './infrastructure/mail/Maile
 import type { IDocumentStore, IFlushable } from './infrastructure/persistence/DocumentStore';
 import { JsonFileDocumentStore } from './infrastructure/persistence/JsonFileDocumentStore';
 import { PostgresMirroredStore } from './infrastructure/persistence/PostgresMirroredStore';
-import { AUDIT_KEY, JsonAuditRepository } from './infrastructure/persistence/repositories/JsonAuditRepository';
-import { ACCOUNTS_KEY, JsonAccountRepository } from './infrastructure/persistence/repositories/JsonAccountRepository';
-import { DIVIDENDS_KEY, JsonDividendRepository } from './infrastructure/persistence/repositories/JsonDividendRepository';
-import { JsonKycRecordRepository, KYC_KEY } from './infrastructure/persistence/repositories/JsonKycRecordRepository';
-import { JsonListingRepository, LISTINGS_KEY } from './infrastructure/persistence/repositories/JsonListingRepository';
+import {
+  AUDIT_KEY,
+  JsonAuditRepository,
+} from './infrastructure/persistence/repositories/JsonAuditRepository';
+import {
+  ACCOUNTS_KEY,
+  JsonAccountRepository,
+} from './infrastructure/persistence/repositories/JsonAccountRepository';
+import {
+  DIVIDENDS_KEY,
+  JsonDividendRepository,
+} from './infrastructure/persistence/repositories/JsonDividendRepository';
+import {
+  JsonKycRecordRepository,
+  KYC_KEY,
+} from './infrastructure/persistence/repositories/JsonKycRecordRepository';
+import {
+  JsonListingRepository,
+  LISTINGS_KEY,
+} from './infrastructure/persistence/repositories/JsonListingRepository';
 import {
   JsonNetworkSettingsRepository,
   NETWORK_SETTINGS_KEY,
 } from './infrastructure/persistence/repositories/JsonNetworkSettingsRepository';
-import { JsonSandboxBookRepository, ORDERBOOK_KEY } from './infrastructure/persistence/repositories/JsonSandboxBookRepository';
-import { JsonStockRepository, STOCKS_KEY } from './infrastructure/persistence/repositories/JsonStockRepository';
+import {
+  JsonSandboxBookRepository,
+  ORDERBOOK_KEY,
+} from './infrastructure/persistence/repositories/JsonSandboxBookRepository';
+import {
+  JsonStockRepository,
+  STOCKS_KEY,
+} from './infrastructure/persistence/repositories/JsonStockRepository';
 import { FirebaseTokenVerifier } from './infrastructure/security/FirebaseTokenVerifier';
 import { ScryptPasswordHasher } from './infrastructure/security/PasswordHasher';
 import { AesGcmSecretCipher } from './infrastructure/security/SecretCipher';
@@ -86,7 +107,11 @@ import { UsdcFaucet } from './infrastructure/stellar/UsdcFaucet';
 import { LocalSelfieStorage } from './infrastructure/storage/SelfieStorage';
 import { SettlementSweepJob } from './jobs/SettlementSweepJob';
 import { SystemClock, type IClock } from './shared/clock';
-import { InProcessLockProvider, PostgresAdvisoryLockProvider, type ILockProvider } from './shared/LockProvider';
+import {
+  InProcessLockProvider,
+  PostgresAdvisoryLockProvider,
+  type ILockProvider,
+} from './shared/LockProvider';
 import type { ILogger } from './shared/logger';
 
 /** Documents mirrored to Postgres (and restored from it on boot). */
@@ -127,15 +152,27 @@ export interface Container {
   close(): Promise<void>;
 }
 
-async function createStore(config: AppConfig, logger: ILogger): Promise<IDocumentStore & Partial<IFlushable> & { close?: () => Promise<void> }> {
+async function createStore(
+  config: AppConfig,
+  logger: ILogger,
+): Promise<IDocumentStore & Partial<IFlushable> & { close?: () => Promise<void> }> {
   const local = new JsonFileDocumentStore(config.storage.dataDir, logger.child({ component: 'store' }));
   if (!config.storage.databaseUrl) return local;
-  const mirrored = PostgresMirroredStore.connect(local, config.storage.databaseUrl, PERSISTED_DOCUMENTS, logger.child({ component: 'pg' }));
+  const mirrored = PostgresMirroredStore.connect(
+    local,
+    config.storage.databaseUrl,
+    PERSISTED_DOCUMENTS,
+    logger.child({ component: 'pg' }),
+  );
   await mirrored.restore();
   return mirrored;
 }
 
-export async function buildContainer(config: AppConfig, logger: ILogger, overrides: ContainerOverrides = {}): Promise<Container> {
+export async function buildContainer(
+  config: AppConfig,
+  logger: ILogger,
+  overrides: ContainerOverrides = {},
+): Promise<Container> {
   const store = overrides.store ?? (await createStore(config, logger));
   const clock = overrides.clock ?? new SystemClock();
 
@@ -163,19 +200,48 @@ export async function buildContainer(config: AppConfig, logger: ILogger, overrid
   const deployments = new FileDeploymentRegistry(config.stellar.deploymentFile);
   const clients = new StellarClients(networkSettings);
   const friendbot = new FriendbotClient(config.stellar.friendbotUrl, clients);
-  const secrets = overrides.secrets ?? new EnvFileSecretStore(config.storage.envFile, logger.child({ component: 'secrets' }));
-  const keyring = new PlatformKeyring(secrets, deployments, friendbot, config.stellar.isTestnet, logger.child({ component: 'keyring' }));
+  const secrets =
+    overrides.secrets ??
+    new EnvFileSecretStore(config.storage.envFile, logger.child({ component: 'secrets' }));
+  const keyring = new PlatformKeyring(
+    secrets,
+    deployments,
+    friendbot,
+    config.stellar.isTestnet,
+    logger.child({ component: 'keyring' }),
+  );
   const explorer = new Explorer(config.stellar.explorerUrl);
   const horizon = new HorizonAccounts(clients, keyring, config.stellar.xlmFloor, config.stellar.xlmTopUp);
   const sdex = new SdexGateway(clients, keyring);
   const soroban = new SorobanGateway(clients, deployments);
-  const usdc = new UsdcFaucet(config.stellar.usdcCode, config.stellar.usdcGrant, keyring, sdex, horizon, friendbot, deployments, explorer);
-  const licitacion = new LicitacionContract(soroban, keyring, deployments, horizon, usdc, logger.child({ component: 'licitacion' }));
+  const usdc = new UsdcFaucet(
+    config.stellar.usdcCode,
+    config.stellar.usdcGrant,
+    keyring,
+    sdex,
+    horizon,
+    friendbot,
+    deployments,
+    explorer,
+  );
+  const licitacion = new LicitacionContract(
+    soroban,
+    keyring,
+    deployments,
+    horizon,
+    usdc,
+    logger.child({ component: 'licitacion' }),
+  );
   const stockVault = new StockVaultContract(soroban, keyring, deployments);
 
   const cipher = new AesGcmSecretCipher(config.auth.walletPepper, config.auth.walletPepperPrevious);
   const hasher = new ScryptPasswordHasher();
-  const tokens = new HmacTokenService(config.auth.tokenSecret, config.auth.sessionTtlMs, new PersistentRevocationList(store, clock), clock);
+  const tokens = new HmacTokenService(
+    config.auth.tokenSecret,
+    config.auth.sessionTtlMs,
+    new PersistentRevocationList(store, clock),
+    clock,
+  );
   const identity = new FirebaseTokenVerifier(config.auth.firebaseProjectId);
   const walletSignatures = new Sep53WalletSignatureVerifier(clock);
   const selfies = new LocalSelfieStorage(config.storage.dataDir);
@@ -183,10 +249,16 @@ export async function buildContainer(config: AppConfig, logger: ILogger, overrid
   const totp = new TotpService('Fractachain', () => clock.now());
   const mailer =
     overrides.mailer ??
-    (config.mail.smtpUrl ? new SmtpMailer(config.mail.smtpUrl, config.mail.from) : new LogMailer(logger.child({ component: 'mail' })));
+    (config.mail.smtpUrl
+      ? new SmtpMailer(config.mail.smtpUrl, config.mail.from)
+      : new LogMailer(logger.child({ component: 'mail' })));
   // Payout/contribution locks: Postgres advisory locks when replicas share a database.
-  const lockPool = config.storage.databaseUrl ? new Pool({ connectionString: config.storage.databaseUrl, max: 4 }) : null;
-  const locks: ILockProvider = lockPool ? new PostgresAdvisoryLockProvider(lockPool) : new InProcessLockProvider();
+  const lockPool = config.storage.databaseUrl
+    ? new Pool({ connectionString: config.storage.databaseUrl, max: 4 })
+    : null;
+  const locks: ILockProvider = lockPool
+    ? new PostgresAdvisoryLockProvider(lockPool)
+    : new InProcessLockProvider();
 
   /* --------------------------------- application --------------------------------- */
   const admins = new AdminPolicy(config.auth.adminEmails);
@@ -223,10 +295,46 @@ export async function buildContainer(config: AppConfig, logger: ILogger, overrid
     config.stellar.usdcCode,
     logger.child({ component: 'sdex' }),
   );
-  const chainStatus = new OnChainStatusService(listings, accounts, sdexMarket, soroban, deployments, explorer);
-  const settlement = new SettlementService(listings, accounts, licitacion, sdexMarket, chainStatus, explorer, logger.child({ component: 'settlement' }));
-  const offerings = new OfferingService(locks, listings, presenter, accounts, custody, licitacion, settlement, chainStatus, sdexMarket, compliance, explorer);
-  const wallets = new WalletService(accountRepo, accounts, custody, friendbot, usdc, horizon, sdex, logger.child({ component: 'wallet' }));
+  const chainStatus = new OnChainStatusService(
+    listings,
+    accounts,
+    sdexMarket,
+    soroban,
+    deployments,
+    explorer,
+  );
+  const settlement = new SettlementService(
+    listings,
+    accounts,
+    licitacion,
+    sdexMarket,
+    chainStatus,
+    explorer,
+    logger.child({ component: 'settlement' }),
+  );
+  const offerings = new OfferingService(
+    locks,
+    listings,
+    presenter,
+    accounts,
+    custody,
+    licitacion,
+    settlement,
+    chainStatus,
+    sdexMarket,
+    compliance,
+    explorer,
+  );
+  const wallets = new WalletService(
+    accountRepo,
+    accounts,
+    custody,
+    friendbot,
+    usdc,
+    horizon,
+    sdex,
+    logger.child({ component: 'wallet' }),
+  );
   const audit = new AuditTrail(auditRepo, clock);
   const twoFactor = new TwoFactorService(accountRepo, accounts, totp, cipher);
   const emailVerification = new EmailVerificationService(
@@ -237,7 +345,15 @@ export async function buildContainer(config: AppConfig, logger: ILogger, overrid
     config.mail.appUrl,
     logger.child({ component: 'email-verification' }),
   );
-  const passwordReset = new PasswordResetService(accountRepo, hasher, linkTokens, mailer, config.mail.appUrl, clock, logger.child({ component: 'password-reset' }));
+  const passwordReset = new PasswordResetService(
+    accountRepo,
+    hasher,
+    linkTokens,
+    mailer,
+    config.mail.appUrl,
+    clock,
+    logger.child({ component: 'password-reset' }),
+  );
   const auth = new AuthService(
     accountRepo,
     accounts,
@@ -268,12 +384,23 @@ export async function buildContainer(config: AppConfig, logger: ILogger, overrid
       requireEmailVerification: config.auth.requireEmailVerification,
     },
     logger.child({ component: 'kyc' }),
+    emailVerification,
   );
   const demo = new DemoDossierService(listings, keyring, deployments, friendbot);
   const issuance = new IssuanceWorkflowService(listings, stockVault, licitacion, keyring, demo, explorer);
   const sandbox = new SandboxOrderBookService(bookRepo, accounts, listings, presenter);
   const dividends = new DividendService(dividendRepo, listings, accounts);
-  const portfolio = new PortfolioService(accounts, listings, sandbox, sdexMarket, sdex, dividends, horizon, usdc, explorer);
+  const portfolio = new PortfolioService(
+    accounts,
+    listings,
+    sandbox,
+    sdexMarket,
+    sdex,
+    dividends,
+    horizon,
+    usdc,
+    explorer,
+  );
   const stocks = new StockCatalogService(stockRepo);
   const products = new IssuanceProductService(deployments);
   const network = new NetworkAdminService(networkSettings, deployments, keyring, sdex);
@@ -291,17 +418,43 @@ export async function buildContainer(config: AppConfig, logger: ILogger, overrid
     limits,
     controllers: [
       new HealthController(deployments),
-      new AuthController(auth, accounts, wallets, twoFactor, emailVerification, passwordReset, cookie, guard, limits, auditRoutes),
+      new AuthController(
+        auth,
+        accounts,
+        wallets,
+        twoFactor,
+        emailVerification,
+        passwordReset,
+        cookie,
+        guard,
+        limits,
+        auditRoutes,
+      ),
       new WalletController(wallets, guard, limits),
       new KycController(kyc, guard, limits, auditRoutes),
       new CatalogController(stocks, products, mocks, guard, auditRoutes),
-      new ListingController(listings, presenter, issuance, offerings, settlement, dividends, demo, guard, limits, auditRoutes),
+      new ListingController(
+        listings,
+        presenter,
+        issuance,
+        offerings,
+        settlement,
+        dividends,
+        demo,
+        guard,
+        limits,
+        auditRoutes,
+      ),
       new MarketController(sandbox, sdexMarket, portfolio, wallets, chainStatus, guard),
       new AdminOpsController(network, compliance, guard, limits, auditRoutes, audit),
     ],
   });
 
-  const sweep = new SettlementSweepJob(settlement, config.jobs.settlementSweepMs, logger.child({ component: 'sweep' }));
+  const sweep = new SettlementSweepJob(
+    settlement,
+    config.jobs.settlementSweepMs,
+    logger.child({ component: 'sweep' }),
+  );
 
   return {
     app,

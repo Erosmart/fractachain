@@ -11,7 +11,8 @@ export interface AuditQuery {
 }
 
 /** Keys never written to the trail, even if a caller passes them as details. */
-const SENSITIVE = /^(secret|secretKey|secretOnce|password|token|idToken|code|seed|privateKey|xdr|challenge)$/i;
+const SENSITIVE =
+  /^(secret|secretKey|secretOnce|password|token|idToken|code|seed|privateKey|xdr|challenge)$/i;
 
 /**
  * Security audit trail: who did what, to what, from where, and whether it

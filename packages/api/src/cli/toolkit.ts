@@ -43,7 +43,13 @@ export function cliToolkit(): CliToolkit {
   const deployments = new FileDeploymentRegistry(config.stellar.deploymentFile);
   const clients = new StellarClients(settings);
   const friendbot = new FriendbotClient(config.stellar.friendbotUrl, clients);
-  const keyring = new PlatformKeyring(new EnvFileSecretStore(config.storage.envFile, logger), deployments, friendbot, config.stellar.isTestnet, logger);
+  const keyring = new PlatformKeyring(
+    new EnvFileSecretStore(config.storage.envFile, logger),
+    deployments,
+    friendbot,
+    config.stellar.isTestnet,
+    logger,
+  );
   return {
     config,
     logger,

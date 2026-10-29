@@ -27,7 +27,9 @@ export class StockCatalogService {
 
   /** "Emitir acción": the new row is listed in the public market immediately. */
   create(input: CreateStockInput): MervalStock {
-    const ticker = String(input.ticker || '').trim().toUpperCase();
+    const ticker = String(input.ticker || '')
+      .trim()
+      .toUpperCase();
     if (!ticker || ticker.length > 12) throw new ValidationError('Ticker inválido');
     const tokenTicker = (input.tokenTicker || `t${ticker}`).trim().toUpperCase();
     if (!input.companyName?.trim()) throw new ValidationError('Falta la razón social');
@@ -69,7 +71,9 @@ export class StockCatalogService {
   updatePrice(ticker: string, priceUsdc: number, change24hPct?: number): MervalStock {
     const stock = this.require(ticker);
     if (!(priceUsdc > 0)) throw new ValidationError('Precio inválido');
-    stock.change24hPct = Number.isFinite(change24hPct) ? Number(change24hPct) : ((priceUsdc - stock.priceUsdc) / stock.priceUsdc) * 100;
+    stock.change24hPct = Number.isFinite(change24hPct)
+      ? Number(change24hPct)
+      : ((priceUsdc - stock.priceUsdc) / stock.priceUsdc) * 100;
     stock.priceUsdc = priceUsdc;
     this.repo.save();
     return stock;

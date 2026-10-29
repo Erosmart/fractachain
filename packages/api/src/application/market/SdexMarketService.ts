@@ -8,7 +8,13 @@ import { Asset, Operation, type Transaction, type xdr } from '@stellar/stellar-s
 import type { Listing } from '../../domain/listing/Listing';
 import type { OrderSide } from '../../domain/market/SandboxBook';
 import { isStellarPublicKey } from '../../domain/stellar/StellarAddress';
-import { DomainError, NotConfiguredError, NotFoundError, ValidationError, errorMessage } from '../../shared/errors';
+import {
+  DomainError,
+  NotConfiguredError,
+  NotFoundError,
+  ValidationError,
+  errorMessage,
+} from '../../shared/errors';
 import { LockKeys, type ILockProvider } from '../../shared/LockProvider';
 import type { ILogger } from '../../shared/logger';
 import {
@@ -85,7 +91,10 @@ export class SdexMarketService {
   /** Classic USDC the pairs quote against — the same issuer the licitación escrow charges. */
   counterAsset(): Asset {
     const issuer = this.usdc.issuerPublicKey();
-    if (!issuer) throw new NotConfiguredError('Falta el emisor USDC configurado (STELLAR_USDC_ISSUER_SECRET / deployments)');
+    if (!issuer)
+      throw new NotConfiguredError(
+        'Falta el emisor USDC configurado (STELLAR_USDC_ISSUER_SECRET / deployments)',
+      );
     return new Asset(this.usdcCode, issuer);
   }
 
@@ -109,7 +118,9 @@ export class SdexMarketService {
     const listing = this.listings.get(listingId);
     if (!listing) throw new NotFoundError('Mercado no encontrado');
     if (!this.available(listing)) {
-      throw new DomainError('Este listing todavía no tiene cuenta emisora en Stellar, así que no cotiza en el DEX');
+      throw new DomainError(
+        'Este listing todavía no tiene cuenta emisora en Stellar, así que no cotiza en el DEX',
+      );
     }
     return listing;
   }
@@ -151,8 +162,12 @@ export class SdexMarketService {
         this.sdex.recentTrades(security, legacy, 100).catch(() => [] as SdexTrade[]),
       ]);
       if (legacyBook) {
-        const bids = [...book.bids, ...legacyBook.bids.map((b) => ({ ...b, legacy: true }))].sort((a, b) => b.price - a.price);
-        const asks = [...book.asks, ...legacyBook.asks.map((a) => ({ ...a, legacy: true }))].sort((a, b) => a.price - b.price);
+        const bids = [...book.bids, ...legacyBook.bids.map((b) => ({ ...b, legacy: true }))].sort(
+          (a, b) => b.price - a.price,
+        );
+        const asks = [...book.asks, ...legacyBook.asks.map((a) => ({ ...a, legacy: true }))].sort(
+          (a, b) => a.price - b.price,
+        );
         const bestBid = bids[0]?.price ?? null;
         const bestAsk = asks[0]?.price ?? null;
         mergedBook = {
@@ -160,7 +175,7 @@ export class SdexMarketService {
           bids,
           asks,
           spread: bestBid != null && bestAsk != null ? bestAsk - bestBid : null,
-          midPrice: bestBid != null && bestAsk != null ? (bestAsk + bestBid) / 2 : bestBid ?? bestAsk,
+          midPrice: bestBid != null && bestAsk != null ? (bestAsk + bestBid) / 2 : (bestBid ?? bestAsk),
         };
         mergedTrades = [...trades, ...legacyTrades.map((t) => ({ ...t, legacy: true }))]
           .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
@@ -186,10 +201,15 @@ export class SdexMarketService {
       const [line, counterLine] = lines;
       const legacyIssuer = legacy?.getIssuer();
       myOffers = offers
-        .filter((o) => o.selling?.asset_code === security.getCode() || o.buying?.asset_code === security.getCode())
+        .filter(
+          (o) => o.selling?.asset_code === security.getCode() || o.buying?.asset_code === security.getCode(),
+        )
         .map((o) => ({
           ...o,
-          legacy: Boolean(legacyIssuer && (o.selling?.asset_issuer === legacyIssuer || o.buying?.asset_issuer === legacyIssuer)),
+          legacy: Boolean(
+            legacyIssuer &&
+            (o.selling?.asset_issuer === legacyIssuer || o.buying?.asset_issuer === legacyIssuer),
+          ),
         }));
       authorized = line.authorized;
       needsTrustline = !line.exists;
@@ -224,16 +244,21 @@ export class SdexMarketService {
   async prepareOrder(params: OrderParams): Promise<{ xdr: string; summary: Record<string, unknown> }> {
     const listing = this.requireListing(params.listingId);
     const account = this.requireWallet(params.accountId);
-    if (account.kycStatus !== 'APPROVED') throw new DomainError('Solo inversores con KYC aprobado pueden operar');
-    if (!(params.price > 0) || !(params.quantity > 0)) throw new ValidationError('Precio o cantidad inválidos');
+    if (account.kycStatus !== 'APPROVED')
+      throw new DomainError('Solo inversores con KYC aprobado pueden operar');
+    if (!(params.price > 0) || !(params.quantity > 0))
+      throw new ValidationError('Precio o cantidad inválidos');
 
     const security = this.listingAsset(listing);
     const counter = this.counterAsset();
     // Fail with a readable reason rather than after the user signed.
     const [line, counterLine] = await this.sdex.trustlineStates(account.publicKey, [security, counter]);
-    if (!line.exists) throw new DomainError(`Primero aprobá el token ${listing.dossier.tokenTicker} (trustline)`);
+    if (!line.exists)
+      throw new DomainError(`Primero aprobá el token ${listing.dossier.tokenTicker} (trustline)`);
     if (!line.authorized) {
-      throw new DomainError('Tu cuenta no está autorizada por el emisor para operar este activo. Necesitás el KYC aprobado.');
+      throw new DomainError(
+        'Tu cuenta no está autorizada por el emisor para operar este activo. Necesitás el KYC aprobado.',
+      );
     }
     const req = {
       accountId: account.publicKey,
@@ -244,7 +269,8 @@ export class SdexMarketService {
       offerId: params.offerId,
       openCounterTrustline: !counterLine.exists,
     };
-    const xdrOut = params.side === 'BUY' ? await this.sdex.buildBuyOfferXdr(req) : await this.sdex.buildSellOfferXdr(req);
+    const xdrOut =
+      params.side === 'BUY' ? await this.sdex.buildBuyOfferXdr(req) : await this.sdex.buildSellOfferXdr(req);
     return {
       xdr: xdrOut,
       summary: {
@@ -280,7 +306,12 @@ export class SdexMarketService {
       offerId: params.offerId,
       openCounterTrustline: !counterLine.exists,
     };
-    return { xdr: params.side === 'BUY' ? await this.sdex.buildBuyOfferXdr(req) : await this.sdex.buildSellOfferXdr(req) };
+    return {
+      xdr:
+        params.side === 'BUY'
+          ? await this.sdex.buildBuyOfferXdr(req)
+          : await this.sdex.buildSellOfferXdr(req),
+    };
   }
 
   async cancelCustodialOrder(params: CancelParams): Promise<{ hash: string }> {
@@ -290,10 +321,18 @@ export class SdexMarketService {
   }
 
   /** Trustline the investor signs to opt into the security (inert until authorized). */
-  async prepareTrustline(params: { listingId: string; accountId: string; limit?: number }): Promise<{ xdr: string; tokenTicker: string }> {
+  async prepareTrustline(params: {
+    listingId: string;
+    accountId: string;
+    limit?: number;
+  }): Promise<{ xdr: string; tokenTicker: string }> {
     const listing = this.requireListing(params.listingId);
     const account = this.requireWallet(params.accountId);
-    const xdrOut = await this.sdex.buildTrustlineXdr(account.publicKey, this.listingAsset(listing), params.limit);
+    const xdrOut = await this.sdex.buildTrustlineXdr(
+      account.publicKey,
+      this.listingAsset(listing),
+      params.limit,
+    );
     return { xdr: xdrOut, tokenTicker: listing.dossier.tokenTicker };
   }
 
@@ -301,7 +340,8 @@ export class SdexMarketService {
   async openCustodialTrustline(params: { listingId: string; accountId: string; limit?: number }) {
     const listing = this.requireListing(params.listingId);
     const account = this.requireWallet(params.accountId);
-    if (account.kycStatus !== 'APPROVED') throw new DomainError('Solo inversores con KYC aprobado pueden aprobar el token');
+    if (account.kycStatus !== 'APPROVED')
+      throw new DomainError('Solo inversores con KYC aprobado pueden aprobar el token');
     const line = await this.sdex.trustlineState(account.publicKey, this.listingAsset(listing));
     let hash: string | undefined;
     if (!line.exists) {
@@ -317,7 +357,9 @@ export class SdexMarketService {
    * `tokensOnChain` per holding makes retries idempotent (never double-pays).
    */
   distributeClaimedTokens(params: { listingId: string; accountId: string }) {
-    return this.payoutLock.run(LockKeys.payout(params.accountId, params.listingId), () => this.distributeUnlocked(params));
+    return this.payoutLock.run(LockKeys.payout(params.accountId, params.listingId), () =>
+      this.distributeUnlocked(params),
+    );
   }
 
   private async distributeUnlocked(params: { listingId: string; accountId: string }) {
@@ -325,7 +367,8 @@ export class SdexMarketService {
     const account = this.requireWallet(params.accountId);
     const holding = (account.holdings || []).find((h) => h.listingId === params.listingId);
     const pending = Math.max(0, (holding?.tokens || 0) - (holding?.tokensOnChain || 0));
-    if (!holding || pending <= 0) throw new DomainError('No hay tokens reclamados pendientes de envío on-chain');
+    if (!holding || pending <= 0)
+      throw new DomainError('No hay tokens reclamados pendientes de envío on-chain');
 
     const security = this.listingAsset(listing);
     if (account.custodyMode === 'CUSTODIAL') {
@@ -333,13 +376,20 @@ export class SdexMarketService {
     } else {
       const line = await this.sdex.trustlineState(account.publicKey, security);
       if (!line.exists) {
-        throw new DomainError(`Primero aprobá el token ${listing.dossier.tokenTicker}: firmá la trustline desde el orderbook`);
+        throw new DomainError(
+          `Primero aprobá el token ${listing.dossier.tokenTicker}: firmá la trustline desde el orderbook`,
+        );
       }
       if (!line.authorized) await this.compliance.sync(account.publicKey, true);
     }
     const result = await this.sdex.distributeTokens(account.publicKey, security, pending);
     this.accounts.markTokensOnChain(account.id, listing.id, pending);
-    return { hash: result.hash, amount: pending, destination: account.publicKey, tokenTicker: listing.dossier.tokenTicker };
+    return {
+      hash: result.hash,
+      amount: pending,
+      destination: account.publicKey,
+      tokenTicker: listing.dossier.tokenTicker,
+    };
   }
 
   /**
@@ -372,15 +422,39 @@ export class SdexMarketService {
         let ops: xdr.Operation[];
         if (offer.side === 'SELL') {
           ops = [
-            Operation.manageSellOffer({ selling: security, buying: legacy, amount: '0', price: { n, d }, offerId: offer.id }),
-            Operation.manageSellOffer({ selling: security, buying: counter, amount: offer.amount, price: { n, d }, offerId: '0' }),
+            Operation.manageSellOffer({
+              selling: security,
+              buying: legacy,
+              amount: '0',
+              price: { n, d },
+              offerId: offer.id,
+            }),
+            Operation.manageSellOffer({
+              selling: security,
+              buying: counter,
+              amount: offer.amount,
+              price: { n, d },
+              offerId: '0',
+            }),
           ];
         } else {
           const buyStroops = (stroops(offer.amount) * BigInt(n)) / BigInt(d);
           if (buyStroops <= 0n) continue;
           ops = [
-            Operation.manageBuyOffer({ buying: security, selling: legacy, buyAmount: '0', price: { n: d, d: n }, offerId: offer.id }),
-            Operation.manageBuyOffer({ buying: security, selling: counter, buyAmount: toAmount(buyStroops), price: { n: d, d: n }, offerId: '0' }),
+            Operation.manageBuyOffer({
+              buying: security,
+              selling: legacy,
+              buyAmount: '0',
+              price: { n: d, d: n },
+              offerId: offer.id,
+            }),
+            Operation.manageBuyOffer({
+              buying: security,
+              selling: counter,
+              buyAmount: toAmount(buyStroops),
+              price: { n: d, d: n },
+              offerId: '0',
+            }),
           ];
         }
         const unsigned = await this.sdex.buildOfferOpsXdr(account.publicKey, ops);

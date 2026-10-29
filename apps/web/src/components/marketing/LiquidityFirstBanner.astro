@@ -18,29 +18,32 @@ const cards = [
         <Droplets className="w-3.5 h-3.5" />
         {messages.liquidity.kicker}
       </div>
-      <div class="font-lcd text-xs text-black border border-black/10 px-3 py-1 rounded-xl bg-white/80">T+0 · &lt; 4s</div>
+      <div class="font-lcd text-xs text-black border border-black/10 px-3 py-1 rounded-xl bg-white/80">
+        T+0 · &lt; 4s
+      </div>
     </div>
     <h2 class="font-section text-2xl sm:text-3xl lg:text-4xl font-extrabold text-black leading-snug max-w-3xl">
       {messages.liquidity.title}
     </h2>
     <p class="text-neutral-600 text-sm sm:text-base max-w-3xl leading-relaxed">{messages.liquidity.body}</p>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
-      {
-        cards.map(([Icon, title, desc]) => (
-          <div class="p-5 rounded-2xl border border-black/10 bg-white/70 space-y-2">
-            <Icon className="w-5 h-5" />
-            <h3 class="font-section font-extrabold">{title}</h3>
-            <p class="text-sm text-neutral-600">{desc}</p>
-          </div>
-        ))
-      }
+      {cards.map(([Icon, title, desc]) => (
+        <div class="p-5 rounded-2xl border border-black/10 bg-white/70 space-y-2">
+          <Icon className="w-5 h-5" />
+          <h3 class="font-section font-extrabold">{title}</h3>
+          <p class="text-sm text-neutral-600">{desc}</p>
+        </div>
+      ))}
     </div>
     <div class="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-between gap-3 border-t border-black/10 pt-4">
       <span class="text-xs text-neutral-500 flex items-center gap-2">
         <Sparkles className="w-4 h-4 shrink-0" /> Argentina Builder Challenge
       </span>
       <div class="flex flex-wrap gap-2 sm:gap-3">
-        <a href="/orderbook" class="flex-1 sm:flex-none justify-center px-5 py-2.5 btn-lcd btn-lcd-solid text-xs">
+        <a
+          href="/orderbook"
+          class="flex-1 sm:flex-none justify-center px-5 py-2.5 btn-lcd btn-lcd-solid text-xs"
+        >
           {messages.nav.orderbook} <ArrowRight className="w-3.5 h-3.5" />
         </a>
       </div>

@@ -17,7 +17,8 @@ const SECURITY_HEADERS: Record<string, string> = {
   'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   // The KYC form may use the camera for the selfie; nothing else is needed.
-  'Permissions-Policy': 'camera=(self), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()',
+  'Permissions-Policy':
+    'camera=(self), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()',
   // Firebase's Google sign-in talks to its popup through window.opener.
   'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
   'Cross-Origin-Resource-Policy': 'same-origin',
@@ -31,7 +32,9 @@ const SECURITY_HEADERS: Record<string, string> = {
  */
 function contentSecurityPolicy(astroPolicy: string | null): string {
   if (!astroPolicy) return FALLBACK_CSP;
-  return /frame-ancestors/.test(astroPolicy) ? astroPolicy : `${astroPolicy.replace(/;\s*$/, '')}; frame-ancestors 'none'`;
+  return /frame-ancestors/.test(astroPolicy)
+    ? astroPolicy
+    : `${astroPolicy.replace(/;\s*$/, '')}; frame-ancestors 'none'`;
 }
 
 function isHttps(request: Request, url: URL): boolean {
@@ -44,7 +47,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const response = await next();
   const headers = new Headers(response.headers);
-  headers.set('Content-Security-Policy', contentSecurityPolicy(response.headers.get('content-security-policy')));
+  headers.set(
+    'Content-Security-Policy',
+    contentSecurityPolicy(response.headers.get('content-security-policy')),
+  );
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) headers.set(name, value);
   if (isHttps(context.request, context.url)) {
     headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');

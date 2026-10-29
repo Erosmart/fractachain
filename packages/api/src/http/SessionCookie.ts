@@ -25,7 +25,12 @@ export class SessionCookie {
   }
 
   clear(res: Response): void {
-    res.clearCookie(this.options.name, { httpOnly: true, secure: this.options.secure, sameSite: 'strict', path: '/' });
+    res.clearCookie(this.options.name, {
+      httpOnly: true,
+      secure: this.options.secure,
+      sameSite: 'strict',
+      path: '/',
+    });
   }
 
   read(req: Request): string | undefined {

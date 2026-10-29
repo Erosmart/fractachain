@@ -14,15 +14,61 @@ type Point = [number, number];
 // Coarse continent outlines in viewBox space (400x380), circle center 200/190.
 const CONTINENTS: Point[][] = [
   // South America
-  [[98, 190], [112, 168], [135, 158], [162, 166], [168, 180], [158, 205], [148, 240], [136, 272], [124, 288], [116, 262], [104, 222], [96, 200]],
+  [
+    [98, 190],
+    [112, 168],
+    [135, 158],
+    [162, 166],
+    [168, 180],
+    [158, 205],
+    [148, 240],
+    [136, 272],
+    [124, 288],
+    [116, 262],
+    [104, 222],
+    [96, 200],
+  ],
   // North America
-  [[52, 98], [82, 72], [118, 60], [152, 66], [168, 82], [150, 96], [128, 104], [98, 112], [70, 110]],
+  [
+    [52, 98],
+    [82, 72],
+    [118, 60],
+    [152, 66],
+    [168, 82],
+    [150, 96],
+    [128, 104],
+    [98, 112],
+    [70, 110],
+  ],
   // Europe
-  [[255, 82], [282, 70], [308, 78], [302, 98], [278, 108], [258, 98]],
+  [
+    [255, 82],
+    [282, 70],
+    [308, 78],
+    [302, 98],
+    [278, 108],
+    [258, 98],
+  ],
   // Africa
-  [[250, 124], [288, 114], [320, 138], [318, 184], [292, 218], [274, 212], [258, 172], [246, 142]],
+  [
+    [250, 124],
+    [288, 114],
+    [320, 138],
+    [318, 184],
+    [292, 218],
+    [274, 212],
+    [258, 172],
+    [246, 142],
+  ],
   // Asia (partial, clipped by the rim on purpose)
-  [[318, 72], [344, 86], [352, 112], [334, 132], [312, 116], [310, 92]],
+  [
+    [318, 72],
+    [344, 86],
+    [352, 112],
+    [334, 132],
+    [312, 116],
+    [310, 92],
+  ],
 ];
 
 // ~Argentina, inside the South America outline
@@ -60,7 +106,10 @@ for (let x = CX - R; x <= CX + R; x += STEP) {
   }
 }
 
-const arcs = ARCS.map((a) => ({ ...a, d: `M${a.from[0]},${a.from[1]} Q${a.c[0]},${a.c[1]} ${HUB[0]},${HUB[1]}` }));
+const arcs = ARCS.map((a) => ({
+  ...a,
+  d: `M${a.from[0]},${a.from[1]} Q${a.c[0]},${a.c[1]} ${HUB[0]},${HUB[1]}`,
+}));
 ---
 
 <section class="relative crystal-card rounded-2xl sm:rounded-3xl overflow-hidden min-h-[26rem] sm:min-h-[30rem] lg:min-h-[32rem]">
@@ -80,43 +129,72 @@ const arcs = ARCS.map((a) => ({ ...a, d: `M${a.from[0]},${a.from[1]} Q${a.c[0]},
         </radialGradient>
       </defs>
 
-      <circle cx={CX} cy={CY} r={R} fill="url(#mtrOcean)" stroke="rgba(60,110,45,0.22)" stroke-width="1"></circle>
+      <circle
+        cx={CX}
+        cy={CY}
+        r={R}
+        fill="url(#mtrOcean)"
+        stroke="rgba(60,110,45,0.22)"
+        stroke-width="1"
+      ></circle>
 
       <g clip-path="url(#mtrGlobeClip)">
-        {
-          DOTS.map((d) =>
-            d.land ? (
-              <circle cx={d.x} cy={d.y} r={2} fill="#3f8f37" opacity={0.85} />
-            ) : (
-              <circle cx={d.x} cy={d.y} r={1.2} fill="#64748b" opacity={0.18} />
-            ),
-          )
-        }
-        {
-          [112, 150, 230, 268].map((y) => (
-            <line x1={CX - R} y1={y} x2={CX + R} y2={y} stroke="rgba(60,110,45,0.14)" stroke-width="0.8" />
-          ))
-        }
+        {DOTS.map((d) =>
+          d.land ? (
+            <circle cx={d.x} cy={d.y} r={2} fill="#3f8f37" opacity={0.85} />
+          ) : (
+            <circle cx={d.x} cy={d.y} r={1.2} fill="#64748b" opacity={0.18} />
+          ),
+        )}
+        {[112, 150, 230, 268].map((y) => (
+          <line x1={CX - R} y1={y} x2={CX + R} y2={y} stroke="rgba(60,110,45,0.14)" stroke-width="0.8" />
+        ))}
         <line x1={CX - R} y1={CY} x2={CX + R} y2={CY} stroke="rgba(60,110,45,0.2)" stroke-width="0.8"></line>
-        <ellipse cx={CX} cy={CY} rx={70} ry={R} fill="none" stroke="rgba(60,110,45,0.14)" stroke-width="0.8"></ellipse>
-        <ellipse cx={CX} cy={CY} rx={120} ry={R} fill="none" stroke="rgba(60,110,45,0.1)" stroke-width="0.8"></ellipse>
+        <ellipse
+          cx={CX}
+          cy={CY}
+          rx={70}
+          ry={R}
+          fill="none"
+          stroke="rgba(60,110,45,0.14)"
+          stroke-width="0.8"
+        ></ellipse>
+        <ellipse
+          cx={CX}
+          cy={CY}
+          rx={120}
+          ry={R}
+          fill="none"
+          stroke="rgba(60,110,45,0.1)"
+          stroke-width="0.8"
+        ></ellipse>
       </g>
 
-      {
-        arcs.map((a) => (
-          <g>
-            <path d={a.d} fill="none" stroke="rgba(78,167,67,0.4)" stroke-width="1.2" stroke-dasharray="3 4" />
-            <circle r={2.6} fill="#2f7d29">
-              <animateMotion dur={`${a.dur}s`} begin={`${a.delay}s`} repeatCount="indefinite" path={a.d} />
-            </circle>
-            <circle cx={a.from[0]} cy={a.from[1]} r={2.2} fill="#2f7d29" opacity={0.7} />
-            <circle cx={a.from[0]} cy={a.from[1]} r={2.2} fill="#4ea743" opacity={0.5}>
-              <animate attributeName="r" values="2.2;8;2.2" dur={`${a.dur}s`} begin={`${a.delay}s`} repeatCount="indefinite" />
-              <animate attributeName="opacity" values="0.5;0;0.5" dur={`${a.dur}s`} begin={`${a.delay}s`} repeatCount="indefinite" />
-            </circle>
-          </g>
-        ))
-      }
+      {arcs.map((a) => (
+        <g>
+          <path d={a.d} fill="none" stroke="rgba(78,167,67,0.4)" stroke-width="1.2" stroke-dasharray="3 4" />
+          <circle r={2.6} fill="#2f7d29">
+            <animateMotion dur={`${a.dur}s`} begin={`${a.delay}s`} repeatCount="indefinite" path={a.d} />
+          </circle>
+          <circle cx={a.from[0]} cy={a.from[1]} r={2.2} fill="#2f7d29" opacity={0.7} />
+          <circle cx={a.from[0]} cy={a.from[1]} r={2.2} fill="#4ea743" opacity={0.5}>
+            <animate
+              attributeName="r"
+              values="2.2;8;2.2"
+              dur={`${a.dur}s`}
+              begin={`${a.delay}s`}
+              repeatCount="indefinite"
+            />
+            <animate
+              attributeName="opacity"
+              values="0.5;0;0.5"
+              dur={`${a.dur}s`}
+              begin={`${a.delay}s`}
+              repeatCount="indefinite"
+            />
+          </circle>
+        </g>
+      ))}
 
       <!-- Argentina hub — everything lands here -->
       <circle cx={HUB[0]} cy={HUB[1]} r={3.8} fill="#1f5c1a"></circle>
@@ -134,14 +212,12 @@ const arcs = ARCS.map((a) => ({ ...a, d: `M${a.from[0]},${a.from[1]} Q${a.c[0]},
       <h2 class="font-section text-3xl sm:text-4xl lg:text-5xl font-extrabold text-black">{copy.title}</h2>
       <p class="text-neutral-600 text-sm sm:text-base leading-relaxed">{copy.body}</p>
       <ul class="flex flex-wrap gap-2.5 pt-1">
-        {
-          copy.points.map((point) => (
-            <li class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/70 border border-black/10 text-xs font-display font-bold text-black">
-              <CheckCircle2 className="w-3.5 h-3.5 text-[#4ea743] shrink-0" />
-              {point}
-            </li>
-          ))
-        }
+        {copy.points.map((point) => (
+          <li class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/70 border border-black/10 text-xs font-display font-bold text-black">
+            <CheckCircle2 className="w-3.5 h-3.5 text-[#4ea743] shrink-0" />
+            {point}
+          </li>
+        ))}
       </ul>
     </div>
   </div>

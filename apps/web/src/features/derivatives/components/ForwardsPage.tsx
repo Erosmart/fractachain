@@ -47,7 +47,8 @@ const MOCK_FORWARDS: ForwardContract[] = [
 /** Production forwards (roadmap): demo contracts and a clause simulator. */
 function ForwardsPage() {
   const { t, locale } = useI18n();
-  const comLabel = (c: string) => t(c === 'Soja' ? 'misc.comSoja' : c === 'Maíz' ? 'misc.comMaiz' : 'misc.comTrigo');
+  const comLabel = (c: string) =>
+    t(c === 'Soja' ? 'misc.comSoja' : c === 'Maíz' ? 'misc.comMaiz' : 'misc.comTrigo');
   const fmtDate = (iso: string) =>
     new Date(`${iso}T12:00:00`).toLocaleDateString(locale === 'es' ? 'es-AR' : 'en-US', {
       day: 'numeric',
@@ -79,7 +80,9 @@ function ForwardsPage() {
           <Sprout className="w-3.5 h-3.5" />
           {t('fwd.kicker')}
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">{t('pages.forwardsTitle')}</h1>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">
+          {t('pages.forwardsTitle')}
+        </h1>
         <p className="text-neutral-600 text-xs sm:text-sm max-w-2xl">{t('fwd.lead')}</p>
         <MockDisclaimer product="Forwards" />
         <LiveContractLink kind="forward" />
@@ -121,7 +124,9 @@ function ForwardsPage() {
                   <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-start">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-black text-sm sm:text-base font-mono break-all">{fwd.id}</span>
+                        <span className="font-bold text-black text-sm sm:text-base font-mono break-all">
+                          {fwd.id}
+                        </span>
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-leaf-100 text-[#2f6f28] border border-[#8fcb7a]/50">
                           {comLabel(fwd.commodity)}
                         </span>
@@ -147,7 +152,9 @@ function ForwardsPage() {
                     </div>
                     <div>
                       <span className="text-neutral-500 text-[10px] block">{t('fwd.delivery')}</span>
-                      <span className="font-bold font-mono text-neutral-700">{fmtDate(fwd.deliveryDate)}</span>
+                      <span className="font-bold font-mono text-neutral-700">
+                        {fmtDate(fwd.deliveryDate)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -166,7 +173,8 @@ function ForwardsPage() {
                 {t('fwd.selected')} <strong className="text-black font-mono">{selectedForward.id}</strong>
               </div>
               <div className="text-neutral-600">
-                {t('fwd.totalDelivery')} <strong className="text-[#2f6f28] font-mono">${formatInt(totalContractValue)} USDC</strong>
+                {t('fwd.totalDelivery')}{' '}
+                <strong className="text-[#2f6f28] font-mono">${formatInt(totalContractValue)} USDC</strong>
               </div>
             </div>
 
@@ -178,14 +186,18 @@ function ForwardsPage() {
               <div
                 {...clickable(() => setResolutionAction('PENALTY'), resolutionAction === 'PENALTY')}
                 className={`p-4 rounded-xl border cursor-pointer transition-all space-y-1.5 ${
-                  resolutionAction === 'PENALTY' ? 'bg-red-50 border-red-300 text-black' : 'bg-black/5 border-black/8 text-neutral-600 hover:border-black/20'
+                  resolutionAction === 'PENALTY'
+                    ? 'bg-red-50 border-red-300 text-black'
+                    : 'bg-black/5 border-black/8 text-neutral-600 hover:border-black/20'
                 }`}
               >
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <span className="font-bold text-xs text-red-700 flex items-center gap-1">
                     <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> {t('fwd.penalty')}
                   </span>
-                  <span className="font-mono text-xs font-bold text-black">-${formatInt(penaltyAmount)} USDC</span>
+                  <span className="font-mono text-xs font-bold text-black">
+                    -${formatInt(penaltyAmount)} USDC
+                  </span>
                 </div>
                 <p className="text-[11px] text-neutral-600">{t('fwd.penaltyBody')}</p>
               </div>
@@ -194,7 +206,9 @@ function ForwardsPage() {
               <div
                 {...clickable(() => setResolutionAction('ROLLOVER'), resolutionAction === 'ROLLOVER')}
                 className={`p-4 rounded-xl border cursor-pointer transition-all space-y-1.5 ${
-                  resolutionAction === 'ROLLOVER' ? 'bg-leaf-100 border-[#7ed86a] text-black' : 'bg-black/5 border-black/8 text-neutral-600 hover:border-black/20'
+                  resolutionAction === 'ROLLOVER'
+                    ? 'bg-leaf-100 border-[#7ed86a] text-black'
+                    : 'bg-black/5 border-black/8 text-neutral-600 hover:border-black/20'
                 }`}
               >
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
@@ -209,7 +223,10 @@ function ForwardsPage() {
 
             {/* Execution Result Feedback */}
             {actionDone && (
-              <div className="p-3 rounded-xl bg-leaf-100 border border-[#8fcb7a]/50 text-[#2f6f28] text-xs flex items-center gap-2" role="status">
+              <div
+                className="p-3 rounded-xl bg-leaf-100 border border-[#8fcb7a]/50 text-[#2f6f28] text-xs flex items-center gap-2"
+                role="status"
+              >
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>
                   {resolutionAction === 'PENALTY'

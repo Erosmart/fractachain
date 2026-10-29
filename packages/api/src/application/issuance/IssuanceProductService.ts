@@ -26,7 +26,14 @@ export class IssuanceProductService {
     return [...this.products];
   }
 
-  create(input: { kind: ProductKind; name: string; paymentKind: PaymentKind; pricePerUnit: string; contractAddress?: string; notes?: string }): IssuanceProduct {
+  create(input: {
+    kind: ProductKind;
+    name: string;
+    paymentKind: PaymentKind;
+    pricePerUnit: string;
+    contractAddress?: string;
+    notes?: string;
+  }): IssuanceProduct {
     const product: IssuanceProduct = {
       id: `ISS-${String(this.seq++).padStart(3, '0')}`,
       kind: input.kind,

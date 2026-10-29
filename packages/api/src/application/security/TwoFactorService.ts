@@ -35,7 +35,8 @@ export class TwoFactorService {
     if (!pending) throw new DomainError('Primero generá el código QR');
     const secret = this.cipher.open(pending).plain;
     const check = this.totp.verify(secret, code);
-    if (!check.valid) throw new UnauthenticatedError('Código incorrecto. Revisá la hora de tu teléfono y probá de nuevo.');
+    if (!check.valid)
+      throw new UnauthenticatedError('Código incorrecto. Revisá la hora de tu teléfono y probá de nuevo.');
     const recoveryCodes = RecoveryCodes.generate();
     account.twoFactor = {
       secret: pending,

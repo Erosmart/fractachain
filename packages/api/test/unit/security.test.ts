@@ -60,9 +60,16 @@ describe('HmacTokenService', () => {
     const { tokens, clock } = setup();
     const { token } = tokens.issue('usr_1');
     const [p, body, mac] = token.split('.');
-    const forged = Buffer.from(JSON.stringify({ ...JSON.parse(Buffer.from(body, 'base64url').toString()), sub: 'admin' })).toString('base64url');
+    const forged = Buffer.from(
+      JSON.stringify({ ...JSON.parse(Buffer.from(body, 'base64url').toString()), sub: 'admin' }),
+    ).toString('base64url');
     expect(tokens.verify(`${p}.${forged}.${mac}`)).toBeNull();
-    const other = new HmacTokenService('x'.repeat(40), 60_000, new PersistentRevocationList(new InMemoryDocumentStore(), clock), clock);
+    const other = new HmacTokenService(
+      'x'.repeat(40),
+      60_000,
+      new PersistentRevocationList(new InMemoryDocumentStore(), clock),
+      clock,
+    );
     expect(other.verify(token)).toBeNull();
     expect(tokens.verify('fc1.usr_1.123.abcdef')).toBeNull();
   });

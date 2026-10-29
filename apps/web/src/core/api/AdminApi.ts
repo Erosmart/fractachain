@@ -80,11 +80,17 @@ export class AdminApi {
     return this.http.get<TestnetAdminView>('/api/admin/testnet', { timeoutMs: CHAIN_TIMEOUT_MS });
   }
 
-  saveTestnet(settings: TestnetSettings & { settleAt?: string; settlePolicy: SettlePolicy }): Promise<TestnetAdminView> {
+  saveTestnet(
+    settings: TestnetSettings & { settleAt?: string; settlePolicy: SettlePolicy },
+  ): Promise<TestnetAdminView> {
     return this.http.post<TestnetAdminView>('/api/admin/testnet', settings);
   }
 
   configureIssuer(clawback = false): Promise<{ hash?: string }> {
-    return this.http.post('/api/admin/testnet/configure-issuer', { clawback }, { timeoutMs: CHAIN_TIMEOUT_MS });
+    return this.http.post(
+      '/api/admin/testnet/configure-issuer',
+      { clawback },
+      { timeoutMs: CHAIN_TIMEOUT_MS },
+    );
   }
 }

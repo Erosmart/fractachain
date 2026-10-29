@@ -26,7 +26,10 @@ export class InvestorService {
     this.requireSession();
     if (this.session.getSnapshot().user?.custodyMode === 'SELF') {
       await this.relay
-        .signAndRelay({ prepare: this.market.sdexTrustlinePreparePath(listingId), submit: this.market.sdexSubmitPath })
+        .signAndRelay({
+          prepare: this.market.sdexTrustlinePreparePath(listingId),
+          submit: this.market.sdexSubmitPath,
+        })
         .catch((err: unknown) => {
           // No issuing account yet means no asset to trust: the opt-in is still
           // recorded below and the trustline is signed once the asset exists.
@@ -67,7 +70,10 @@ export class InvestorService {
     return this.listings.finalize(listingId);
   };
 
-  readonly refundContribution = async (listingId: string, selfCustody?: boolean): Promise<ChainActionResult> => {
+  readonly refundContribution = async (
+    listingId: string,
+    selfCustody?: boolean,
+  ): Promise<ChainActionResult> => {
     this.requireSession();
     const isSelf = selfCustody ?? this.session.getSnapshot().user?.custodyMode === 'SELF';
     const data = isSelf

@@ -69,7 +69,9 @@ export class AppConfig {
    * opened from another device on the LAN (e.g. a phone hitting
    * `http://192.168.0.14:3000`), keeping the configured port.
    */
-  apiBaseUrl(location: Pick<Location, 'hostname' | 'protocol' | 'origin'> | null = AppConfig.currentLocation()): string {
+  apiBaseUrl(
+    location: Pick<Location, 'hostname' | 'protocol' | 'origin'> | null = AppConfig.currentLocation(),
+  ): string {
     const fallback = this.values.apiUrl.replace(/\/+$/, '');
     // Same-origin API (web and API in one server): the page's own origin.
     if (!fallback) return location?.origin ?? '';

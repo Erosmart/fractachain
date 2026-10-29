@@ -72,7 +72,13 @@ export const EMPTY_STOCK: NewStockInput = {
   custodiedShares: 10000,
 };
 
-export const STOCK_TEXT_FIELDS = ['ticker', 'tokenTicker', 'companyName', 'isin', 'sector'] as const satisfies readonly (keyof NewStockInput)[];
+export const STOCK_TEXT_FIELDS = [
+  'ticker',
+  'tokenTicker',
+  'companyName',
+  'isin',
+  'sector',
+] as const satisfies readonly (keyof NewStockInput)[];
 
 /** Cheap shape check before a round-trip; the API validates the checksum. */
 export function looksLikeStellarAccount(value: string): boolean {

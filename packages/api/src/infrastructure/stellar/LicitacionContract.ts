@@ -87,7 +87,9 @@ export class LicitacionContract {
     }
     const xlm = await this.accounts.nativeXlm(wallet);
     if (xlm < amount + 2) {
-      throw new DomainError(`La wallet tiene ${xlm.toFixed(2)} XLM y el aporte es ${amount}. Friendbot o recargá XLM de testnet.`);
+      throw new DomainError(
+        `La wallet tiene ${xlm.toFixed(2)} XLM y el aporte es ${amount}. Friendbot o recargá XLM de testnet.`,
+      );
     }
   }
 
@@ -126,7 +128,12 @@ export class LicitacionContract {
     listing: Listing,
     deadlineMs: number,
     fiduciarySecret?: string,
-  ): Promise<{ contractId: string; hash: string | null; factoryProductId: number | null; fiduciaryUsdcReady: boolean | null }> {
+  ): Promise<{
+    contractId: string;
+    hash: string | null;
+    factoryProductId: number | null;
+    fiduciaryUsdcReady: boolean | null;
+  }> {
     const d = listing.dossier;
     const fiduciary = normalizeAddress(d.proceedsWallet);
     if (!isStellarPublicKey(fiduciary)) {
@@ -140,7 +147,8 @@ export class LicitacionContract {
 
     const isXlm = d.paymentKind === 'XLM';
     const paymentToken = isXlm ? this.soroban.xlmSac() : deployment?.usdcSac;
-    if (!isContractId(paymentToken)) throw new NotConfiguredError('Falta usdcSac en deployments/testnet.json');
+    if (!isContractId(paymentToken))
+      throw new NotConfiguredError('Falta usdcSac en deployments/testnet.json');
 
     const admin = await this.keyring.licitacionAdmin();
     const deployed = await this.soroban.deployFromWasmHash(wasmHash, admin);
@@ -155,7 +163,9 @@ export class LicitacionContract {
       deadline: BigInt(Math.floor(deadlineMs / 1000)),
       price_per_unit: price,
       legal_info: {
-        fideicomiso_hash: createHash('sha256').update(`${listing.id}:${d.estatutoHash || ''}`).digest(),
+        fideicomiso_hash: createHash('sha256')
+          .update(`${listing.id}:${d.estatutoHash || ''}`)
+          .digest(),
         cnv_record_id: d.cnvRecordId || '',
         legal_terms_uri: d.legalTermsUri || '',
       },
@@ -164,7 +174,9 @@ export class LicitacionContract {
     // SC-06: initialize is a separate tx from the deploy — verify nobody beat us to it.
     const storedAdmin = await this.soroban.readOptional<string>(client, 'get_admin');
     if (storedAdmin !== undefined && String(storedAdmin) !== admin.publicKey()) {
-      throw new DomainError('La licitación quedó inicializada con otro admin (posible front-running): descartada');
+      throw new DomainError(
+        'La licitación quedó inicializada con otro admin (posible front-running): descartada',
+      );
     }
 
     let factoryProductId: number | null = null;
@@ -192,13 +204,19 @@ export class LicitacionContract {
     if (!isXlm) {
       try {
         fiduciaryUsdcReady = await this.usdc.ensureFiduciaryTrustline(fiduciary, fiduciarySecret);
-        if (!fiduciaryUsdcReady) this.logger.warn('la wallet fiduciaria aún no tiene trustline USDC', { fiduciary });
+        if (!fiduciaryUsdcReady)
+          this.logger.warn('la wallet fiduciaria aún no tiene trustline USDC', { fiduciary });
       } catch (err) {
         this.logger.warn('trustline USDC de la fiduciaria falló', { err: errorMessage(err) });
         fiduciaryUsdcReady = false;
       }
     }
-    return { contractId: deployed.contractId, hash: hash || deployed.hash, factoryProductId, fiduciaryUsdcReady };
+    return {
+      contractId: deployed.contractId,
+      hash: hash || deployed.hash,
+      factoryProductId,
+      fiduciaryUsdcReady,
+    };
   }
 
   /**
@@ -216,9 +234,14 @@ export class LicitacionContract {
     ]);
     if (current && String(current) === wallet) return { hash: null, fiduciary: wallet };
     if (fromStroops(raised) > 0) {
-      throw new DomainError(`La licitación ya recibió aportes: el contrato paga a ${current} y no se puede repuntar a ${wallet}`);
+      throw new DomainError(
+        `La licitación ya recibió aportes: el contrato paga a ${current} y no se puede repuntar a ${wallet}`,
+      );
     }
-    const { hash } = await this.soroban.invoke(client, 'set_fiduciary', { admin: admin.publicKey(), fiduciary: wallet });
+    const { hash } = await this.soroban.invoke(client, 'set_fiduciary', {
+      admin: admin.publicKey(),
+      fiduciary: wallet,
+    });
     return { hash, fiduciary: wallet };
   }
 
@@ -236,11 +259,21 @@ export class LicitacionContract {
       this.soroban.read<bigint>(client, 'get_total_raised'),
       this.soroban.read<bigint>(client, 'get_rwa_balance', { user: buyer.publicKey() }),
     ]);
-    return { hash, raised: fromStroops(raised), tokens: Number(rwa), amount, licitacion: listing.licitacionContract };
+    return {
+      hash,
+      raised: fromStroops(raised),
+      tokens: Number(rwa),
+      amount,
+      licitacion: listing.licitacionContract,
+    };
   }
 
   /** Self-custody: simulated `contribute` for Freighter to sign (after the admin whitelists the wallet). */
-  async prepareContributeXdr(listing: Listing, wallet: string, amount: number): Promise<{ xdr: string; publicKey: string; verifyHash: string | null }> {
+  async prepareContributeXdr(
+    listing: Listing,
+    wallet: string,
+    amount: number,
+  ): Promise<{ xdr: string; publicKey: string; verifyHash: string | null }> {
     await this.assertBuyerFunds(wallet, listing, amount);
     const verifyHash = await this.verifyInvestor(listing, wallet);
     const xdr = await this.soroban.unsignedInvocationXdr(this.contractId(listing), wallet, 'contribute', {
@@ -282,11 +315,17 @@ export class LicitacionContract {
   }
 
   async prepareRefundXdr(listing: Listing, wallet: string): Promise<{ xdr: string; publicKey: string }> {
-    const xdr = await this.soroban.unsignedInvocationXdr(this.contractId(listing), wallet, 'refund', { contributor: wallet });
+    const xdr = await this.soroban.unsignedInvocationXdr(this.contractId(listing), wallet, 'refund', {
+      contributor: wallet,
+    });
     return { xdr, publicKey: wallet };
   }
 
-  async submitRefund(listing: Listing, wallet: string, signedXdr: string): Promise<{ hash: string; refunded: number; rwa: number }> {
+  async submitRefund(
+    listing: Listing,
+    wallet: string,
+    signedXdr: string,
+  ): Promise<{ hash: string; refunded: number; rwa: number }> {
     const contractId = this.contractId(listing);
     const tx = this.soroban.parseTransaction(signedXdr);
     SignedTransactionPolicy.assertSourcedBy(tx, wallet);
@@ -297,36 +336,67 @@ export class LicitacionContract {
       this.soroban.read<bigint>(client, 'get_price_per_unit').catch(() => 0n),
     ]);
     const hash = await this.soroban.submitSigned(tx);
-    const after = await this.soroban.read<bigint>(client, 'get_rwa_balance', { user: wallet }).catch(() => 0n);
+    const after = await this.soroban
+      .read<bigint>(client, 'get_rwa_balance', { user: wallet })
+      .catch(() => 0n);
     const units = Number(before);
-    return { hash, refunded: price && units > 0 ? fromStroops(BigInt(units) * BigInt(price)) : 0, rwa: Number(after) };
+    return {
+      hash,
+      refunded: price && units > 0 ? fromStroops(BigInt(units) * BigInt(price)) : 0,
+      rwa: Number(after),
+    };
   }
 
   /** Custodial refund, signed with the investor's custodial key. */
-  async refund(listing: Listing, contributor: Keypair): Promise<{ hash: string | null; refunded: number; rwa: number }> {
+  async refund(
+    listing: Listing,
+    contributor: Keypair,
+  ): Promise<{ hash: string | null; refunded: number; rwa: number }> {
     const client = await this.soroban.client(this.contractId(listing), contributor);
     const [before, price] = await Promise.all([
       this.soroban.read<bigint>(client, 'get_rwa_balance', { user: contributor.publicKey() }).catch(() => 0n),
       this.soroban.read<bigint>(client, 'get_price_per_unit').catch(() => 0n),
     ]);
     const { hash } = await this.soroban.invoke(client, 'refund', { contributor: contributor.publicKey() });
-    const after = await this.soroban.read<bigint>(client, 'get_rwa_balance', { user: contributor.publicKey() }).catch(() => 0n);
+    const after = await this.soroban
+      .read<bigint>(client, 'get_rwa_balance', { user: contributor.publicKey() })
+      .catch(() => 0n);
     const units = Number(before);
-    return { hash, refunded: price && units > 0 ? fromStroops(BigInt(units) * BigInt(price)) : 0, rwa: Number(after) };
+    return {
+      hash,
+      refunded: price && units > 0 ? fromStroops(BigInt(units) * BigInt(price)) : 0,
+      rwa: Number(after),
+    };
   }
 
-  async finalize(listing: Listing): Promise<{ hash: string | null; state: number; raised: number; proceedsWithdrawn: boolean; fiduciary: string | null }> {
+  async finalize(listing: Listing): Promise<{
+    hash: string | null;
+    state: number;
+    raised: number;
+    proceedsWithdrawn: boolean;
+    fiduciary: string | null;
+  }> {
     const { client } = await this.adminClient(listing);
     const { hash } = await this.soroban.invoke(client, 'finalize');
     const snap = await this.read(listing);
-    return { hash, state: snap.state, raised: snap.raised, proceedsWithdrawn: snap.proceedsWithdrawn, fiduciary: snap.fiduciary };
+    return {
+      hash,
+      state: snap.state,
+      raised: snap.raised,
+      proceedsWithdrawn: snap.proceedsWithdrawn,
+      fiduciary: snap.fiduciary,
+    };
   }
 
   async withdrawProceeds(listing: Listing): Promise<{ hash: string | null; amount: number }> {
     const { client, admin } = await this.adminClient(listing);
-    const { hash, result } = await this.soroban.invoke(client, 'withdraw_proceeds', { admin: admin.publicKey() });
+    const { hash, result } = await this.soroban.invoke(client, 'withdraw_proceeds', {
+      admin: admin.publicKey(),
+    });
     const amount =
-      typeof result === 'bigint' || typeof result === 'number' || typeof result === 'string' ? fromStroops(result) : 0;
+      typeof result === 'bigint' || typeof result === 'number' || typeof result === 'string'
+        ? fromStroops(result)
+        : 0;
     return { hash, amount };
   }
 
@@ -404,10 +474,14 @@ export class LicitacionContract {
       if (reads.fiduciary) {
         snapshot.fiduciaryXlm = await this.accounts.nativeXlm(reads.fiduciary);
         if (paymentUnit(listing) === 'USDC') {
-          snapshot.fiduciaryUsdc = this.usdc.issuerPublicKey() ? await this.usdc.balance(reads.fiduciary) : null;
+          snapshot.fiduciaryUsdc = this.usdc.issuerPublicKey()
+            ? await this.usdc.balance(reads.fiduciary)
+            : null;
         }
       }
-      snapshot.fiduciaryMismatch = Boolean(reads.fiduciary && isStellarPublicKey(wallet) && reads.fiduciary !== wallet);
+      snapshot.fiduciaryMismatch = Boolean(
+        reads.fiduciary && isStellarPublicKey(wallet) && reads.fiduciary !== wallet,
+      );
       return snapshot;
     } catch (err) {
       return offline('waiting', errorMessage(err));
@@ -415,6 +489,10 @@ export class LicitacionContract {
   }
 
   closeStatusFromChain(snapshot: LicitacionSnapshot, listing: Listing) {
-    return expectedCloseStatus({ state: snapshot.state, raised: snapshot.raised, softCap: listing.dossier.offeringSoftCapUsdc });
+    return expectedCloseStatus({
+      state: snapshot.state,
+      raised: snapshot.raised,
+      softCap: listing.dossier.offeringSoftCapUsdc,
+    });
   }
 }

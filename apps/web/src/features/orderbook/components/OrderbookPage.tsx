@@ -100,8 +100,12 @@ function Orderbook() {
   // On SDEX the spendable balance lives on-chain: the backend already nets out
   // what resting offers have locked (liabilities). Sandbox books use the
   // platform ledger minus reserved cash.
-  const freeCash = onSdex ? Number(book?.usdcBalance || 0) : Math.max(0, Number(user?.cashUsdc || 0) - reservedCash);
-  const freeTokens = onSdex ? Number(book?.tokenBalance || 0) : Math.max(0, Number(holding?.tokens || 0) - reservedTokens);
+  const freeCash = onSdex
+    ? Number(book?.usdcBalance || 0)
+    : Math.max(0, Number(user?.cashUsdc || 0) - reservedCash);
+  const freeTokens = onSdex
+    ? Number(book?.tokenBalance || 0)
+    : Math.max(0, Number(holding?.tokens || 0) - reservedTokens);
 
   const maxQty = useMemo(() => {
     if (side === 'SELL') return freeTokens;
@@ -200,8 +204,12 @@ function Orderbook() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <p className="font-lcd text-[11px] uppercase tracking-[0.2em] text-neutral-500">{t('ob.kicker')}</p>
-          <h1 className="text-2xl sm:text-3xl font-extrabold font-display">{onSdex ? t('ob.titleSdex') : t('ob.titleLocal')}</h1>
-          <p className="text-neutral-600 mt-1 max-w-xl">{onSdex ? t('ob.descSdex') : book ? t('ob.descLocal') : t('ob.descNone')}</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold font-display">
+            {onSdex ? t('ob.titleSdex') : t('ob.titleLocal')}
+          </h1>
+          <p className="text-neutral-600 mt-1 max-w-xl">
+            {onSdex ? t('ob.descSdex') : book ? t('ob.descLocal') : t('ob.descNone')}
+          </p>
         </div>
         <div className="flex items-center gap-2 px-3 py-2 rounded-2xl crystal-card text-sm">
           <ShieldCheck className="w-4 h-4" />
@@ -265,7 +273,9 @@ function Orderbook() {
             {/* Compradores a la izquierda, vendedores a la derecha. */}
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-[#2f6f28] mb-1">{t('ob.buys')}</p>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[#2f6f28] mb-1">
+                  {t('ob.buys')}
+                </p>
                 <div className="grid grid-cols-3 text-[11px] font-mono text-neutral-500 uppercase">
                   <span>{t('ob.price')}</span>
                   <span className="text-right">{t('ob.qty')}</span>
@@ -280,23 +290,36 @@ function Orderbook() {
                       onClick={() => takeLevel('bid', bid)}
                       title={t('ob.takeBid', { p: bid.price.toFixed(2), n: fmtQty(bid.amount) })}
                       className={`w-full grid grid-cols-3 p-1.5 rounded relative overflow-hidden text-[#2f6f28] text-left cursor-pointer transition hover:bg-emerald-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${
-                        taken?.from === 'bid' && taken.price === bid.price ? 'ring-2 ring-emerald-600 bg-emerald-50' : ''
+                        taken?.from === 'bid' && taken.price === bid.price
+                          ? 'ring-2 ring-emerald-600 bg-emerald-50'
+                          : ''
                       }`}
                     >
-                      <div className="absolute right-0 top-0 bottom-0 bg-emerald-100 pointer-events-none" style={{ width: `${bid.depthPercent}%` }} />
+                      <div
+                        className="absolute right-0 top-0 bottom-0 bg-emerald-100 pointer-events-none"
+                        style={{ width: `${bid.depthPercent}%` }}
+                      />
                       <span className="font-bold relative z-10">
                         ${bid.price.toFixed(2)}
-                        {bid.legacy && <span className="ml-1 text-[8px] text-amber-600 font-bold uppercase">{t('ob.legacy')}</span>}
+                        {bid.legacy && (
+                          <span className="ml-1 text-[8px] text-amber-600 font-bold uppercase">
+                            {t('ob.legacy')}
+                          </span>
+                        )}
                       </span>
                       <span className="text-right relative z-10">{fmtQty(bid.amount)}</span>
-                      <span className="text-right relative z-10 text-neutral-500">${bid.total.toLocaleString()}</span>
+                      <span className="text-right relative z-10 text-neutral-500">
+                        ${bid.total.toLocaleString()}
+                      </span>
                     </button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-red-700 mb-1">{t('ob.sells')}</p>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-red-700 mb-1">
+                  {t('ob.sells')}
+                </p>
                 <div className="grid grid-cols-3 text-[11px] font-mono text-neutral-500 uppercase">
                   <span>{t('ob.price')}</span>
                   <span className="text-right">{t('ob.qty')}</span>
@@ -311,16 +334,27 @@ function Orderbook() {
                       onClick={() => takeLevel('ask', ask)}
                       title={t('ob.takeAsk', { p: ask.price.toFixed(2), n: fmtQty(ask.amount) })}
                       className={`w-full grid grid-cols-3 p-1.5 rounded relative overflow-hidden text-red-700 text-left cursor-pointer transition hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 ${
-                        taken?.from === 'ask' && taken.price === ask.price ? 'ring-2 ring-red-500 bg-red-50' : ''
+                        taken?.from === 'ask' && taken.price === ask.price
+                          ? 'ring-2 ring-red-500 bg-red-50'
+                          : ''
                       }`}
                     >
-                      <div className="absolute right-0 top-0 bottom-0 bg-red-100 pointer-events-none" style={{ width: `${ask.depthPercent}%` }} />
+                      <div
+                        className="absolute right-0 top-0 bottom-0 bg-red-100 pointer-events-none"
+                        style={{ width: `${ask.depthPercent}%` }}
+                      />
                       <span className="font-bold relative z-10">
                         ${ask.price.toFixed(2)}
-                        {ask.legacy && <span className="ml-1 text-[8px] text-amber-600 font-bold uppercase">{t('ob.legacy')}</span>}
+                        {ask.legacy && (
+                          <span className="ml-1 text-[8px] text-amber-600 font-bold uppercase">
+                            {t('ob.legacy')}
+                          </span>
+                        )}
                       </span>
                       <span className="text-right relative z-10">{fmtQty(ask.amount)}</span>
-                      <span className="text-right relative z-10 text-neutral-500">${ask.total.toLocaleString()}</span>
+                      <span className="text-right relative z-10 text-neutral-500">
+                        ${ask.total.toLocaleString()}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -337,10 +371,17 @@ function Orderbook() {
                   <span className="text-right">{t('ob.seller')}</span>
                 </div>
                 {book.trades.slice(0, 20).map((tr) => (
-                  <div key={tr.id} className="grid grid-cols-4 text-[11px] font-mono text-neutral-700 py-0.5 border-b border-black/5 last:border-0">
+                  <div
+                    key={tr.id}
+                    className="grid grid-cols-4 text-[11px] font-mono text-neutral-700 py-0.5 border-b border-black/5 last:border-0"
+                  >
                     <span className="font-bold">
                       ${tr.price.toFixed(2)}
-                      {tr.legacy && <span className="ml-1 text-[8px] text-amber-600 font-bold uppercase">{t('ob.legacy')}</span>}
+                      {tr.legacy && (
+                        <span className="ml-1 text-[8px] text-amber-600 font-bold uppercase">
+                          {t('ob.legacy')}
+                        </span>
+                      )}
                     </span>
                     <span className="text-right">{fmtQty(tr.amount)}</span>
                     <span className="text-right text-[#2f6f28]" title={tr.buyer}>
@@ -358,14 +399,21 @@ function Orderbook() {
           <div className="lg:col-span-4 p-6 rounded-3xl crystal-card space-y-5">
             <h3 className="font-display font-extrabold">{t('ob.limitOrder')}</h3>
             <p className="text-xs text-neutral-500">
-              {t('ob.balance')} ${(onSdex ? Number(book?.usdcTotal ?? 0) : freeCash).toLocaleString('es-AR', { maximumFractionDigits: 2 })} USDC
+              {t('ob.balance')} $
+              {(onSdex ? Number(book?.usdcTotal ?? 0) : freeCash).toLocaleString('es-AR', {
+                maximumFractionDigits: 2,
+              })}{' '}
+              USDC
               {(onSdex ? (book?.tokenTotal ?? 0) > 0 : !!holding)
                 ? ` · ${fmtQty(onSdex ? Number(book?.tokenTotal || 0) : Number(holding?.tokens || 0))} ${book.tokenTicker}`
                 : ''}
               {onSdex
-                ? (Number(book?.usdcTotal || 0) - freeCash > 0.005 || Number(book?.tokenTotal || 0) - freeTokens > 0.005) &&
+                ? (Number(book?.usdcTotal || 0) - freeCash > 0.005 ||
+                    Number(book?.tokenTotal || 0) - freeTokens > 0.005) &&
                   ` · ${t('ob.lockedOrders', {
-                    u: (Number(book?.usdcTotal || 0) - freeCash).toLocaleString('es-AR', { maximumFractionDigits: 2 }),
+                    u: (Number(book?.usdcTotal || 0) - freeCash).toLocaleString('es-AR', {
+                      maximumFractionDigits: 2,
+                    }),
                     tk: fmtQty(Math.max(0, Number(book?.tokenTotal || 0) - freeTokens)),
                   })}`
                 : reservedCash + reservedTokens > 0
@@ -417,10 +465,16 @@ function Orderbook() {
               {taken && (
                 <div className="px-3 py-2 rounded-xl bg-black/[0.04] text-[11px] space-y-1.5">
                   <p>
-                    {t(taken.from === 'ask' ? 'ob.takingAsk' : 'ob.takingBid')} <span className="font-mono font-bold">${taken.price.toFixed(2)}</span> ·{' '}
-                    <span className="font-mono">{fmtQty(taken.available)}</span> {t(taken.from === 'ask' ? 'ob.available' : 'ob.demanded')}
+                    {t(taken.from === 'ask' ? 'ob.takingAsk' : 'ob.takingBid')}{' '}
+                    <span className="font-mono font-bold">${taken.price.toFixed(2)}</span> ·{' '}
+                    <span className="font-mono">{fmtQty(taken.available)}</span>{' '}
+                    {t(taken.from === 'ask' ? 'ob.available' : 'ob.demanded')}
                   </p>
-                  <button type="button" onClick={() => applyQty(Math.min(taken.available, maxQty))} className="underline font-bold">
+                  <button
+                    type="button"
+                    onClick={() => applyQty(Math.min(taken.available, maxQty))}
+                    className="underline font-bold"
+                  >
                     {t('ob.takeAll')}
                   </button>
                 </div>
@@ -517,7 +571,9 @@ function Orderbook() {
                     <span className="flex items-center gap-1.5">
                       {o.side} {fmtQty(o.remaining)} @ ${o.price}
                       {o.legacy && (
-                        <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[9px] font-bold uppercase">{t('ob.legacy')}</span>
+                        <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[9px] font-bold uppercase">
+                          {t('ob.legacy')}
+                        </span>
                       )}
                     </span>
                     <button type="button" onClick={() => cancel(o.id)} className="underline">

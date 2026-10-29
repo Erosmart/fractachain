@@ -8,8 +8,16 @@ const INFINITY_PATH =
 const HERO_ORBIT = 'M 75.5 274.1 A 270 60 -25 1 0 564.7 45.9 A 270 60 -25 1 0 75.5 274.1';
 ---
 
-<div aria-hidden="true" class="pointer-events-none absolute -inset-x-6 sm:-inset-x-16 lg:-inset-x-40 inset-y-0 overflow-hidden">
-  <svg viewBox="0 0 640 320" preserveAspectRatio="xMidYMid meet" class="absolute inset-0 h-full w-full" fill="none">
+<div
+  aria-hidden="true"
+  class="pointer-events-none absolute -inset-x-6 sm:-inset-x-16 lg:-inset-x-40 inset-y-0 overflow-hidden"
+>
+  <svg
+    viewBox="0 0 640 320"
+    preserveAspectRatio="xMidYMid meet"
+    class="absolute inset-0 h-full w-full"
+    fill="none"
+  >
     <defs>
       <linearGradient id="heroInfL" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0%" stop-color="#1a6fb8"></stop>
@@ -36,15 +44,60 @@ const HERO_ORBIT = 'M 75.5 274.1 A 270 60 -25 1 0 564.7 45.9 A 270 60 -25 1 0 75
     <!-- órbita diagonal detrás (estilo logo) -->
     <g class="globe-float">
       <path d={HERO_ORBIT} stroke="url(#heroBand)" stroke-width="12" opacity="0.07"></path>
-      <path d={HERO_ORBIT} stroke="url(#heroBand)" stroke-width="12" stroke-linecap="round" stroke-dasharray="46 18" opacity="0.09" class="infinity-drift-rev"></path>
+      <path
+        d={HERO_ORBIT}
+        stroke="url(#heroBand)"
+        stroke-width="12"
+        stroke-linecap="round"
+        stroke-dasharray="46 18"
+        opacity="0.09"
+        class="infinity-drift-rev"
+      ></path>
     </g>
     <!-- infinito: cinta lemniscata con gradiente azul→teal→verde -->
     <g class="globe-float">
-      <path d={INFINITY_PATH} stroke="#2fa8a0" stroke-width="46" stroke-linecap="round" opacity="0.045" filter="url(#heroGlow)"></path>
-      <path d={INFINITY_PATH} stroke="url(#heroInf)" stroke-width="30" stroke-linecap="round" opacity="0.1"></path>
-      <path d={INFINITY_PATH} stroke="url(#heroInf)" stroke-width="30" stroke-linecap="round" stroke-dasharray="46 18" opacity="0.15" class="infinity-drift"></path>
-      <path d={INFINITY_PATH} stroke="#f0b429" stroke-width="4" stroke-linecap="round" stroke-dasharray="110 18 110 18" opacity="0.26" class="infinity-drift-rev"></path>
-      <path d={INFINITY_PATH} stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-dasharray="60 196" opacity="0.18" class="infinity-drift"></path>
+      <path
+        d={INFINITY_PATH}
+        stroke="#2fa8a0"
+        stroke-width="46"
+        stroke-linecap="round"
+        opacity="0.045"
+        filter="url(#heroGlow)"
+      ></path>
+      <path
+        d={INFINITY_PATH}
+        stroke="url(#heroInf)"
+        stroke-width="30"
+        stroke-linecap="round"
+        opacity="0.1"
+      ></path>
+      <path
+        d={INFINITY_PATH}
+        stroke="url(#heroInf)"
+        stroke-width="30"
+        stroke-linecap="round"
+        stroke-dasharray="46 18"
+        opacity="0.15"
+        class="infinity-drift"
+      ></path>
+      <path
+        d={INFINITY_PATH}
+        stroke="#f0b429"
+        stroke-width="4"
+        stroke-linecap="round"
+        stroke-dasharray="110 18 110 18"
+        opacity="0.26"
+        class="infinity-drift-rev"
+      ></path>
+      <path
+        d={INFINITY_PATH}
+        stroke="#ffffff"
+        stroke-width="7"
+        stroke-linecap="round"
+        stroke-dasharray="60 196"
+        opacity="0.18"
+        class="infinity-drift"
+      ></path>
     </g>
     <!-- nodos en las puntas de los lóbulos, como el logo -->
     <circle cx="60" cy="160" r="7" fill="#1a6fb8" opacity="0.4"></circle>
@@ -56,20 +109,16 @@ const HERO_ORBIT = 'M 75.5 274.1 A 270 60 -25 1 0 564.7 45.9 A 270 60 -25 1 0 75
     <circle cx="320" cy="160" r="5" fill="#2fa8a0" opacity="0.4"></circle>
     <circle cx="452" cy="120" r="6" fill="#f0b429" opacity="0.4"></circle>
     <!-- partículas viajando por el infinito y la órbita -->
-    {
-      [-6, -3, 0].map((begin) => (
-        <circle r="4" fill="#4ea743" opacity="0.4">
-          <animateMotion dur="9s" begin={`${begin}s`} repeatCount="indefinite" path={INFINITY_PATH} />
-        </circle>
-      ))
-    }
-    {
-      [-4, -9].map((begin) => (
-        <circle r="3" fill="#2fa8a0" opacity="0.36">
-          <animateMotion dur="12s" begin={`${begin}s`} repeatCount="indefinite" path={INFINITY_PATH} />
-        </circle>
-      ))
-    }
+    {[-6, -3, 0].map((begin) => (
+      <circle r="4" fill="#4ea743" opacity="0.4">
+        <animateMotion dur="9s" begin={`${begin}s`} repeatCount="indefinite" path={INFINITY_PATH} />
+      </circle>
+    ))}
+    {[-4, -9].map((begin) => (
+      <circle r="3" fill="#2fa8a0" opacity="0.36">
+        <animateMotion dur="12s" begin={`${begin}s`} repeatCount="indefinite" path={INFINITY_PATH} />
+      </circle>
+    ))}
     <circle r="3" fill="#f0b429" opacity="0.4">
       <animateMotion dur="14s" begin="-7s" repeatCount="indefinite" path={INFINITY_PATH}></animateMotion>
     </circle>
@@ -92,11 +141,57 @@ const HERO_ORBIT = 'M 75.5 274.1 A 270 60 -25 1 0 564.7 45.9 A 270 60 -25 1 0 75
     <circle cx="140" cy="70" r="14" stroke="#4ea743" stroke-width="1" opacity="0.12"></circle>
     <circle cx="505" cy="255" r="18" stroke="#4ea743" stroke-width="1" opacity="0.1"></circle>
     <circle cx="70" cy="200" r="9" stroke="#4ea743" stroke-width="1" opacity="0.12"></circle>
-    <circle cx="600" cy="110" r="22" stroke="#4ea743" stroke-width="1" opacity="0.09" stroke-dasharray="3 5"></circle>
-    <path d="M40 96v10M35 101h10" stroke="#4ea743" stroke-width="1.4" opacity="0.22" stroke-linecap="round"></path>
-    <path d="M604 210v10M599 215h10" stroke="#4ea743" stroke-width="1.4" opacity="0.2" stroke-linecap="round"></path>
-    <path d="M210 286v8M206 290h8" stroke="#4ea743" stroke-width="1.4" opacity="0.18" stroke-linecap="round"></path>
-    <rect x="530" y="30" width="7" height="7" rx="1.5" stroke="#4ea743" stroke-width="1" opacity="0.18" transform="rotate(18 533.5 33.5)"></rect>
-    <rect x="118" y="250" width="6" height="6" rx="1.2" stroke="#4ea743" stroke-width="1" opacity="0.16" transform="rotate(24 121 253)"></rect>
+    <circle
+      cx="600"
+      cy="110"
+      r="22"
+      stroke="#4ea743"
+      stroke-width="1"
+      opacity="0.09"
+      stroke-dasharray="3 5"
+    ></circle>
+    <path
+      d="M40 96v10M35 101h10"
+      stroke="#4ea743"
+      stroke-width="1.4"
+      opacity="0.22"
+      stroke-linecap="round"
+    ></path>
+    <path
+      d="M604 210v10M599 215h10"
+      stroke="#4ea743"
+      stroke-width="1.4"
+      opacity="0.2"
+      stroke-linecap="round"
+    ></path>
+    <path
+      d="M210 286v8M206 290h8"
+      stroke="#4ea743"
+      stroke-width="1.4"
+      opacity="0.18"
+      stroke-linecap="round"
+    ></path>
+    <rect
+      x="530"
+      y="30"
+      width="7"
+      height="7"
+      rx="1.5"
+      stroke="#4ea743"
+      stroke-width="1"
+      opacity="0.18"
+      transform="rotate(18 533.5 33.5)"
+    ></rect>
+    <rect
+      x="118"
+      y="250"
+      width="6"
+      height="6"
+      rx="1.2"
+      stroke="#4ea743"
+      stroke-width="1"
+      opacity="0.16"
+      transform="rotate(24 121 253)"
+    ></rect>
   </svg>
 </div>

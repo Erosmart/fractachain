@@ -54,7 +54,11 @@ const es = {
       kicker: 'Alcance global',
       title: 'More than RWA',
       body: 'No solo somos la solución para tokenizar tu producción o las acciones de tu empresa: te conectamos con inversores globales en más de 90 países y liquidez T+0.',
-      points: ['Inversores en más de 90 países', 'Liquidez T+0 on-chain', 'Diseño bajo marco CNV · Ley 26.831'],
+      points: [
+        'Inversores en más de 90 países',
+        'Liquidez T+0 on-chain',
+        'Diseño bajo marco CNV · Ley 26.831',
+      ],
     },
     ctaMarket: 'Explorar licitaciones',
     ctaStocks: 'Acciones Merval',
@@ -129,9 +133,15 @@ const es = {
     title: 'Tokenizá las acciones de tu empresa y levantá capital',
     body: 'Cotizar en el Merval o BYMA exige costos y un tamaño que la mayoría de las empresas no alcanza: con nuestra estructura tu empresa sale a mercado sin esa barrera, bajo el mismo marco regulatorio CNV. Estructuramos el fideicomiso, tokenizamos tus acciones y te acompañamos de la licitación primaria al listado en el secundario.',
     steps: [
-      ['Estructurá tu fideicomiso', 'Armamos el fideicomiso para preparar la tokenización de tus acciones, cumpliendo la normativa CNV.'],
+      [
+        'Estructurá tu fideicomiso',
+        'Armamos el fideicomiso para preparar la tokenización de tus acciones, cumpliendo la normativa CNV.',
+      ],
       ['Licitación primaria', 'Abrís tu licitación y los inversores suscriben con el expediente completo.'],
-      ['Mercado secundario', 'Salida a bolsa: tus acciones cotizan una vez alcanzados los mínimos de financiamiento.'],
+      [
+        'Mercado secundario',
+        'Salida a bolsa: tus acciones cotizan una vez alcanzados los mínimos de financiamiento.',
+      ],
     ],
     cta: 'Tokenizar mi empresa',
   },
@@ -145,15 +155,36 @@ const es = {
     cajaSub: 'Custodia comitente 1:1',
     stepsTitle: 'De la idea a la licitación: 4 pasos',
     steps: [
-      ['Constitución de la sociedad', 'Una SAS o S.A. ante la IGJ / Registro Público provincial opera la plataforma y es titular de todas las inscripciones regulatorias.'],
-      ['Inscripción PSAV ante la CNV', 'El registro de Proveedores de Servicios de Activos Virtuales (Ley 27.739, RG 1058) habilita a custodiar, emitir y facilitar la compraventa de tokens. Pide programa AML/CFT ante la UIF, solvencia, idoneidad técnica y un Oficial de Cumplimiento.'],
-      ['Fideicomiso financiero', 'Con oferta pública bajo la Ley 26.831 y el Sandbox CNV (RG 1069/1081/1087/1150, vigente al 31/12/2027). Se estructura como Programa Global con Series independientes: cada emisión sucesiva sale más barata.'],
-      ['Tokenización y emisión', 'Las cuotapartes del fideicomiso —o las acciones y bonos que una empresa emite dentro de una Serie— se representan como tokens en Stellar/Soroban, respaldados 1:1 por el activo custodiado.'],
+      [
+        'Constitución de la sociedad',
+        'Una SAS o S.A. ante la IGJ / Registro Público provincial opera la plataforma y es titular de todas las inscripciones regulatorias.',
+      ],
+      [
+        'Inscripción PSAV ante la CNV',
+        'El registro de Proveedores de Servicios de Activos Virtuales (Ley 27.739, RG 1058) habilita a custodiar, emitir y facilitar la compraventa de tokens. Pide programa AML/CFT ante la UIF, solvencia, idoneidad técnica y un Oficial de Cumplimiento.',
+      ],
+      [
+        'Fideicomiso financiero',
+        'Con oferta pública bajo la Ley 26.831 y el Sandbox CNV (RG 1069/1081/1087/1150, vigente al 31/12/2027). Se estructura como Programa Global con Series independientes: cada emisión sucesiva sale más barata.',
+      ],
+      [
+        'Tokenización y emisión',
+        'Las cuotapartes del fideicomiso —o las acciones y bonos que una empresa emite dentro de una Serie— se representan como tokens en Stellar/Soroban, respaldados 1:1 por el activo custodiado.',
+      ],
     ],
     cards: [
-      ['Diseño regulado', 'PSAV, AML/CFT, KYC on-chain y time-lock horario ART. El marco es el de la CNV; la habilitación todavía no está otorgada.'],
-      ['Cualquier inversor del mundo', 'Liquidación T+0 en Stellar. El riel es global; el título sigue siendo argentino y custodiado.'],
-      ['Un fideicomiso, muchas emisiones', 'El Programa Global emite Series independientes; con emisión frecuente la CNV habilita autorización automática (RG 1074/2025).'],
+      [
+        'Diseño regulado',
+        'PSAV, AML/CFT, KYC on-chain y time-lock horario ART. El marco es el de la CNV; la habilitación todavía no está otorgada.',
+      ],
+      [
+        'Cualquier inversor del mundo',
+        'Liquidación T+0 en Stellar. El riel es global; el título sigue siendo argentino y custodiado.',
+      ],
+      [
+        'Un fideicomiso, muchas emisiones',
+        'El Programa Global emite Series independientes; con emisión frecuente la CNV habilita autorización automática (RG 1074/2025).',
+      ],
     ],
   },
   merval: {
@@ -162,16 +193,23 @@ const es = {
     lead: 'tYPF, tGGAL y el resto del panel líder: 1 token = 1 acción en Caja de Valores. También deuda soberana y ON en el roadmap.',
     ctaStocks: 'Ver acciones Merval',
     ctaBonds: 'Bonos y licitaciones',
-    stake: 'También podés poner en stake tus acciones y recibir renta sobre las acciones puestas en stake, además de los dividendos que correspondan de tus acciones argentinas o títulos de deuda.',
+    stake:
+      'También podés poner en stake tus acciones y recibir renta sobre las acciones puestas en stake, además de los dividendos que correspondan de tus acciones argentinas o títulos de deuda.',
   },
   liquidity: {
     kicker: 'Liquidez primero',
     title: 'Tokenizar sin mercado secundario no sirve.',
     body: 'Cada emisión nace con orderbook y liquidez en Stellar. Entrás y salís cuando hace falta, con doble KYC.',
     cards: [
-      ['Burst loans', 'Accedé a préstamos instantáneos poniendo como colateral tu producción (vinos, quesos, tabaco, maíz) con warrants Ley 9643: liquidez en segundos sin vender tu producción.'],
+      [
+        'Burst loans',
+        'Accedé a préstamos instantáneos poniendo como colateral tu producción (vinos, quesos, tabaco, maíz) con warrants Ley 9643: liquidez en segundos sin vender tu producción.',
+      ],
       ['CLOB 24/7', 'Libro de órdenes P2P y operación las 24 horas. Clearing 0.25%.'],
-      ['OPA on-chain', 'OPA al 50% y squeeze-out al 95%: operá en la blockchain con las mismas reglas y seguridad que en un mercado tradicional.'],
+      [
+        'OPA on-chain',
+        'OPA al 50% y squeeze-out al 95%: operá en la blockchain con las mismas reglas y seguridad que en un mercado tradicional.',
+      ],
     ],
     burst: 'Burst loan',
   },
@@ -209,7 +247,10 @@ const es = {
         ['Costo casi cero', 'Fees de fracciones de centavo por operación.'],
         ['Acceso global', 'Cualquier inversor del mundo, desde cualquier país.'],
         ['Solo KYC', 'Con la verificación on-chain ya podés invertir.'],
-        ['Custodia a elección', 'Nosotros podemos administrar las claves privadas de tu wallet, o administrarlas vos mismo con auto-custodia. Tus tokens, tu custodia.'],
+        [
+          'Custodia a elección',
+          'Nosotros podemos administrar las claves privadas de tu wallet, o administrarlas vos mismo con auto-custodia. Tus tokens, tu custodia.',
+        ],
       ],
     },
     scf: 'Diseñado bajo el Argentina Builder Challenge.',
@@ -241,12 +282,12 @@ const es = {
     walletTitle: '¿Quién guarda las claves?',
     walletLead: 'Elegí una sola vez. Después seguís al KYC.',
     custodialTitle: 'Las guardamos nosotros',
-    custodialBody:
-      'Custodia en Fractachain. No tenés que anotar la clave. Recuperás la cuenta con tu email.',
+    custodialBody: 'Custodia en Fractachain. No tenés que anotar la clave. Recuperás la cuenta con tu email.',
     selfTitle: 'Las guardo yo',
     selfBody: 'Auto-custodia. Te mostramos la clave una sola vez. Si la perdés, no hay recupero.',
     freighterTitle: 'Conectar Freighter',
-    freighterBody: 'Usá tu wallet de Stellar (extensión Freighter). Firmás con tus claves; nunca salen de tu navegador.',
+    freighterBody:
+      'Usá tu wallet de Stellar (extensión Freighter). Firmás con tus claves; nunca salen de tu navegador.',
     secretWarn: 'Guardá esta clave ahora. No la volvemos a mostrar.',
     secretCta: 'Ya la anoté, seguir',
     kycTitle: 'Validación de identidad',
@@ -275,7 +316,8 @@ const es = {
     title: 'Licitaciones',
     openOne: '{n} licitación abierta. Expediente: CUIT, ISIN, CNV, Caja de Valores y contratos.',
     openMany: '{n} licitaciones abiertas. Expediente: CUIT, ISIN, CNV, Caja de Valores y contratos.',
-    honestyBanner: 'Demo testnet: aporte live en XLM (Friendbot). USDC Circle, forwards, warrants y Merval son maqueta. Las unidades RWA viven en el contrato Soroban (no son un asset clasico en Freighter/SDEX).',
+    honestyBanner:
+      'Demo testnet: aporte live en XLM (Friendbot). USDC Circle, forwards, warrants y Merval son maqueta. Las unidades RWA viven en el contrato Soroban (no son un asset clasico en Freighter/SDEX).',
     empty: 'No hay licitaciones live. Levanta el backend o sigue el runbook de demo.',
     live: 'Flujo vivo del demo: login → wallet → KYC → aportar XLM → finalize / refund on-chain. Forwards, warrants y Merval son maqueta.',
     min: 'mín.',
@@ -401,7 +443,8 @@ const es = {
     tail: ': login, KYC, wallet testnet y aporte en XLM.',
   },
   wallet: {
-    honesty: 'Esta demo usa wallet custodial firmada por el backend (relay del pitch). No hay seed phrase falsa aca.',
+    honesty:
+      'Esta demo usa wallet custodial firmada por el backend (relay del pitch). No hay seed phrase falsa aca.',
     custodialLabel: 'Wallet custodial (demo)',
     publicKey: 'Clave publica Stellar (testnet)',
     copy: 'Copiar',
@@ -410,7 +453,8 @@ const es = {
     noKey: 'Todavia no hay G... asociada. Completa el onboarding de wallet custodial.',
     goOnboarding: 'Ir a onboarding de wallet',
     selfCustodyTitle: 'Self-custody / Freighter',
-    selfCustodyBody: 'Aporte, refund, trustline y ordenes del DEX se firman desde Freighter: el backend arma la transaccion sin firmar y tu clave nunca sale del navegador.',
+    selfCustodyBody:
+      'Aporte, refund, trustline y ordenes del DEX se firman desde Freighter: el backend arma la transaccion sin firmar y tu clave nunca sale del navegador.',
     ctaInvest: 'Ir a Las Lilas',
     usdcBalance: 'Saldo USDC',
     usdcFund: 'Fondear USDC de testnet',
@@ -532,7 +576,8 @@ const es = {
     settlement: 'Liquidación',
     t0: 'Inmediata T+0',
     available: 'Activos Disponibles',
-    empty: 'No hay acciones activas en el mercado. El admin las emite y las activa desde Admin → Salida a bolsa.',
+    empty:
+      'No hay acciones activas en el mercado. El admin las emite y las activa desde Admin → Salida a bolsa.',
     custody: '1:1 Custodia',
     inCustody: 'En Custodia:',
     divTitle: 'Distribución Automática de Dividendos en USDC',
@@ -658,7 +703,8 @@ const es = {
     onMin: 'Al alcanzar el mínimo de inversión',
     onMinBody: 'Si llega al soft cap, cierra y los suscriptores pueden reclamar tokens.',
     onDate: 'Esperar a una fecha',
-    onDateBody: 'Sigue abierta aunque ya haya mínimo. En esa fecha cierra: éxito si llegó al mínimo, si no falla.',
+    onDateBody:
+      'Sigue abierta aunque ya haya mínimo. En esa fecha cierra: éxito si llegó al mínimo, si no falla.',
     closeDate: 'Fecha de cierre / reparto',
     friendbot: 'Pedir XLM a Friendbot al login',
     save: 'Guardar',
@@ -802,37 +848,44 @@ const es = {
   ptn: {
     byma: {
       role: 'Bolsas y Mercados Argentinos',
-      description: 'Infraestructura bursátil central y estándares de mercado para la negociación de valores negociables.',
+      description:
+        'Infraestructura bursátil central y estándares de mercado para la negociación de valores negociables.',
       badge: 'Mercado de Capitales',
     },
     'caja-de-valores': {
       role: 'Depositario Central de Valores',
-      description: 'Custodia institucional segregada 1:1 en subcuenta comitente oficial (Subcuenta N° 84920).',
+      description:
+        'Custodia institucional segregada 1:1 en subcuenta comitente oficial (Subcuenta N° 84920).',
       badge: 'Custodia Colectiva',
     },
     stellar: {
       role: 'Red Blockchain & Soroban',
-      description: 'Protocolo de liquidación rápida T+0 (< 4s) con contratos inteligentes en WebAssembly (WASM).',
+      description:
+        'Protocolo de liquidación rápida T+0 (< 4s) con contratos inteligentes en WebAssembly (WASM).',
       badge: 'Infraestructura L1',
     },
     'alfred-pay': {
       role: 'Rampas Fiduciarias LatAm',
-      description: 'Procesamiento de pagos y transferencias fiat-to-crypto multimoneda para liquidación regional.',
+      description:
+        'Procesamiento de pagos y transferencias fiat-to-crypto multimoneda para liquidación regional.',
       badge: 'On/Off-Ramp LatAm',
     },
     'matba-rofex': {
       role: 'Mercado a Término Agropecuario',
-      description: 'Referencia oficial de cotizaciones de futuros y opciones de granos (Soja Rosario, Maíz, Trigo).',
+      description:
+        'Referencia oficial de cotizaciones de futuros y opciones de granos (Soja Rosario, Maíz, Trigo).',
       badge: 'Derivados de Granos',
     },
     anclap: {
       role: 'Anchor Oficial ARST en Stellar',
-      description: 'Emisor del token fiat ARST y rampa bancaria regulada por transferencia inmediata en Argentina.',
+      description:
+        'Emisor del token fiat ARST y rampa bancaria regulada por transferencia inmediata en Argentina.',
       badge: 'Anchor Pesos ARST',
     },
     circle: {
       role: 'Cross-Chain Transfer Protocol',
-      description: 'Transferencia nativa de USDC entre Stellar, Arbitrum y Ethereum con quema y emisión sin slippage.',
+      description:
+        'Transferencia nativa de USDC entre Stellar, Arbitrum y Ethereum con quema y emisión sin slippage.',
       badge: 'Native USDC Bridge',
     },
   },
@@ -859,7 +912,8 @@ const es = {
     twoFaTitle: 'Verificación en dos pasos (TOTP)',
     twoFaOn: 'Activada',
     twoFaOff: 'Desactivada',
-    twoFaBody: 'Además de tu contraseña, wallet o Google, te vamos a pedir un código de 6 dígitos de una app como Google Authenticator, 1Password o Authy.',
+    twoFaBody:
+      'Además de tu contraseña, wallet o Google, te vamos a pedir un código de 6 dígitos de una app como Google Authenticator, 1Password o Authy.',
     enable: 'Activar',
     disable: 'Desactivar',
     starting: 'Preparando…',
@@ -871,7 +925,8 @@ const es = {
     cancelSetup: 'Cancelar',
     qrAlt: 'Código QR para tu app de autenticación',
     recoveryTitle: 'Guardá tus códigos de recuperación',
-    recoveryWarn: 'Cada código sirve una sola vez si perdés el celular. No los vamos a volver a mostrar: guardalos en un lugar seguro.',
+    recoveryWarn:
+      'Cada código sirve una sola vez si perdés el celular. No los vamos a volver a mostrar: guardalos en un lugar seguro.',
     copy: 'Copiar códigos',
     copied: 'Copiados',
     done: 'Ya los guardé',
@@ -974,7 +1029,8 @@ const es = {
     freighterNoSignedTx: 'Freighter no devolvió la transacción firmada',
     opFailed: 'La operación falló',
     noXdr: 'El backend no devolvió la transacción para firmar',
-    googleNotConfigured: 'Google no está configurado. Entrá con email y contraseña, o cargá las claves de Firebase.',
+    googleNotConfigured:
+      'Google no está configurado. Entrá con email y contraseña, o cargá las claves de Firebase.',
     googleUser: 'Usuario Google',
     sessionExpired: 'Tu sesión venció. Iniciá sesión de nuevo.',
     timeout: 'El servidor tardó demasiado en responder. Probá de nuevo.',
@@ -1030,7 +1086,11 @@ const en: Messages = {
       kicker: 'Global reach',
       title: 'More than RWA',
       body: "We're not just the way to tokenize your production or your company's shares: we connect you with global investors in 90+ countries and T+0 liquidity.",
-      points: ['Investors in 90+ countries', 'T+0 on-chain liquidity', 'Designed under the CNV framework · Law 26,831'],
+      points: [
+        'Investors in 90+ countries',
+        'T+0 on-chain liquidity',
+        'Designed under the CNV framework · Law 26,831',
+      ],
     },
     ctaMarket: 'Explore offerings',
     ctaStocks: 'Merval stocks',
@@ -1105,7 +1165,10 @@ const en: Messages = {
     title: 'Tokenize your company’s shares and raise capital',
     body: 'Listing on Merval or BYMA demands costs and a scale most companies cannot reach: our structure takes your company public without that barrier, under the same CNV regulatory framework. We structure the trust, tokenize your shares, and walk you from the primary offering to the secondary-market listing.',
     steps: [
-      ['Structure your trust', 'We set up the fideicomiso to prepare your shares for tokenization under CNV rules.'],
+      [
+        'Structure your trust',
+        'We set up the fideicomiso to prepare your shares for tokenization under CNV rules.',
+      ],
       ['Primary offering', 'You open your auction and investors subscribe with the full file.'],
       ['Secondary market', 'Listing: your shares trade once minimum funding is reached.'],
     ],
@@ -1121,15 +1184,36 @@ const en: Messages = {
     cajaSub: '1:1 beneficial custody',
     stepsTitle: 'From idea to offering: 4 steps',
     steps: [
-      ['Incorporate the company', 'A SAS or S.A. registered with the IGJ / provincial Public Registry operates the platform and holds every regulatory registration.'],
-      ['PSAV registration at the CNV', 'The Virtual Asset Service Provider registry (Law 27.739, RG 1058) authorizes custody, issuance and trading of tokens. It requires an AML/CFT program with the UIF, solvency, technical fitness and a Compliance Officer.'],
-      ['Financial trust', 'A public-offering fideicomiso under Law 26.831 and the CNV Sandbox (RG 1069/1081/1087/1150, in force until Dec 31, 2027), structured as a Global Program with independent Series so each new issuance gets cheaper.'],
-      ['Tokenization and issuance', 'The trust units —or the shares and bonds a client company issues inside a Series— become tokens on Stellar/Soroban, backed 1:1 by the custodied asset.'],
+      [
+        'Incorporate the company',
+        'A SAS or S.A. registered with the IGJ / provincial Public Registry operates the platform and holds every regulatory registration.',
+      ],
+      [
+        'PSAV registration at the CNV',
+        'The Virtual Asset Service Provider registry (Law 27.739, RG 1058) authorizes custody, issuance and trading of tokens. It requires an AML/CFT program with the UIF, solvency, technical fitness and a Compliance Officer.',
+      ],
+      [
+        'Financial trust',
+        'A public-offering fideicomiso under Law 26.831 and the CNV Sandbox (RG 1069/1081/1087/1150, in force until Dec 31, 2027), structured as a Global Program with independent Series so each new issuance gets cheaper.',
+      ],
+      [
+        'Tokenization and issuance',
+        'The trust units —or the shares and bonds a client company issues inside a Series— become tokens on Stellar/Soroban, backed 1:1 by the custodied asset.',
+      ],
     ],
     cards: [
-      ['Regulatory design', 'VASP, AML/CFT, on-chain KYC and ART business-hours time-lock. The framework is the CNV one; authorization has not been granted.'],
-      ['Any investor in the world', 'T+0 settlement on Stellar. The rail is global; the security stays Argentine and custodied.'],
-      ['One trust, many issuances', 'The Global Program issues independent Series; frequent issuance unlocks automatic CNV authorization (RG 1074/2025).'],
+      [
+        'Regulatory design',
+        'VASP, AML/CFT, on-chain KYC and ART business-hours time-lock. The framework is the CNV one; authorization has not been granted.',
+      ],
+      [
+        'Any investor in the world',
+        'T+0 settlement on Stellar. The rail is global; the security stays Argentine and custodied.',
+      ],
+      [
+        'One trust, many issuances',
+        'The Global Program issues independent Series; frequent issuance unlocks automatic CNV authorization (RG 1074/2025).',
+      ],
     ],
   },
   merval: {
@@ -1138,16 +1222,23 @@ const en: Messages = {
     lead: 'tYPF, tGGAL and the rest of the leading panel: 1 token = 1 share at Caja de Valores. Sovereign debt and notes are on the roadmap.',
     ctaStocks: 'See Merval stocks',
     ctaBonds: 'Bonds and offerings',
-    stake: 'You can also stake your shares and earn yield on staked positions, on top of any dividends from your Argentine stocks or debt securities.',
+    stake:
+      'You can also stake your shares and earn yield on staked positions, on top of any dividends from your Argentine stocks or debt securities.',
   },
   liquidity: {
     kicker: 'Liquidity first',
     title: 'Tokenizing without a secondary market does not work.',
     body: 'Every issuance is born with an orderbook and Stellar liquidity. You get in and out when you need to, with dual KYC.',
     cards: [
-      ['Burst loans', 'Get instant loans collateralized by your production (wine, cheese, tobacco, corn) with Law 9643 warrants: liquidity in seconds without selling it.'],
+      [
+        'Burst loans',
+        'Get instant loans collateralized by your production (wine, cheese, tobacco, corn) with Law 9643 warrants: liquidity in seconds without selling it.',
+      ],
       ['CLOB 24/7', 'P2P order book trading 24 hours a day. 0.25% clearing.'],
-      ['On-chain tender', 'Tender offer at 50%, squeeze-out at 95%: trade on-chain with the same rules and security as a traditional market.'],
+      [
+        'On-chain tender',
+        'Tender offer at 50%, squeeze-out at 95%: trade on-chain with the same rules and security as a traditional market.',
+      ],
     ],
     burst: 'Burst loan',
   },
@@ -1167,7 +1258,7 @@ const en: Messages = {
         {
           tag: 'For foreign investors',
           title: 'Fund from anywhere in the world',
-          body: 'Top up in your local currency through MoneyGram\'s global network, in cash or digital.',
+          body: "Top up in your local currency through MoneyGram's global network, in cash or digital.",
         },
         {
           tag: 'Direct on-chain',
@@ -1185,7 +1276,10 @@ const en: Messages = {
         ['Near-zero cost', 'Fraction-of-a-cent fees per operation.'],
         ['Global access', 'Any investor worldwide, from any country.'],
         ['KYC only', 'With on-chain verification you can invest right away.'],
-        ['Your choice of custody', 'We can manage your wallet’s private keys, or you keep them yourself with self-custody. Your tokens, your custody.'],
+        [
+          'Your choice of custody',
+          'We can manage your wallet’s private keys, or you keep them yourself with self-custody. Your tokens, your custody.',
+        ],
       ],
     },
     scf: 'Built under the Argentina Builder Challenge.',
@@ -1217,11 +1311,13 @@ const en: Messages = {
     walletTitle: 'Who holds the keys?',
     walletLead: 'Choose once. Then you continue to KYC.',
     custodialTitle: 'We hold them',
-    custodialBody: 'Custody at Fractachain. You do not write down a key. You recover the account with your email.',
+    custodialBody:
+      'Custody at Fractachain. You do not write down a key. You recover the account with your email.',
     selfTitle: 'I hold them',
     selfBody: 'Self-custody. We show the key once. If you lose it, there is no recovery.',
     freighterTitle: 'Connect Freighter',
-    freighterBody: 'Use your Stellar wallet (Freighter extension). You sign with your keys; they never leave your browser.',
+    freighterBody:
+      'Use your Stellar wallet (Freighter extension). You sign with your keys; they never leave your browser.',
     secretWarn: 'Save this key now. We will not show it again.',
     secretCta: 'I wrote it down, continue',
     kycTitle: 'Identity check',
@@ -1250,7 +1346,8 @@ const en: Messages = {
     title: 'Offerings',
     openOne: '{n} open offering. File: CUIT, ISIN, CNV, Caja de Valores and contracts.',
     openMany: '{n} open offerings. File: CUIT, ISIN, CNV, Caja de Valores and contracts.',
-    honestyBanner: 'Testnet demo: live contribute is in XLM (Friendbot). Circle USDC, forwards, warrants and Merval are mock. RWA units live in the Soroban contract (not a classic Freighter/SDEX asset).',
+    honestyBanner:
+      'Testnet demo: live contribute is in XLM (Friendbot). Circle USDC, forwards, warrants and Merval are mock. RWA units live in the Soroban contract (not a classic Freighter/SDEX asset).',
     empty: 'No live offerings yet. Start the backend or follow the demo runbook.',
     live: 'Live demo loop: login → wallet → KYC → contribute XLM → finalize / refund on-chain. Forwards, warrants and Merval are mockups.',
     min: 'min.',
@@ -1261,8 +1358,7 @@ const en: Messages = {
     closed: 'Offering closed: the minimum was reached. Claim tokens in the portfolio.',
     closedSuccess:
       'Closed as Successful. finalize() paid the testnet {u} to the company wallet. RWA units have been in the contract since contribute().',
-    closedFailed:
-      'Closed as Failed (soft cap was missed). The investor recovers {u} with on-chain refund().',
+    closedFailed: 'Closed as Failed (soft cap was missed). The investor recovers {u} with on-chain refund().',
     closesAt: 'It closes on its own if the {n} USDC minimum is reached.',
     closesAtXlm: 'It closes on-chain at the {n} {u} hard cap or the deadline — not on soft cap alone.',
     finalizeRule:
@@ -1376,7 +1472,8 @@ const en: Messages = {
     tail: ': login, KYC, testnet wallet and an XLM contribution.',
   },
   wallet: {
-    honesty: 'This demo uses a backend-signed custodial wallet (pitch relay). There is no fake seed phrase here.',
+    honesty:
+      'This demo uses a backend-signed custodial wallet (pitch relay). There is no fake seed phrase here.',
     custodialLabel: 'Custodial wallet (demo)',
     publicKey: 'Stellar public key (testnet)',
     copy: 'Copy',
@@ -1385,7 +1482,8 @@ const en: Messages = {
     noKey: 'No G... key yet. Finish custodial wallet onboarding.',
     goOnboarding: 'Go to wallet onboarding',
     selfCustodyTitle: 'Self-custody / Freighter',
-    selfCustodyBody: 'Contribute, refund, trustline and DEX orders are signed in Freighter: the backend builds the unsigned transaction and your key never leaves the browser.',
+    selfCustodyBody:
+      'Contribute, refund, trustline and DEX orders are signed in Freighter: the backend builds the unsigned transaction and your key never leaves the browser.',
     ctaInvest: 'Go to Las Lilas',
     usdcBalance: 'USDC balance',
     usdcFund: 'Fund testnet USDC',
@@ -1633,7 +1731,8 @@ const en: Messages = {
     onMin: 'When the investment minimum is reached',
     onMinBody: 'If it reaches the soft cap it closes and subscribers can claim tokens.',
     onDate: 'Wait for a date',
-    onDateBody: 'It stays open even past the minimum. On that date it closes: success if the minimum was reached, failure otherwise.',
+    onDateBody:
+      'It stays open even past the minimum. On that date it closes: success if the minimum was reached, failure otherwise.',
     closeDate: 'Close / distribution date',
     friendbot: 'Request XLM from Friendbot on login',
     save: 'Save',
@@ -1782,7 +1881,8 @@ const en: Messages = {
     },
     'caja-de-valores': {
       role: 'Central Securities Depository',
-      description: 'Segregated 1:1 institutional custody in an official comitente subaccount (Subaccount No. 84920).',
+      description:
+        'Segregated 1:1 institutional custody in an official comitente subaccount (Subaccount No. 84920).',
       badge: 'Collective Custody',
     },
     stellar: {
@@ -1807,7 +1907,8 @@ const en: Messages = {
     },
     circle: {
       role: 'Cross-Chain Transfer Protocol',
-      description: 'Native USDC transfers between Stellar, Arbitrum, and Ethereum with burn-and-mint and no slippage.',
+      description:
+        'Native USDC transfers between Stellar, Arbitrum, and Ethereum with burn-and-mint and no slippage.',
       badge: 'Native USDC Bridge',
     },
   },
@@ -1834,7 +1935,8 @@ const en: Messages = {
     twoFaTitle: 'Two-step verification (TOTP)',
     twoFaOn: 'On',
     twoFaOff: 'Off',
-    twoFaBody: 'Besides your password, wallet or Google, we will ask for a 6-digit code from an app such as Google Authenticator, 1Password or Authy.',
+    twoFaBody:
+      'Besides your password, wallet or Google, we will ask for a 6-digit code from an app such as Google Authenticator, 1Password or Authy.',
     enable: 'Turn on',
     disable: 'Turn off',
     starting: 'Preparing…',
@@ -1846,7 +1948,8 @@ const en: Messages = {
     cancelSetup: 'Cancel',
     qrAlt: 'QR code for your authenticator app',
     recoveryTitle: 'Save your recovery codes',
-    recoveryWarn: "Each code works once if you lose your phone. We won't show them again: keep them somewhere safe.",
+    recoveryWarn:
+      "Each code works once if you lose your phone. We won't show them again: keep them somewhere safe.",
     copy: 'Copy codes',
     copied: 'Copied',
     done: "I've saved them",
@@ -1888,7 +1991,7 @@ const en: Messages = {
     forgotLead: "Enter your email and we'll send you a link to choose a new password.",
     send: 'Send link',
     sending: 'Sending…',
-    sentBody: "If an account exists for that email, a link will arrive in a few minutes. Check spam too.",
+    sentBody: 'If an account exists for that email, a link will arrive in a few minutes. Check spam too.',
     backToLogin: 'Back to sign in',
     resetTitle: 'New password',
     resetLead: 'Choose a new password with at least 8 characters.',

@@ -8,7 +8,8 @@ import { REPO_ROOT } from '../config/env';
  * `.env` shared by the web and the API.
  */
 export function loadEnvironment(files?: string[]): string[] {
-  const candidates = files ?? [process.env.ENV_FILE, path.join(REPO_ROOT, '.env')].filter((f): f is string => Boolean(f));
+  const candidates =
+    files ?? [process.env.ENV_FILE, path.join(REPO_ROOT, '.env')].filter((f): f is string => Boolean(f));
   for (const file of candidates) dotenv.config({ path: file, quiet: true });
   return candidates;
 }

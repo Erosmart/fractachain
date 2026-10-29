@@ -18,7 +18,8 @@ const KIND_XLM = 0;
 runCli(async () => {
   const { deployments, keyring, soroban, listings, logger } = cliToolkit();
   const deployment = deployments.load();
-  if (!isContractId(deployment?.licitacion)) throw new Error('deployments/testnet.json no tiene licitacion de la que copiar el WASM');
+  if (!isContractId(deployment?.licitacion))
+    throw new Error('deployments/testnet.json no tiene licitacion de la que copiar el WASM');
 
   const admin = await keyring.licitacionAdmin();
   const wasmHash = await soroban.wasmHashOf(deployment.licitacion);
@@ -64,7 +65,11 @@ runCli(async () => {
     }
   }
 
-  deployments.save({ licitacionLegacy: deployment.licitacion, licitacion: deployed.contractId, licitacionWasmHash: wasmHash });
+  deployments.save({
+    licitacionLegacy: deployment.licitacion,
+    licitacion: deployed.contractId,
+    licitacionWasmHash: wasmHash,
+  });
   if (listing) {
     Object.assign(listing, {
       licitacionContract: deployed.contractId,

@@ -17,13 +17,18 @@ export default function StockCatalogSection({ admin }: { admin: IssuanceAdmin })
     <section className="space-y-4">
       <h2 className="font-section text-xl font-extrabold">{t('admIss.secStocks')}</h2>
       <p className="text-sm text-neutral-600 max-w-2xl">
-        {t('admIss.secStocksBodyPre')} <span className="font-mono">/stocks</span> {t('admIss.secStocksBodyPost')}
+        {t('admIss.secStocksBodyPre')} <span className="font-mono">/stocks</span>{' '}
+        {t('admIss.secStocksBodyPost')}
       </p>
 
       <div className="p-5 rounded-3xl crystal-card space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-bold">{t('admIss.newStock')}</h3>
-          <button type="button" onClick={() => setStockForm(randomDemoStock())} className="px-3 py-1.5 rounded-xl border border-black/20 text-xs font-bold">
+          <button
+            type="button"
+            onClick={() => setStockForm(randomDemoStock())}
+            className="px-3 py-1.5 rounded-xl border border-black/20 text-xs font-bold"
+          >
             {t('admIss.autofill')}
           </button>
         </div>
@@ -59,7 +64,11 @@ export default function StockCatalogSection({ admin }: { admin: IssuanceAdmin })
             />
           </label>
         </div>
-        <button type="button" onClick={emit} className="px-5 py-3 rounded-2xl bg-black text-white font-display font-bold text-sm">
+        <button
+          type="button"
+          onClick={emit}
+          className="px-5 py-3 rounded-2xl bg-black text-white font-display font-bold text-sm"
+        >
           {t('admIss.emit')}
         </button>
       </div>
@@ -67,14 +76,19 @@ export default function StockCatalogSection({ admin }: { admin: IssuanceAdmin })
       <div className="space-y-2">
         {admin.stocks.length === 0 && <p className="text-neutral-500 text-sm">{t('admIss.noStocks')}</p>}
         {admin.stocks.map((s) => (
-          <div key={s.ticker} className="p-4 rounded-3xl crystal-card flex flex-wrap items-center justify-between gap-3">
+          <div
+            key={s.ticker}
+            className="p-4 rounded-3xl crystal-card flex flex-wrap items-center justify-between gap-3"
+          >
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-display font-extrabold">{s.tokenTicker}</span>
                 <span className="text-xs text-neutral-500 font-mono">({s.ticker})</span>
                 <span
                   className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    s.active ? 'bg-leaf-100 text-[#2f6f28] border border-[#8fcb7a]/50' : 'bg-neutral-200 text-neutral-500'
+                    s.active
+                      ? 'bg-leaf-100 text-[#2f6f28] border border-[#8fcb7a]/50'
+                      : 'bg-neutral-200 text-neutral-500'
                   }`}
                 >
                   {s.active ? t('admIss.inMarket') : t('admIss.hidden')}
@@ -84,7 +98,8 @@ export default function StockCatalogSection({ admin }: { admin: IssuanceAdmin })
                 {s.companyName} · ISIN {s.isin}
               </div>
               <div className="text-[11px] text-neutral-500 font-mono">
-                ${s.priceUsdc} USDC · {Number(s.custodiedSharesInCajaDeValores || 0).toLocaleString()} {t('admIss.inCustody')}
+                ${s.priceUsdc} USDC · {Number(s.custodiedSharesInCajaDeValores || 0).toLocaleString()}{' '}
+                {t('admIss.inCustody')}
               </div>
             </div>
             <div className="flex items-center gap-2">

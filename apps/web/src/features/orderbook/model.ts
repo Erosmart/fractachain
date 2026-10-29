@@ -52,7 +52,8 @@ export interface TakenLevel {
   available: number;
 }
 
-export const fmtQty = (n: number) => n.toLocaleString('es-AR', { maximumFractionDigits: 4, minimumFractionDigits: 0 });
+export const fmtQty = (n: number) =>
+  n.toLocaleString('es-AR', { maximumFractionDigits: 4, minimumFractionDigits: 0 });
 
 /**
  * Folds an SDEX response into the shape the book UI renders.
@@ -148,7 +149,14 @@ export function buildCandles(
   const dt = Math.max(tLast - tFirst, 60_000) / (N - LEAD);
   const t0 = tFirst - LEAD * dt;
 
-  const out: Candle[] = Array.from({ length: N }, (_, i) => ({ t: t0 + i * dt, o: 0, h: -Infinity, l: Infinity, c: 0, v: 0 }));
+  const out: Candle[] = Array.from({ length: N }, (_, i) => ({
+    t: t0 + i * dt,
+    o: 0,
+    h: -Infinity,
+    l: Infinity,
+    c: 0,
+    v: 0,
+  }));
   for (const tr of sorted) {
     const i = Math.min(N - 1, Math.max(0, Math.floor((tr.t - t0) / dt)));
     const b = out[i];

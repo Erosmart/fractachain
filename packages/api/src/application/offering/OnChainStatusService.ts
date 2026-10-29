@@ -86,7 +86,11 @@ export class OnChainStatusService {
    * Receipt after a subscription. Also records the trustline opt-in and, for
    * custodial wallets on SDEX listings, opens the classic trustline on-ledger.
    */
-  async receiptAfterContribute(listingId: string, accountId: string, contributeHash?: string | null): Promise<ContributionReceiptView> {
+  async receiptAfterContribute(
+    listingId: string,
+    accountId: string,
+    contributeHash?: string | null,
+  ): Promise<ContributionReceiptView> {
     const listing = this.listings.get(listingId);
     const account = this.accounts.get(accountId);
     const receipt: ContributionReceiptView = {
@@ -105,7 +109,8 @@ export class OnChainStatusService {
     } catch {
       // already recorded, or KYC/wallet missing — contribute already gated that
     }
-    if (!(this.sdexMarket.available(listing) && account.custodyMode === 'CUSTODIAL' && account.publicKey)) return receipt;
+    if (!(this.sdexMarket.available(listing) && account.custodyMode === 'CUSTODIAL' && account.publicKey))
+      return receipt;
     try {
       const result = await this.sdexMarket.openCustodialTrustline({ listingId, accountId });
       receipt.trustlineHash = result.hash || null;

@@ -14,7 +14,11 @@ export default function DossierFormSection({ admin }: { admin: IssuanceAdmin }) 
         {DOSSIER_TEXT_FIELDS.map((key) => (
           <label key={key} className="text-sm space-y-1">
             <span className="font-bold">{t(`admIss.f.${key}`)}</span>
-            <input className="w-full px-3 py-2 rounded-xl border border-black/10" value={form[key]} onChange={(e) => setField(key, e.target.value)} />
+            <input
+              className="w-full px-3 py-2 rounded-xl border border-black/10"
+              value={form[key]}
+              onChange={(e) => setField(key, e.target.value)}
+            />
           </label>
         ))}
         <label className="sm:col-span-2 text-sm space-y-1 p-4 rounded-2xl border border-black/15 bg-black/[0.03]">
@@ -29,7 +33,9 @@ export default function DossierFormSection({ admin }: { admin: IssuanceAdmin }) 
         </label>
         {DOSSIER_NUMBER_FIELDS.map(([key, labelKey]) => (
           <label key={key} className="text-sm space-y-1">
-            <span className="font-bold">{labelKey ? t(labelKey) : key === 'offeringSoftCapUsdc' ? 'Soft cap USDC' : 'Hard cap USDC'}</span>
+            <span className="font-bold">
+              {labelKey ? t(labelKey) : key === 'offeringSoftCapUsdc' ? 'Soft cap USDC' : 'Hard cap USDC'}
+            </span>
             <input
               type="number"
               className="w-full px-3 py-2 rounded-xl border border-black/10"

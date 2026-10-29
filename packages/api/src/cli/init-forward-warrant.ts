@@ -22,7 +22,12 @@ runCli(async () => {
   const buyer = readActor(file, 'buyer');
   const warrantera = readActor(file, 'warrantera');
 
-  await initializeForward(soroban, deployment.forward, { registry, producer, buyer, arbiter: admin.publicKey() })
+  await initializeForward(soroban, deployment.forward, {
+    registry,
+    producer,
+    buyer,
+    arbiter: admin.publicKey(),
+  })
     .then((sent) => logger.info('forward inicializado', { hash: sent.hash }))
     .catch((err) => logger.warn('forward initialize omitido', { err: String(err) }));
   await initializeWarrant(soroban, deployment.warrant, { registry, producer, warrantera })

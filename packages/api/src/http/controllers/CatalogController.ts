@@ -75,41 +75,93 @@ export class CatalogController implements Controller {
     r.get('/api/admin/stocks', this.guard.requireAdmin, (_req, res) => {
       ok(res, this.stocks.adminCatalog());
     });
-    r.post('/api/admin/stocks', this.guard.requireAdmin, this.audit.route('stock.create'), body(CreateStockBody), (req, res) => {
-      ok(res, this.stocks.create(bodyOf(req, CreateStockBody)), 201);
-    });
-    r.post('/api/admin/stocks/:ticker/active', this.guard.requireAdmin, this.audit.route('stock.active', param('ticker')), params(TickerParam), body(StockActiveBody), (req, res) => {
-      ok(res, this.stocks.setActive(String(req.params.ticker), bodyOf(req, StockActiveBody).active));
-    });
-    r.post('/api/admin/stocks/:ticker/price', this.guard.requireAdmin, this.audit.route('stock.price', param('ticker')), params(TickerParam), body(StockPriceBody), (req, res) => {
-      const b = bodyOf(req, StockPriceBody);
-      ok(res, this.stocks.updatePrice(String(req.params.ticker), b.priceUsdc, b.change24hPct));
-    });
+    r.post(
+      '/api/admin/stocks',
+      this.guard.requireAdmin,
+      this.audit.route('stock.create'),
+      body(CreateStockBody),
+      (req, res) => {
+        ok(res, this.stocks.create(bodyOf(req, CreateStockBody)), 201);
+      },
+    );
+    r.post(
+      '/api/admin/stocks/:ticker/active',
+      this.guard.requireAdmin,
+      this.audit.route('stock.active', param('ticker')),
+      params(TickerParam),
+      body(StockActiveBody),
+      (req, res) => {
+        ok(res, this.stocks.setActive(String(req.params.ticker), bodyOf(req, StockActiveBody).active));
+      },
+    );
+    r.post(
+      '/api/admin/stocks/:ticker/price',
+      this.guard.requireAdmin,
+      this.audit.route('stock.price', param('ticker')),
+      params(TickerParam),
+      body(StockPriceBody),
+      (req, res) => {
+        const b = bodyOf(req, StockPriceBody);
+        ok(res, this.stocks.updatePrice(String(req.params.ticker), b.priceUsdc, b.change24hPct));
+      },
+    );
 
     /* ------------------------------ issuance ------------------------------ */
     r.get('/api/admin/issuance/assets', this.guard.requireAdmin, (_req, res) => {
       ok(res, this.products.paymentAssets());
     });
-    r.post('/api/admin/issuance/assets', this.guard.requireAdmin, this.audit.route('issuance.payment_asset'), body(PaymentAssetBody), (req, res) => {
-      const { kind, address } = bodyOf(req, PaymentAssetBody);
-      res.json({ success: true, kind, address: this.products.setPaymentAsset(kind, address) });
-    });
+    r.post(
+      '/api/admin/issuance/assets',
+      this.guard.requireAdmin,
+      this.audit.route('issuance.payment_asset'),
+      body(PaymentAssetBody),
+      (req, res) => {
+        const { kind, address } = bodyOf(req, PaymentAssetBody);
+        res.json({ success: true, kind, address: this.products.setPaymentAsset(kind, address) });
+      },
+    );
     r.get('/api/admin/issuance/products', this.guard.requireAdmin, (_req, res) => {
       ok(res, this.products.list());
     });
-    r.post('/api/admin/issuance/products', this.guard.requireAdmin, this.audit.route('issuance.product.create'), body(CreateProductBody), (req, res) => {
-      const b = bodyOf(req, CreateProductBody);
-      ok(res, this.products.create({ ...b, pricePerUnit: b.pricePerUnit || '0' }), 201);
-    });
-    r.post('/api/admin/issuance/products/:id/price', this.guard.requireAdmin, this.audit.route('issuance.product.price', param('id')), params(IdParam), body(ProductPriceBody), (req, res) => {
-      const product = this.products.updatePrice(String(req.params.id), bodyOf(req, ProductPriceBody).pricePerUnit);
-      if (!product) throw new NotFoundError('Producto no encontrado');
-      ok(res, product);
-    });
-    r.post('/api/admin/issuance/products/:id/bind', this.guard.requireAdmin, this.audit.route('issuance.product.bind', param('id')), params(IdParam), body(ProductBindBody), (req, res) => {
-      const product = this.products.bindContract(String(req.params.id), bodyOf(req, ProductBindBody).contractAddress);
-      if (!product) throw new NotFoundError('Producto no encontrado');
-      ok(res, product);
-    });
+    r.post(
+      '/api/admin/issuance/products',
+      this.guard.requireAdmin,
+      this.audit.route('issuance.product.create'),
+      body(CreateProductBody),
+      (req, res) => {
+        const b = bodyOf(req, CreateProductBody);
+        ok(res, this.products.create({ ...b, pricePerUnit: b.pricePerUnit || '0' }), 201);
+      },
+    );
+    r.post(
+      '/api/admin/issuance/products/:id/price',
+      this.guard.requireAdmin,
+      this.audit.route('issuance.product.price', param('id')),
+      params(IdParam),
+      body(ProductPriceBody),
+      (req, res) => {
+        const product = this.products.updatePrice(
+          String(req.params.id),
+          bodyOf(req, ProductPriceBody).pricePerUnit,
+        );
+        if (!product) throw new NotFoundError('Producto no encontrado');
+        ok(res, product);
+      },
+    );
+    r.post(
+      '/api/admin/issuance/products/:id/bind',
+      this.guard.requireAdmin,
+      this.audit.route('issuance.product.bind', param('id')),
+      params(IdParam),
+      body(ProductBindBody),
+      (req, res) => {
+        const product = this.products.bindContract(
+          String(req.params.id),
+          bodyOf(req, ProductBindBody).contractAddress,
+        );
+        if (!product) throw new NotFoundError('Producto no encontrado');
+        ok(res, product);
+      },
+    );
   }
 }

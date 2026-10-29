@@ -38,29 +38,29 @@ body {
 }
 
 body {
-  font-family: var(--font-lato), "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-lato), 'Helvetica Neue', Arial, sans-serif;
   font-weight: 400;
 }
 
 .font-display,
 .font-section,
 .font-body {
-  font-family: var(--font-lato), "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-lato), 'Helvetica Neue', Arial, sans-serif;
 }
 
 .font-lcd {
-  font-family: var(--font-lcd), "SF Mono", ui-monospace, monospace;
+  font-family: var(--font-lcd), 'SF Mono', ui-monospace, monospace;
   letter-spacing: 0.06em;
 }
 
 p {
-  font-family: var(--font-lato), "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-lato), 'Helvetica Neue', Arial, sans-serif;
   font-weight: 400;
   line-height: 1.65;
 }
 
 .hero-lead {
-  font-family: var(--font-lato), "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-lato), 'Helvetica Neue', Arial, sans-serif;
   font-weight: 400;
   font-size: 1rem;
   line-height: 1.5;
@@ -75,7 +75,7 @@ p {
 
 .below-fold h2,
 .below-fold h3 {
-  font-family: var(--font-lato), "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-lato), 'Helvetica Neue', Arial, sans-serif;
   font-weight: 700;
 }
 
@@ -100,8 +100,7 @@ p {
 }
 
 .crystal-card {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(232, 248, 224, 0.4));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(232, 248, 224, 0.4));
   backdrop-filter: blur(22px) saturate(1.35);
   -webkit-backdrop-filter: blur(22px) saturate(1.35);
   border: 1px solid rgba(140, 190, 120, 0.35);
@@ -113,11 +112,7 @@ p {
 .liquid-sheen {
   background:
     radial-gradient(ellipse at 20% 0%, rgba(255, 255, 255, 0.85), transparent 45%),
-    repeating-linear-gradient(
-      115deg,
-      transparent 0 13px,
-      rgba(184, 240, 164, 0.12) 13px 14px
-    );
+    repeating-linear-gradient(115deg, transparent 0 13px, rgba(184, 240, 164, 0.12) 13px 14px);
 }
 
 .logo-lockup {
@@ -135,8 +130,12 @@ p {
   text-transform: uppercase;
   font-weight: 700;
   color: #163012;
-  background:
-    linear-gradient(180deg, rgba(232, 255, 220, 0.92) 0%, rgba(184, 240, 164, 0.55) 48%, rgba(255, 255, 255, 0.45) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(232, 255, 220, 0.92) 0%,
+    rgba(184, 240, 164, 0.55) 48%,
+    rgba(255, 255, 255, 0.45) 100%
+  );
   border: 1px solid rgba(126, 196, 110, 0.55);
   border-radius: 12px;
   box-shadow:
@@ -148,21 +147,16 @@ p {
 }
 
 .btn-lcd::after {
-  content: "";
+  content: '';
   pointer-events: none;
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0.14) 0 2px,
-    transparent 2px 4px
-  );
+  background: repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.14) 0 2px, transparent 2px 4px);
   opacity: 0.45;
 }
 
 .btn-lcd-solid {
-  background:
-    linear-gradient(180deg, #d8f7c8 0%, #9ee087 45%, #b8f0a4 100%);
+  background: linear-gradient(180deg, #d8f7c8 0%, #9ee087 45%, #b8f0a4 100%);
   color: #10240c;
 }
 
@@ -182,8 +176,13 @@ p {
 }
 
 @keyframes globe-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 .globe-float {
@@ -191,7 +190,9 @@ p {
 }
 
 @keyframes infinity-drift {
-  to { stroke-dashoffset: -256; }
+  to {
+    stroke-dashoffset: -256;
+  }
 }
 
 .infinity-drift {
@@ -215,8 +216,12 @@ p {
 }
 
 @keyframes merval-reel {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 .merval-reel {

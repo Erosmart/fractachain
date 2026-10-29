@@ -48,7 +48,13 @@ export class ComplianceService {
       .filter((l) => l.dossier.issuerPublicKey && l.dossier.tokenTicker)
       .flatMap((l) => {
         try {
-          return [{ listingId: l.id, tokenTicker: l.dossier.tokenTicker, asset: securityAsset(l.dossier.tokenTicker, l.dossier.issuerPublicKey) }];
+          return [
+            {
+              listingId: l.id,
+              tokenTicker: l.dossier.tokenTicker,
+              asset: securityAsset(l.dossier.tokenTicker, l.dossier.issuerPublicKey),
+            },
+          ];
         } catch {
           return [];
         }
@@ -59,7 +65,10 @@ export class ComplianceService {
   async grant(address: string): Promise<ComplianceSyncReport> {
     if (!this.enforcementEnabled()) return { address, enabled: false, outcomes: [] };
     const assets = this.authorizableAssets();
-    const states = await this.sdex.trustlineStates(address, assets.map((a) => a.asset));
+    const states = await this.sdex.trustlineStates(
+      address,
+      assets.map((a) => a.asset),
+    );
     const outcomes: AuthorizationOutcome[] = [];
     // Sequential on purpose: every authorization is a tx from the same issuer sequence.
     for (let i = 0; i < assets.length; i++) {
@@ -67,7 +76,12 @@ export class ComplianceService {
       const line = states[i];
       try {
         if (!line.exists) {
-          outcomes.push({ listingId, tokenTicker, result: 'skipped', detail: 'El inversor todavía no creó la trustline' });
+          outcomes.push({
+            listingId,
+            tokenTicker,
+            result: 'skipped',
+            detail: 'El inversor todavía no creó la trustline',
+          });
           continue;
         }
         if (line.authorized) {
@@ -90,7 +104,10 @@ export class ComplianceService {
   async revoke(address: string, opts?: { allowUnwind?: boolean }): Promise<ComplianceSyncReport> {
     if (!this.enforcementEnabled()) return { address, enabled: false, outcomes: [] };
     const assets = this.authorizableAssets();
-    const states = await this.sdex.trustlineStates(address, assets.map((a) => a.asset));
+    const states = await this.sdex.trustlineStates(
+      address,
+      assets.map((a) => a.asset),
+    );
     const outcomes: AuthorizationOutcome[] = [];
     for (let i = 0; i < assets.length; i++) {
       const { listingId, tokenTicker, asset } = assets[i];

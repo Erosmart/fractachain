@@ -18,7 +18,13 @@ const { api } = container;
 function Avatar({ rec, className }: { rec: KycRecord; className: string }) {
   const placeholder = <span className={`${className} rounded-full bg-black/5 inline-block`} />;
   if (!rec.selfieUrl) return placeholder;
-  return <AuthenticatedImage path={rec.selfieUrl} className={`${className} rounded-full object-cover`} fallback={placeholder} />;
+  return (
+    <AuthenticatedImage
+      path={rec.selfieUrl}
+      className={`${className} rounded-full object-cover`}
+      fallback={placeholder}
+    />
+  );
 }
 
 /** Compliance queue: review and approve / reject investor KYC. */
@@ -69,7 +75,13 @@ function AdminKyc() {
   const statusLabel = (status: KycRecord['status']) =>
     status === 'PENDING' ? t('admKyc.stPending') : status === 'APPROVED' ? t('admKyc.stApproved') : status;
   const filterLabel = (st: Filter) =>
-    st === 'ALL' ? t('admKyc.all') : st === 'PENDING' ? t('admKyc.pending') : st === 'APPROVED' ? t('admKyc.approved') : t('admKyc.rejected');
+    st === 'ALL'
+      ? t('admKyc.all')
+      : st === 'PENDING'
+        ? t('admKyc.pending')
+        : st === 'APPROVED'
+          ? t('admKyc.approved')
+          : t('admKyc.rejected');
 
   return (
     <div className="space-y-6 py-4">
@@ -126,7 +138,9 @@ function AdminKyc() {
 
       <div className="rounded-2xl sm:rounded-3xl crystal-card overflow-hidden">
         {filtered.length === 0 ? (
-          <p className="p-8 text-sm text-neutral-500 text-center">{filterStatus === 'PENDING' ? t('admKyc.emptyPending') : t('admKyc.emptyFilter')}</p>
+          <p className="p-8 text-sm text-neutral-500 text-center">
+            {filterStatus === 'PENDING' ? t('admKyc.emptyPending') : t('admKyc.emptyFilter')}
+          </p>
         ) : (
           <>
             {/* Mobile cards */}
@@ -205,7 +219,9 @@ function AdminKyc() {
                         </div>
                       </td>
                       <td className="px-4 py-3 font-mono text-xs">{rec.docNumber || '—'}</td>
-                      <td className="px-4 py-3 font-mono text-xs break-all max-w-[140px]">{rec.walletAddress || '—'}</td>
+                      <td className="px-4 py-3 font-mono text-xs break-all max-w-[140px]">
+                        {rec.walletAddress || '—'}
+                      </td>
                       <td className="px-4 py-3 text-xs font-bold">{statusLabel(rec.status)}</td>
                       <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
                         {rec.status !== 'APPROVED' && (

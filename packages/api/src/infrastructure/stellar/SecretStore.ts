@@ -43,7 +43,10 @@ export class EnvFileSecretStore implements ISecretStore {
         return line;
       });
       if (!found) next.push(`${name}=${value}`);
-      const body = next.filter((l, i, a) => l || i < a.length - 1).join('\n').replace(/\n*$/, '\n');
+      const body = next
+        .filter((l, i, a) => l || i < a.length - 1)
+        .join('\n')
+        .replace(/\n*$/, '\n');
       fs.writeFileSync(this.envFile, body, { mode: 0o600 });
     } catch (err) {
       // The key still works for this process; only persistence across restarts is lost.

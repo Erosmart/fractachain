@@ -8,7 +8,14 @@ import {
   type KycRecord,
   type KycReviewStatus,
 } from '../../domain/kyc/KycRecord';
-import { ConflictError, DomainError, ForbiddenError, NotFoundError, ValidationError, errorMessage } from '../../shared/errors';
+import {
+  ConflictError,
+  DomainError,
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+  errorMessage,
+} from '../../shared/errors';
 import type { ILogger } from '../../shared/logger';
 import type { LicitacionContract } from '../../infrastructure/stellar/LicitacionContract';
 import type { ISelfieStorage, StoredImage } from '../../infrastructure/storage/SelfieStorage';
@@ -16,6 +23,11 @@ import type { AccountService } from '../account/AccountService';
 import type { AdminPolicy } from '../account/AdminPolicy';
 import type { ComplianceService } from '../compliance/ComplianceService';
 import type { ListingLedger } from '../listing/ListingLedger';
+
+/** Notified when an account adopts a new email (it must be verified again). */
+export interface IEmailChangeListener {
+  onEmailChanged(account: Account): Promise<void>;
+}
 
 export interface KycPolicyOptions {
   /** No KYC provider exists behind the form on testnet: approve on submit. */
@@ -72,13 +84,21 @@ export class KycService {
     private readonly admins: AdminPolicy,
     private readonly options: KycPolicyOptions,
     private readonly logger: ILogger,
+    private readonly emailChanges?: IEmailChangeListener,
   ) {}
 
   async submitOnboarding(accountId: string, input: OnboardingKycInput): Promise<PublicAccount> {
     const account = this.accounts.require(accountId);
     if (!account.custodyMode) throw new DomainError('Elegí primero el tipo de custodia');
-    if (this.options.requireEmailVerification && account.authProvider === 'email' && !isEmailVerified(account)) {
-      throw new ForbiddenError('Confirmá tu email antes de enviar el KYC (revisá tu casilla o pedí un nuevo link).', 'EMAIL_NOT_VERIFIED');
+    if (
+      this.options.requireEmailVerification &&
+      account.authProvider === 'email' &&
+      !isEmailVerified(account)
+    ) {
+      throw new ForbiddenError(
+        'Confirmá tu email antes de enviar el KYC (revisá tu casilla o pedí un nuevo link).',
+        'EMAIL_NOT_VERIFIED',
+      );
     }
     const legalName = String(input.legalName || '').trim();
     const cuitDigits = String(input.cuit || '').replace(/[^\d]/g, '');
@@ -88,13 +108,19 @@ export class KycService {
     // Wallet-only accounts have no real email yet: the KYC form collects it
     // (the selfie is optional for them, mandatory for everyone else).
     if (account.authProvider === 'wallet') {
-      const email = String(input.email || '').trim().toLowerCase();
+      const email = String(input.email || '')
+        .trim()
+        .toLowerCase();
       if (!EMAIL_RE.test(email) || isWalletEmail(email)) throw new ValidationError('Email inválido');
       // An admin address can never be claimed through the KYC form.
       if (this.admins.isAdminEmail(email)) throw new ForbiddenError('Ese email está reservado');
       const clash = this.repo.findByEmail(email);
       if (clash && clash.id !== account.id) throw new ConflictError('Ese email ya tiene una cuenta');
-      account.email = email;
+      if (account.email !== email) {
+        account.email = email;
+        account.emailVerifiedAt = undefined;
+        void this.emailChanges?.onEmailChanged(account).catch(() => undefined);
+      }
     } else if (!input.selfieDataUrl) {
       throw new ValidationError('Falta la foto');
     }
@@ -149,7 +175,14 @@ export class KycService {
         country: 'Argentina',
         walletAddress: u.publicKey,
         userType: 'INVESTOR',
-        status: u.kycStatus === 'APPROVED' ? 'APPROVED' : u.kycStatus === 'REJECTED' ? 'REJECTED' : u.kycStatus === 'REVOKED' ? 'REVOKED' : 'PENDING',
+        status:
+          u.kycStatus === 'APPROVED'
+            ? 'APPROVED'
+            : u.kycStatus === 'REJECTED'
+              ? 'REJECTED'
+              : u.kycStatus === 'REVOKED'
+                ? 'REVOKED'
+                : 'PENDING',
         isGafiHighRisk: false,
         createdAt: u.createdAt,
         selfieUrl: u.selfiePath ? `/api/kyc/selfie/${u.id}` : undefined,
@@ -215,20 +248,32 @@ export class KycService {
     if (address) {
       // On-chain half of the approval. Fire-and-forget: the decision is
       // recorded; a Horizon hiccup is recoverable via compliance/sync.
-      void this.compliance.grant(address).catch((err) => this.logger.warn('grant on-chain falló', { err: errorMessage(err) }));
+      void this.compliance
+        .grant(address)
+        .catch((err) => this.logger.warn('grant on-chain falló', { err: errorMessage(err) }));
       void this.whitelistOnLiveOfferings(address);
     }
     return { success: true as const, user: account ? this.accounts.toPublic(account) : undefined, record };
   }
 
   reject(id: string, reason?: string) {
-    const { account, record } = this.decide(id, 'REJECTED', 'REJECTED', reason || 'Documentación ilegible o inconsistente');
+    const { account, record } = this.decide(
+      id,
+      'REJECTED',
+      'REJECTED',
+      reason || 'Documentación ilegible o inconsistente',
+    );
     return { success: true as const, user: account ? this.accounts.toPublic(account) : undefined, record };
   }
 
   /** Hard freeze: the network also pulls the holder's open offers. */
   revoke(id: string, reason?: string) {
-    const { account, record } = this.decide(id, 'REVOKED', 'REVOKED', reason || 'Revocación preventiva por compliance');
+    const { account, record } = this.decide(
+      id,
+      'REVOKED',
+      'REVOKED',
+      reason || 'Revocación preventiva por compliance',
+    );
     const address = account?.publicKey || record?.stellarAddress;
     if (address) {
       void this.compliance
@@ -249,7 +294,12 @@ export class KycService {
     return image;
   }
 
-  private decide(id: string, accountStatus: 'APPROVED' | 'REJECTED' | 'REVOKED', recordStatus: KycReviewStatus, reason?: string) {
+  private decide(
+    id: string,
+    accountStatus: 'APPROVED' | 'REJECTED' | 'REVOKED',
+    recordStatus: KycReviewStatus,
+    reason?: string,
+  ) {
     const record = this.records.findById(id);
     const account = (record?.userId && this.accounts.get(record.userId)) || this.repo.findByKycId(id);
     if (!record && !account) throw new NotFoundError('Solicitud no encontrada');
@@ -258,7 +308,8 @@ export class KycService {
       record.status = recordStatus;
       record.reviewedAt = now;
       if (reason) record.rejectionReason = reason;
-      if (recordStatus === 'APPROVED') record.expiresAt = new Date(Date.now() + 365 * 86_400_000).toISOString();
+      if (recordStatus === 'APPROVED')
+        record.expiresAt = new Date(Date.now() + 365 * 86_400_000).toISOString();
       this.records.upsert(record);
     }
     if (account) {

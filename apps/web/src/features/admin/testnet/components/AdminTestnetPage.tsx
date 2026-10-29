@@ -58,7 +58,9 @@ function AdminTestnet() {
         settlePolicy,
         settleAt: settlePolicy === 'ON_DATE' ? settleAt : undefined,
       });
-      setNotice(mode === 'deploy' ? (onChain ? t('admTest.savedOn') : t('admTest.savedOff')) : t('admTest.saved'));
+      setNotice(
+        mode === 'deploy' ? (onChain ? t('admTest.savedOn') : t('admTest.savedOff')) : t('admTest.saved'),
+      );
     } catch (err) {
       setNotice(errorMessage(err, t('admTest.saveFail')));
     }
@@ -98,7 +100,9 @@ function AdminTestnet() {
         <p className="text-neutral-600 mt-1">{t('admTest.lead')}</p>
       </div>
       <div className="p-6 rounded-3xl crystal-card space-y-3">
-        <p className="font-display font-extrabold">{onChain ? t('admTest.onchain') : t('admTest.noContracts')}</p>
+        <p className="font-display font-extrabold">
+          {onChain ? t('admTest.onchain') : t('admTest.noContracts')}
+        </p>
         {deployment?.factory ? (
           <dl className="space-y-1 font-mono text-xs break-all">
             {deploymentRows.map(([label, value]) =>
@@ -120,30 +124,63 @@ function AdminTestnet() {
           </dl>
         ) : (
           <p className="text-sm text-neutral-600">
-            {t('admTest.runHere')} <code>bash scripts/testnet/01-keys.sh && bash scripts/testnet/02-build.sh && bash scripts/testnet/03-deploy.sh</code>
+            {t('admTest.runHere')}{' '}
+            <code>
+              bash scripts/testnet/01-keys.sh && bash scripts/testnet/02-build.sh && bash
+              scripts/testnet/03-deploy.sh
+            </code>
           </p>
         )}
-        <button type="button" onClick={configureIssuer} className="px-4 py-2 rounded-2xl border border-black/15 font-display font-bold text-sm">
+        <button
+          type="button"
+          onClick={configureIssuer}
+          className="px-4 py-2 rounded-2xl border border-black/15 font-display font-bold text-sm"
+        >
           {t('admTest.authBtn')}
         </button>
       </div>
       <div className="p-6 rounded-3xl crystal-card space-y-4">
         {modes.map((opt) => (
-          <label key={opt.id} className={`block p-4 rounded-2xl border cursor-pointer ${mode === opt.id ? 'border-black bg-black/[0.03]' : 'border-black/10'}`}>
-            <input type="radio" name="testnet-mode" className="mr-2" checked={mode === opt.id} onChange={() => setMode(opt.id)} />
+          <label
+            key={opt.id}
+            className={`block p-4 rounded-2xl border cursor-pointer ${mode === opt.id ? 'border-black bg-black/[0.03]' : 'border-black/10'}`}
+          >
+            <input
+              type="radio"
+              name="testnet-mode"
+              className="mr-2"
+              checked={mode === opt.id}
+              onChange={() => setMode(opt.id)}
+            />
             <span className="font-display font-extrabold">{opt.title}</span>
             <p className="text-sm text-neutral-600 mt-1">{opt.body}</p>
           </label>
         ))}
         <div className="pt-2 space-y-3">
           <p className="font-display font-extrabold">{t('admTest.settleQ')}</p>
-          <label className={`block p-4 rounded-2xl border cursor-pointer ${settlePolicy === 'ON_MIN' ? 'border-black bg-black/[0.03]' : 'border-black/10'}`}>
-            <input type="radio" name="settle-policy" className="mr-2" checked={settlePolicy === 'ON_MIN'} onChange={() => setSettlePolicy('ON_MIN')} />
+          <label
+            className={`block p-4 rounded-2xl border cursor-pointer ${settlePolicy === 'ON_MIN' ? 'border-black bg-black/[0.03]' : 'border-black/10'}`}
+          >
+            <input
+              type="radio"
+              name="settle-policy"
+              className="mr-2"
+              checked={settlePolicy === 'ON_MIN'}
+              onChange={() => setSettlePolicy('ON_MIN')}
+            />
             {t('admTest.onMin')}
             <p className="text-sm text-neutral-600 mt-1">{t('admTest.onMinBody')}</p>
           </label>
-          <label className={`block p-4 rounded-2xl border cursor-pointer ${settlePolicy === 'ON_DATE' ? 'border-black bg-black/[0.03]' : 'border-black/10'}`}>
-            <input type="radio" name="settle-policy" className="mr-2" checked={settlePolicy === 'ON_DATE'} onChange={() => setSettlePolicy('ON_DATE')} />
+          <label
+            className={`block p-4 rounded-2xl border cursor-pointer ${settlePolicy === 'ON_DATE' ? 'border-black bg-black/[0.03]' : 'border-black/10'}`}
+          >
+            <input
+              type="radio"
+              name="settle-policy"
+              className="mr-2"
+              checked={settlePolicy === 'ON_DATE'}
+              onChange={() => setSettlePolicy('ON_DATE')}
+            />
             {t('admTest.onDate')}
             <p className="text-sm text-neutral-600 mt-1">{t('admTest.onDateBody')}</p>
           </label>
@@ -181,7 +218,11 @@ function AdminTestnet() {
             onChange={(e) => setRpcUrl(e.target.value)}
           />
         </label>
-        <button type="button" onClick={save} className="px-5 py-3 rounded-2xl bg-black text-white font-display font-bold">
+        <button
+          type="button"
+          onClick={save}
+          className="px-5 py-3 rounded-2xl bg-black text-white font-display font-bold"
+        >
           {t('admTest.save')}
         </button>
         {notice && (

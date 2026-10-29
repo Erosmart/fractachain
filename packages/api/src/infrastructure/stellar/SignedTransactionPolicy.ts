@@ -49,7 +49,12 @@ export class SignedTransactionPolicy {
    * The transaction is a single Soroban invocation of `method` on `contractId`,
    * and its first argument (the investor address) is the caller's wallet.
    */
-  static assertContractInvocation(tx: Transaction, contractId: string, method: string, investor: string): void {
+  static assertContractInvocation(
+    tx: Transaction,
+    contractId: string,
+    method: string,
+    investor: string,
+  ): void {
     if (tx.operations.length !== 1 || tx.operations[0].type !== 'invokeHostFunction') {
       throw new ValidationError('Se esperaba una única invocación de contrato');
     }

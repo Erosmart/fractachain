@@ -49,7 +49,9 @@ export class OfferingService {
     if (this.listings.isOnChain(listing) && alreadyClosedOnChain(live) && listing.status === 'LISTED') {
       const status = this.licitacion.closeStatusFromChain(live, listing);
       if (status) {
-        current = this.listings.markClosed(listing.id, status, live.raised, { proceedsPaidTo: live.fiduciary });
+        current = this.listings.markClosed(listing.id, status, live.raised, {
+          proceedsPaidTo: live.fiduciary,
+        });
         await this.settlement.settleHolders(current).catch(() => []);
       }
     }
@@ -103,7 +105,9 @@ export class OfferingService {
 
   /** Custodial or sandbox subscription. */
   contribute(listingId: string, accountId: string, amount: number) {
-    return this.lock.run(LockKeys.offering(accountId, listingId), () => this.contributeUnlocked(listingId, accountId, amount));
+    return this.lock.run(LockKeys.offering(accountId, listingId), () =>
+      this.contributeUnlocked(listingId, accountId, amount),
+    );
   }
 
   private async contributeUnlocked(listingId: string, accountId: string, amount: number) {
@@ -115,7 +119,11 @@ export class OfferingService {
         throw new DomainError('Wallet propia: firmá el aporte con Freighter desde la ficha de la licitación');
       }
       const chain = await this.licitacion.contribute(listing, this.custody.keypairFor(accountId), amount);
-      this.listings.recordOnChainContribution(listing.id, accountId, { amount: chain.amount, tokens: chain.tokens, raised: chain.raised });
+      this.listings.recordOnChainContribution(listing.id, accountId, {
+        amount: chain.amount,
+        tokens: chain.tokens,
+        raised: chain.raised,
+      });
       return this.afterContribution(listing.id, accountId, chain.hash);
     }
     this.listings.contributeSandbox(listing.id, amount, accountId);
@@ -130,20 +138,28 @@ export class OfferingService {
 
   /** Relays the Freighter-signed contribution; the booked amount is read from the contract. */
   submitContribute(listingId: string, accountId: string, signedXdr: string) {
-    return this.lock.run(LockKeys.offering(accountId, listingId), () => this.submitContributeUnlocked(listingId, accountId, signedXdr));
+    return this.lock.run(LockKeys.offering(accountId, listingId), () =>
+      this.submitContributeUnlocked(listingId, accountId, signedXdr),
+    );
   }
 
   private async submitContributeUnlocked(listingId: string, accountId: string, signedXdr: string) {
     const listing = this.requireOnChain(listingId);
     const wallet = this.selfCustodyWallet(accountId);
     const chain = await this.licitacion.submitContribute(listing, wallet, signedXdr);
-    this.listings.recordOnChainContribution(listing.id, accountId, { amount: chain.amount, tokens: chain.tokens, raised: chain.raised });
+    this.listings.recordOnChainContribution(listing.id, accountId, {
+      amount: chain.amount,
+      tokens: chain.tokens,
+      raised: chain.raised,
+    });
     return this.afterContribution(listing.id, accountId, chain.hash);
   }
 
   /** Custodial refund of a failed offering. */
   refund(listingId: string, accountId: string) {
-    return this.lock.run(LockKeys.offering(accountId, listingId), () => this.refundUnlocked(listingId, accountId));
+    return this.lock.run(LockKeys.offering(accountId, listingId), () =>
+      this.refundUnlocked(listingId, accountId),
+    );
   }
 
   private async refundUnlocked(listingId: string, accountId: string) {
@@ -177,7 +193,9 @@ export class OfferingService {
   }
 
   submitRefund(listingId: string, accountId: string, signedXdr: string) {
-    return this.lock.run(LockKeys.offering(accountId, listingId), () => this.submitRefundUnlocked(listingId, accountId, signedXdr));
+    return this.lock.run(LockKeys.offering(accountId, listingId), () =>
+      this.submitRefundUnlocked(listingId, accountId, signedXdr),
+    );
   }
 
   private async submitRefundUnlocked(listingId: string, accountId: string, signedXdr: string) {
@@ -203,7 +221,8 @@ export class OfferingService {
   /** Permissionless finalize: the contract itself gates it on hard cap or deadline. */
   finalizeByInvestor(listingId: string) {
     const listing = this.listings.require(listingId);
-    if (!this.listings.isOnChain(listing)) throw new DomainError('Esta licitación sandbox cierra con el endpoint admin /close');
+    if (!this.listings.isOnChain(listing))
+      throw new DomainError('Esta licitación sandbox cierra con el endpoint admin /close');
     return this.settlement.finalize(listing.id);
   }
 
@@ -211,7 +230,9 @@ export class OfferingService {
   async withdrawProceeds(listingId: string) {
     const listing = this.listings.require(listingId);
     if (!this.listings.isOnChain(listing)) {
-      throw new DomainError('withdraw_proceeds es el reintento on-chain; esta licitación no tiene contrato Soroban');
+      throw new DomainError(
+        'withdraw_proceeds es el reintento on-chain; esta licitación no tiene contrato Soroban',
+      );
     }
     const result = await this.licitacion.withdrawProceeds(listing);
     return {
@@ -233,7 +254,12 @@ export class OfferingService {
     const account = this.accounts.require(accountId);
     if (listing && this.sdexMarket.available(listing) && account.custodyMode === 'CUSTODIAL') {
       await this.sdexMarket.openCustodialTrustline({ listingId: listing.id, accountId });
-    } else if (listing && this.sdexMarket.available(listing) && account.publicKey && account.kycStatus === 'APPROVED') {
+    } else if (
+      listing &&
+      this.sdexMarket.available(listing) &&
+      account.publicKey &&
+      account.kycStatus === 'APPROVED'
+    ) {
       await this.compliance.sync(account.publicKey, true);
     }
     return user;

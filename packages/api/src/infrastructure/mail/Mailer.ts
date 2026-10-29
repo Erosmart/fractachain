@@ -19,7 +19,11 @@ export class LogMailer implements IMailer {
   constructor(private readonly logger: ILogger) {}
 
   async send(message: MailMessage): Promise<void> {
-    this.logger.info('email (sin SMTP: se muestra en el log)', { to: message.to, subject: message.subject, body: message.text });
+    this.logger.info('email (sin SMTP: se muestra en el log)', {
+      to: message.to,
+      subject: message.subject,
+      body: message.text,
+    });
   }
 }
 
@@ -36,6 +40,12 @@ export class SmtpMailer implements IMailer {
 
   async send(message: MailMessage): Promise<void> {
     const transport = await this.transport;
-    await transport.sendMail({ from: this.from, to: message.to, subject: message.subject, text: message.text, html: message.html });
+    await transport.sendMail({
+      from: this.from,
+      to: message.to,
+      subject: message.subject,
+      text: message.text,
+      html: message.html,
+    });
   }
 }

@@ -33,7 +33,10 @@ export default function PriceCandles({ trades, refPrice }: PriceCandlesProps) {
   const loc = locale === 'en' ? 'en-US' : 'es-AR';
   const daySpan = last.t - first.t > 20 * 3600e3;
   const timeFmt = (ts: number) =>
-    new Date(ts).toLocaleString(loc, daySpan ? { day: '2-digit', month: '2-digit' } : { hour: '2-digit', minute: '2-digit' });
+    new Date(ts).toLocaleString(
+      loc,
+      daySpan ? { day: '2-digit', month: '2-digit' } : { hour: '2-digit', minute: '2-digit' },
+    );
 
   return (
     <div className="rounded-2xl border border-black/10 bg-white/60 p-3">
@@ -50,8 +53,23 @@ export default function PriceCandles({ trades, refPrice }: PriceCandlesProps) {
           const yy = y(p);
           return (
             <g key={i}>
-              <line x1={PADL} x2={W - PADR} y1={yy} y2={yy} stroke="#000" strokeOpacity={0.07} strokeDasharray="3 4" />
-              <text x={W - PADR + 5} y={yy + 3} fontSize={8.5} fill="#000" fillOpacity={0.45} fontFamily="monospace">
+              <line
+                x1={PADL}
+                x2={W - PADR}
+                y1={yy}
+                y2={yy}
+                stroke="#000"
+                strokeOpacity={0.07}
+                strokeDasharray="3 4"
+              />
+              <text
+                x={W - PADR + 5}
+                y={yy + 3}
+                fontSize={8.5}
+                fill="#000"
+                fillOpacity={0.45}
+                fontFamily="monospace"
+              >
                 {p.toFixed(2)}
               </text>
             </g>
@@ -66,14 +84,38 @@ export default function PriceCandles({ trades, refPrice }: PriceCandlesProps) {
           const vh = (c.v / maxV) * VOLH;
           return (
             <g key={i}>
-              {vh > 0 && <rect x={x - bw * 0.32} y={H - PADB - vh} width={Math.max(1.5, bw * 0.64)} height={vh} fill={col} opacity={0.25} />}
+              {vh > 0 && (
+                <rect
+                  x={x - bw * 0.32}
+                  y={H - PADB - vh}
+                  width={Math.max(1.5, bw * 0.64)}
+                  height={vh}
+                  fill={col}
+                  opacity={0.25}
+                />
+              )}
               <line x1={x} x2={x} y1={y(c.h)} y2={y(c.l)} stroke={col} strokeWidth={1.1} />
-              <rect x={x - bw * 0.32} y={top} width={Math.max(1.5, bw * 0.64)} height={body} fill={col} rx={0.5} />
+              <rect
+                x={x - bw * 0.32}
+                y={top}
+                width={Math.max(1.5, bw * 0.64)}
+                height={body}
+                fill={col}
+                rx={0.5}
+              />
             </g>
           );
         })}
         {/* línea de último precio */}
-        <line x1={PADL} x2={W - PADR} y1={y(last.c)} y2={y(last.c)} stroke="#111" strokeOpacity={0.5} strokeDasharray="2 3" />
+        <line
+          x1={PADL}
+          x2={W - PADR}
+          y1={y(last.c)}
+          y2={y(last.c)}
+          stroke="#111"
+          strokeOpacity={0.5}
+          strokeDasharray="2 3"
+        />
         <rect x={W - PADR + 1} y={y(last.c) - 7} width={PADR - 3} height={13} rx={3} fill="#111" />
         <text x={W - PADR + 5} y={y(last.c) + 3} fontSize={8.5} fill="#fff" fontFamily="monospace">
           {last.c.toFixed(2)}

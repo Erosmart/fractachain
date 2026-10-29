@@ -18,6 +18,10 @@ export class WalletApi {
   }
 
   submitUsdcTrustline(xdr: string): Promise<UsdcFundResult> {
-    return this.http.post<UsdcFundResult>('/api/wallet/usdc/submit', { xdr }, { timeoutMs: CHAIN_TIMEOUT_MS });
+    return this.http.post<UsdcFundResult>(
+      '/api/wallet/usdc/submit',
+      { xdr },
+      { timeoutMs: CHAIN_TIMEOUT_MS },
+    );
   }
 }

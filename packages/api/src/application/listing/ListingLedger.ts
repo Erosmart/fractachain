@@ -84,7 +84,10 @@ export class ListingLedger {
     // Default to an issuer the backend can sign with: issuing under an account
     // we do not control leaves the tokens undistributable.
     const issuer =
-      dossier.issuerPublicKey.trim() || this.chain.platformIssuerPublicKey() || this.chain.deploymentIssuer() || '';
+      dossier.issuerPublicKey.trim() ||
+      this.chain.platformIssuerPublicKey() ||
+      this.chain.deploymentIssuer() ||
+      '';
     const listing: Listing = {
       id: `IPO-${ticker}-${Date.now().toString(36)}`,
       dossier: {
@@ -95,7 +98,8 @@ export class ListingLedger {
         proceedsWallet: normalizeAddress(dossier.proceedsWallet),
         paymentKind: dossier.paymentKind || 'USDC',
         jurisdiction: dossier.jurisdiction || 'Argentina',
-        minInvestmentUsdc: dossier.minInvestmentUsdc && dossier.minInvestmentUsdc > 0 ? dossier.minInvestmentUsdc : 15000,
+        minInvestmentUsdc:
+          dossier.minInvestmentUsdc && dossier.minInvestmentUsdc > 0 ? dossier.minInvestmentUsdc : 15000,
         offeringSoftCapUsdc: dossier.offeringSoftCapUsdc > 0 ? dossier.offeringSoftCapUsdc : 15000,
       },
       status: 'DRAFT',
@@ -124,12 +128,18 @@ export class ListingLedger {
 
   /** Caja de Valores deposit hash, derived identically at deploy and mint time. */
   cvDepositHash(listing: Listing): string {
-    return crypto.createHash('sha256').update(`${listing.dossier.cajaSubaccount}:${listing.dossier.isin}`).digest('hex');
+    return crypto
+      .createHash('sha256')
+      .update(`${listing.dossier.cajaSubaccount}:${listing.dossier.isin}`)
+      .digest('hex');
   }
 
   markDeployed(id: string, onChain?: { contractId: string }): Listing {
     const listing = this.assertDeployable(id);
-    listing.stockContract = onChain?.contractId || this.chain.sharedStockVault() || ListingLedger.syntheticContractId(`${listing.id}:stock`);
+    listing.stockContract =
+      onChain?.contractId ||
+      this.chain.sharedStockVault() ||
+      ListingLedger.syntheticContractId(`${listing.id}:stock`);
     // The licitación gets its own instance when the offering opens.
     listing.licitacionContract = '';
     listing.factoryProductId = this.repo.list().filter((l) => l.factoryProductId).length + 1;
@@ -137,7 +147,8 @@ export class ListingLedger {
     listing.status = 'DEPLOYED';
     listing.cvDepositHash = this.cvDepositHash(listing);
     if (!isStellarPublicKey(listing.dossier.issuerPublicKey)) {
-      listing.dossier.issuerPublicKey = this.chain.platformIssuerPublicKey() || this.chain.deploymentIssuer() || '';
+      listing.dossier.issuerPublicKey =
+        this.chain.platformIssuerPublicKey() || this.chain.deploymentIssuer() || '';
     }
     this.repo.save(listing);
     return listing;
@@ -176,13 +187,19 @@ export class ListingLedger {
     const { settleAt } = this.resolveSettleChoice(opts);
     const days = listing.dossier.offeringDays > 0 ? listing.dossier.offeringDays : 30;
     const deadlineMs = settleAt ? new Date(settleAt).getTime() : Date.now() + days * 86_400_000;
-    if (!Number.isFinite(deadlineMs) || deadlineMs <= Date.now()) throw new ValidationError('La fecha de cierre tiene que ser futura');
+    if (!Number.isFinite(deadlineMs) || deadlineMs <= Date.now())
+      throw new ValidationError('La fecha de cierre tiene que ser futura');
     return { listing, deadlineMs };
   }
 
-  markOpen(id: string, opts?: SettleChoice, onChain?: { contractId: string; factoryProductId?: number | null }): Listing {
+  markOpen(
+    id: string,
+    opts?: SettleChoice,
+    onChain?: { contractId: string; factoryProductId?: number | null },
+  ): Listing {
     const { listing } = this.prepareOpen(id, opts);
-    listing.licitacionContract = onChain?.contractId || ListingLedger.syntheticContractId(`${listing.id}:licitacion`);
+    listing.licitacionContract =
+      onChain?.contractId || ListingLedger.syntheticContractId(`${listing.id}:licitacion`);
     if (onChain?.factoryProductId != null) listing.factoryProductId = onChain.factoryProductId;
     listing.status = 'LISTED';
     listing.listedAt = new Date().toISOString();
@@ -199,12 +216,15 @@ export class ListingLedger {
     const listing = this.peek(id);
     const next = normalizeAddress(wallet);
     if (!isStellarPublicKey(next)) {
-      throw new ValidationError('La wallet que recibe la licitación no es una dirección Stellar válida (debe empezar con G)');
+      throw new ValidationError(
+        'La wallet que recibe la licitación no es una dirección Stellar válida (debe empezar con G)',
+      );
     }
     if (next === normalizeAddress(listing.dossier.issuerPublicKey)) {
       throw new ValidationError('La wallet que cobra no puede ser la cuenta emisora del token');
     }
-    if (listing.raisedUsdc > 0) throw new ConflictError('Ya hay inversores que aportaron: la wallet de cobro no se puede cambiar');
+    if (listing.raisedUsdc > 0)
+      throw new ConflictError('Ya hay inversores que aportaron: la wallet de cobro no se puede cambiar');
     listing.dossier.proceedsWallet = next;
     this.repo.save(listing);
     return listing;
@@ -236,10 +256,12 @@ export class ListingLedger {
       listing.tokensMinted * price - listing.raisedUsdc,
     );
     if (remaining <= 0) throw new DomainError('No queda cupo en esta licitación');
-    if (amount > remaining + EPSILON) throw new DomainError(`Solo quedan ${remaining.toLocaleString('es-AR')} USDC de cupo`);
+    if (amount > remaining + EPSILON)
+      throw new DomainError(`Solo quedan ${remaining.toLocaleString('es-AR')} USDC de cupo`);
     const ticket = listing.dossier.minInvestmentUsdc || price;
     const minNow = remaining < ticket ? price : ticket;
-    if (amount + EPSILON < minNow) throw new DomainError(`El aporte mínimo ahora es ${minNow.toLocaleString('es-AR')} USDC`);
+    if (amount + EPSILON < minNow)
+      throw new DomainError(`El aporte mínimo ahora es ${minNow.toLocaleString('es-AR')} USDC`);
 
     this.accounts.debitCash(accountId, amount);
     listing.raisedUsdc += amount;
@@ -256,9 +278,14 @@ export class ListingLedger {
   }
 
   /** Books a contribution that already settled on-chain. `amount` must come from the chain. */
-  recordOnChainContribution(id: string, accountId: string, input: { amount: number; tokens: number; raised: number }): Listing {
+  recordOnChainContribution(
+    id: string,
+    accountId: string,
+    input: { amount: number; tokens: number; raised: number },
+  ): Listing {
     const listing = this.require(id);
-    const units = listing.dossier.pricePerShareUsdc > 0 ? input.amount / listing.dossier.pricePerShareUsdc : input.tokens;
+    const units =
+      listing.dossier.pricePerShareUsdc > 0 ? input.amount / listing.dossier.pricePerShareUsdc : input.tokens;
     if (units > 0) {
       this.accounts.addHolding(accountId, {
         listingId: listing.id,
@@ -297,7 +324,8 @@ export class ListingLedger {
   closeSandbox(id: string): Listing {
     const listing = this.require(id);
     assertListed(listing);
-    if (this.isOnChain(listing)) throw new DomainError('Esta licitación cierra on-chain: usá el endpoint async de cierre');
+    if (this.isOnChain(listing))
+      throw new DomainError('Esta licitación cierra on-chain: usá el endpoint async de cierre');
     const min = listing.dossier.offeringSoftCapUsdc || 0;
     listing.status = min > 0 && listing.raisedUsdc >= min ? 'CLOSED_SUCCESS' : 'CLOSED_FAILED';
     listing.closedAt = new Date().toISOString();

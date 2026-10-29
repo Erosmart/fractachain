@@ -31,7 +31,10 @@ export class FriendbotClient implements IFriendbot {
   async fund(publicKey: string): Promise<FriendbotResult> {
     if (!isStellarPublicKey(publicKey)) return { funded: false, already: false };
     const addr = encodeURIComponent(publicKey);
-    const urls = [`${this.friendbotUrl}/?addr=${addr}`, `${this.clients.horizon().serverURL.toString().replace(/\/+$/, '')}/friendbot?addr=${addr}`];
+    const urls = [
+      `${this.friendbotUrl}/?addr=${addr}`,
+      `${this.clients.horizon().serverURL.toString().replace(/\/+$/, '')}/friendbot?addr=${addr}`,
+    ];
     for (const url of urls) {
       const viaFetch = await this.viaFetch(url);
       if (viaFetch.funded) return viaFetch;
@@ -70,7 +73,10 @@ export class FriendbotClient implements IFriendbot {
       child.on('error', () => resolve({ funded: false, already: false }));
       child.on('close', (code) => {
         const already = ALREADY.test(body);
-        resolve({ funded: code === 0 && (/successful/i.test(body) || already || /hash/i.test(body)), already });
+        resolve({
+          funded: code === 0 && (/successful/i.test(body) || already || /hash/i.test(body)),
+          already,
+        });
       });
     });
   }

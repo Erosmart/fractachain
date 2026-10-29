@@ -70,7 +70,9 @@ describe('auth', () => {
 
   it('rejects a wrong password with a generic message', async () => {
     await register('bob@example.com');
-    const res = await api().post('/api/auth/email').send({ email: 'bob@example.com', password: 'not-the-password' });
+    const res = await api()
+      .post('/api/auth/email')
+      .send({ email: 'bob@example.com', password: 'not-the-password' });
     expect(res.status).toBe(401);
     expect(res.body.message).toBe('Email o contraseña incorrectos');
   });
@@ -93,7 +95,9 @@ describe('auth', () => {
       createdAt: new Date().toISOString(),
       lastLoginAt: new Date().toISOString(),
     });
-    const res = await api().post('/api/auth/email').send({ email: 'victim@example.com', password: 'attacker-pass' });
+    const res = await api()
+      .post('/api/auth/email')
+      .send({ email: 'victim@example.com', password: 'attacker-pass' });
     expect(res.status).toBe(401);
   });
 
@@ -123,7 +127,10 @@ describe('auth', () => {
   it('validates input and reports field issues', async () => {
     const res = await api().post('/api/auth/email').send({ email: 'x@example.com', password: 'short' });
     expect(res.status).toBe(400);
-    const bad = await api().post('/api/auth/wallet').set('Authorization', `Bearer ${(await register('dan@example.com')).token}`).send({ mode: 'ROOT' });
+    const bad = await api()
+      .post('/api/auth/wallet')
+      .set('Authorization', `Bearer ${(await register('dan@example.com')).token}`)
+      .send({ mode: 'ROOT' });
     expect(bad.status).toBe(400);
     expect(bad.body.code).toBe('VALIDATION_FAILED');
   });
@@ -139,14 +146,24 @@ describe('authorization', () => {
 
   it('keeps KYC selfies private to the owner and admins', async () => {
     const owner = await register('frank@example.com');
-    const custody = await api().post('/api/auth/wallet').set('Authorization', `Bearer ${owner.token}`).send({ mode: 'SELF' });
+    const custody = await api()
+      .post('/api/auth/wallet')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ mode: 'SELF' });
     expect(custody.status).toBe(200);
     expect(custody.body.secretOnce).toMatch(/^S/);
-    const png = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000a49444154789c6300010000050001', 'hex');
+    const png = Buffer.from(
+      '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000a49444154789c6300010000050001',
+      'hex',
+    );
     const kyc = await api()
       .post('/api/kyc/onboard')
       .set('Authorization', `Bearer ${owner.token}`)
-      .send({ legalName: 'Frank SA', cuit: '20-12345678-9', selfieDataUrl: `data:image/png;base64,${png.toString('base64')}` });
+      .send({
+        legalName: 'Frank SA',
+        cuit: '20-12345678-9',
+        selfieDataUrl: `data:image/png;base64,${png.toString('base64')}`,
+      });
     expect(kyc.status).toBe(200);
     const url = `/api/kyc/selfie/${owner.user.id}`;
     expect((await api().get(url)).status).toBe(401);
@@ -161,7 +178,9 @@ describe('authorization', () => {
   it('refuses disguised uploads (SVG/HTML claiming to be an image)', async () => {
     const { token } = await register('heidi@example.com');
     await api().post('/api/auth/wallet').set('Authorization', `Bearer ${token}`).send({ mode: 'SELF' });
-    const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>').toString('base64');
+    const svg = Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+    ).toString('base64');
     const res = await api()
       .post('/api/kyc/onboard')
       .set('Authorization', `Bearer ${token}`)
@@ -200,18 +219,25 @@ describe('http hardening', () => {
     const missing = await api().get('/api/nope');
     expect(missing.status).toBe(404);
     expect(missing.body.success).toBe(false);
-    const broken = await api().post('/api/auth/email').set('Content-Type', 'application/json').send('{"email":');
+    const broken = await api()
+      .post('/api/auth/email')
+      .set('Content-Type', 'application/json')
+      .send('{"email":');
     expect(broken.status).toBe(400);
     expect(broken.body.message).toBe('JSON inválido');
   });
 
   it('rejects anonymous KYC uploads before buffering the body', async () => {
-    const res = await api().post('/api/kyc/onboard').send({ legalName: 'x', cuit: '20123456789', selfieDataUrl: 'x'.repeat(1_000_000) });
+    const res = await api()
+      .post('/api/kyc/onboard')
+      .send({ legalName: 'x', cuit: '20123456789', selfieDataUrl: 'x'.repeat(1_000_000) });
     expect(res.status).toBe(401);
   });
 
   it('caps body size outside the KYC upload', async () => {
-    const res = await api().post('/api/auth/email').send({ email: 'x@example.com', password: 'p'.repeat(200_000) });
+    const res = await api()
+      .post('/api/auth/email')
+      .send({ email: 'x@example.com', password: 'p'.repeat(200_000) });
     expect(res.status).toBe(413);
   });
 });

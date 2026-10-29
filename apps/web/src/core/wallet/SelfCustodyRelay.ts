@@ -23,9 +23,15 @@ export class SelfCustodyRelay {
   ) {}
 
   async signAndRelay<T>(req: RelayRequest): Promise<T> {
-    const prepared = await this.http.post<{ xdr?: string }>(req.prepare, req.body ?? {}, { timeoutMs: CHAIN_TIMEOUT_MS });
+    const prepared = await this.http.post<{ xdr?: string }>(req.prepare, req.body ?? {}, {
+      timeoutMs: CHAIN_TIMEOUT_MS,
+    });
     if (!prepared?.xdr) throw new Error(this.t('err.noXdr'));
     const signed = await this.signer.signTransaction(prepared.xdr);
-    return this.http.post<T>(req.submit, { ...(req.body ?? {}), xdr: signed }, { timeoutMs: CHAIN_TIMEOUT_MS });
+    return this.http.post<T>(
+      req.submit,
+      { ...(req.body ?? {}), xdr: signed },
+      { timeoutMs: CHAIN_TIMEOUT_MS },
+    );
   }
 }

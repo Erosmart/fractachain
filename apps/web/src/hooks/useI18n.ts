@@ -1,7 +1,13 @@
 import { useCallback, useContext, useMemo, useSyncExternalStore } from 'react';
 import { LocaleContext } from '@/components/island/LocaleContext';
 import { container } from '@/core/container';
-import { messagesFor, translate, type Locale, type Messages, type TranslateVars } from '@/core/i18n/translate';
+import {
+  messagesFor,
+  translate,
+  type Locale,
+  type Messages,
+  type TranslateVars,
+} from '@/core/i18n/translate';
 
 export interface I18n {
   locale: Locale;

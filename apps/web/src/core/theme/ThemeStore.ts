@@ -31,7 +31,10 @@ export class ThemeStore extends Store<ThemeState> {
    * supports view transitions. `commitSync` lets the React layer flush the
    * icon swap synchronously inside the transition (it wraps `flushSync`).
    */
-  readonly toggle = (origin?: HTMLElement | null, commitSync: (fn: () => void) => void = (fn) => fn()): void => {
+  readonly toggle = (
+    origin?: HTMLElement | null,
+    commitSync: (fn: () => void) => void = (fn) => fn(),
+  ): void => {
     const next: Theme = ThemeStore.fromDocument() === 'dark' ? 'light' : 'dark';
     const commit = () => {
       document.documentElement.classList.toggle('dark', next === 'dark');
@@ -58,7 +61,10 @@ export class ThemeStore extends Store<ThemeState> {
       const { top, left, width, height } = origin.getBoundingClientRect();
       const x = left + width / 2;
       const y = top + height / 2;
-      const radius = Math.hypot(Math.max(left, window.innerWidth - left), Math.max(top, window.innerHeight - top));
+      const radius = Math.hypot(
+        Math.max(left, window.innerWidth - left),
+        Math.max(top, window.innerHeight - top),
+      );
       document.documentElement.animate(
         { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
         { duration: 400, easing: 'ease-in-out', pseudoElement: '::view-transition-new(root)' },

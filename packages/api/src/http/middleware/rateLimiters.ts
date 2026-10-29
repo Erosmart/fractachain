@@ -18,8 +18,16 @@ function limiter(windowMs: number, limit: number, message: string): RateLimitReq
 export class RateLimiters {
   readonly global = limiter(60_000, 300, 'Demasiadas solicitudes. Esperá un minuto.');
   readonly auth = limiter(15 * 60_000, 30, 'Demasiados intentos de ingreso. Probá de nuevo en 15 minutos.');
-  readonly secretExport = limiter(60 * 60_000, 5, 'Límite de exportación de clave alcanzado. Probá en una hora.');
+  readonly secretExport = limiter(
+    60 * 60_000,
+    5,
+    'Límite de exportación de clave alcanzado. Probá en una hora.',
+  );
   readonly faucet = limiter(10 * 60_000, 20, 'Demasiados pedidos de fondeo. Esperá unos minutos.');
   readonly kycSubmit = limiter(60 * 60_000, 10, 'Demasiados envíos de KYC. Probá en una hora.');
-  readonly heavyAdmin = limiter(10 * 60_000, 30, 'Demasiadas operaciones on-chain seguidas. Esperá unos minutos.');
+  readonly heavyAdmin = limiter(
+    10 * 60_000,
+    30,
+    'Demasiadas operaciones on-chain seguidas. Esperá unos minutos.',
+  );
 }

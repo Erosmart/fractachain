@@ -64,7 +64,10 @@ function DynamicHeroText() {
       <h1 className="flex flex-wrap items-baseline justify-center gap-x-[0.28em] gap-y-0 text-[2.15rem] sm:text-[3.45rem] xl:text-[3.9rem] font-extrabold tracking-tight text-black leading-[1.15] text-center max-w-full">
         <span className="font-display">{messages.hero.invert}</span>
         <span className="hero-lcd relative inline-block max-w-full text-[1.02em] sm:text-[1.04em] align-baseline">
-          <span className="pointer-events-none absolute left-0 top-0 -z-10 h-0 overflow-hidden opacity-0" aria-hidden>
+          <span
+            className="pointer-events-none absolute left-0 top-0 -z-10 h-0 overflow-hidden opacity-0"
+            aria-hidden
+          >
             {sectors.map((s, i) => (
               <span
                 key={`measure-${s.text}`}

@@ -51,7 +51,11 @@ export class PortfolioService {
   ) {}
 
   async quote(listing: Listing): Promise<MarketQuote> {
-    const base = { listingId: listing.id, tokenTicker: listing.dossier.tokenTicker, legalName: listing.dossier.legalName };
+    const base = {
+      listingId: listing.id,
+      tokenTicker: listing.dossier.tokenTicker,
+      legalName: listing.dossier.legalName,
+    };
     if (this.sdexMarket.available(listing)) {
       try {
         const security = this.sdexMarket.listingAsset(listing);
@@ -61,7 +65,8 @@ export class PortfolioService {
           this.sdex.recentTrades(security, counter, 5).catch(() => [] as SdexTrade[]),
         ]);
         const last = trades[0];
-        if (last && last.price > 0) return { ...base, price: last.price, source: 'sdex_last', asOf: last.createdAt };
+        if (last && last.price > 0)
+          return { ...base, price: last.price, source: 'sdex_last', asOf: last.createdAt };
         if (book?.midPrice && book.midPrice > 0) {
           return { ...base, price: book.midPrice, source: 'sdex_mid', asOf: new Date().toISOString() };
         }
@@ -72,12 +77,22 @@ export class PortfolioService {
     try {
       const book = this.sandbox.book(listing.id);
       if (book.trades?.length && book.lastPrice > 0) {
-        return { ...base, price: book.lastPrice, source: 'sandbox_last', asOf: book.trades[0]?.createdAt || new Date().toISOString() };
+        return {
+          ...base,
+          price: book.lastPrice,
+          source: 'sandbox_last',
+          asOf: book.trades[0]?.createdAt || new Date().toISOString(),
+        };
       }
     } catch {
       // listing without a book yet
     }
-    return { ...base, price: listing.dossier.pricePerShareUsdc, source: 'ipo', asOf: listing.closedAt || listing.listedAt || listing.createdAt };
+    return {
+      ...base,
+      price: listing.dossier.pricePerShareUsdc,
+      source: 'ipo',
+      asOf: listing.closedAt || listing.listedAt || listing.createdAt,
+    };
   }
 
   async build(accountId: string) {
@@ -98,7 +113,14 @@ export class PortfolioService {
           const shares = economicShares(h);
           const quote: MarketQuote = listing
             ? await quoteOf(listing)
-            : { listingId: h.listingId, tokenTicker: h.tokenTicker, legalName: h.tokenTicker, price: 0, source: 'ipo', asOf: new Date().toISOString() };
+            : {
+                listingId: h.listingId,
+                tokenTicker: h.tokenTicker,
+                legalName: h.tokenTicker,
+                price: 0,
+                source: 'ipo',
+                asOf: new Date().toISOString(),
+              };
           const marketValue = round6(shares * quote.price);
           const costBasis = round6(h.usdcAmount || 0);
           const pnl = round6(marketValue - costBasis);
@@ -137,7 +159,9 @@ export class PortfolioService {
           };
         }),
       ),
-      account.publicKey && usdcIssuer ? this.horizon.assetBalance(account.publicKey, 'USDC', usdcIssuer) : Promise.resolve(0),
+      account.publicKey && usdcIssuer
+        ? this.horizon.assetBalance(account.publicKey, 'USDC', usdcIssuer)
+        : Promise.resolve(0),
       account.publicKey ? this.horizon.nativeXlm(account.publicKey) : Promise.resolve(0),
     ]);
 

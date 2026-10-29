@@ -18,7 +18,11 @@ export class ListingsApi {
 
   /** Custodial / sandbox path: the platform signs. */
   contribute(id: string, usdcAmount: number): Promise<ListingDetail> {
-    return this.http.post<ListingDetail>(`/api/listings/${enc(id)}/contribute`, { usdcAmount }, { timeoutMs: CHAIN_TIMEOUT_MS });
+    return this.http.post<ListingDetail>(
+      `/api/listings/${enc(id)}/contribute`,
+      { usdcAmount },
+      { timeoutMs: CHAIN_TIMEOUT_MS },
+    );
   }
 
   contributePreparePath(id: string): string {
@@ -38,11 +42,19 @@ export class ListingsApi {
   }
 
   finalize(id: string): Promise<ChainActionResult> {
-    return this.http.post<ChainActionResult>(`/api/listings/${enc(id)}/finalize`, {}, { timeoutMs: CHAIN_TIMEOUT_MS });
+    return this.http.post<ChainActionResult>(
+      `/api/listings/${enc(id)}/finalize`,
+      {},
+      { timeoutMs: CHAIN_TIMEOUT_MS },
+    );
   }
 
   refund(id: string): Promise<ChainActionResult> {
-    return this.http.post<ChainActionResult>(`/api/listings/${enc(id)}/refund`, {}, { timeoutMs: CHAIN_TIMEOUT_MS });
+    return this.http.post<ChainActionResult>(
+      `/api/listings/${enc(id)}/refund`,
+      {},
+      { timeoutMs: CHAIN_TIMEOUT_MS },
+    );
   }
 
   trustline(id: string): Promise<unknown> {
@@ -50,11 +62,19 @@ export class ListingsApi {
   }
 
   claim(id: string): Promise<ChainActionResult> {
-    return this.http.post<ChainActionResult>(`/api/listings/${enc(id)}/claim`, {}, { timeoutMs: CHAIN_TIMEOUT_MS });
+    return this.http.post<ChainActionResult>(
+      `/api/listings/${enc(id)}/claim`,
+      {},
+      { timeoutMs: CHAIN_TIMEOUT_MS },
+    );
   }
 
   distribute(id: string): Promise<ChainActionResult> {
-    return this.http.post<ChainActionResult>(`/api/listings/${enc(id)}/distribute`, {}, { timeoutMs: CHAIN_TIMEOUT_MS });
+    return this.http.post<ChainActionResult>(
+      `/api/listings/${enc(id)}/distribute`,
+      {},
+      { timeoutMs: CHAIN_TIMEOUT_MS },
+    );
   }
 
   claimDividends(id: string): Promise<{ amount: number; user: unknown }> {

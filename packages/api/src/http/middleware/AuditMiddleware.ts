@@ -40,13 +40,24 @@ export class AuditMiddleware {
   }
 
   /** Same, for events recorded from inside a handler. */
-  record(req: Request, action: string, target: string | null, outcome: 'success' | 'failure' = 'success', details?: Record<string, unknown>): void {
+  record(
+    req: Request,
+    action: string,
+    target: string | null,
+    outcome: 'success' | 'failure' = 'success',
+    details?: Record<string, unknown>,
+  ): void {
     this.trail.record(auditContext(req), action, target, outcome, details);
   }
 }
 
-export const param = (name: string): TargetOf => (req) => (req.params?.[name] ? String(req.params[name]) : null);
-export const bodyField = (name: string): TargetOf => (req) => {
-  const value = (req.body as Record<string, unknown> | undefined)?.[name];
-  return typeof value === 'string' ? value.trim().toLowerCase() : null;
-};
+export const param =
+  (name: string): TargetOf =>
+  (req) =>
+    req.params?.[name] ? String(req.params[name]) : null;
+export const bodyField =
+  (name: string): TargetOf =>
+  (req) => {
+    const value = (req.body as Record<string, unknown> | undefined)?.[name];
+    return typeof value === 'string' ? value.trim().toLowerCase() : null;
+  };

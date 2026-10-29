@@ -21,7 +21,15 @@ const { api, wallet } = container;
 
 /** Offering page: dossier, live on-chain state and every investor action. */
 function MarketDetailPage({ listingId }: { listingId: string }) {
-  const { user, refreshUser, approveToken, claimTokens, distributeTokens, finalizeOffering, refundContribution } = useAuth();
+  const {
+    user,
+    refreshUser,
+    approveToken,
+    claimTokens,
+    distributeTokens,
+    finalizeOffering,
+    refundContribution,
+  } = useAuth();
   const sessionId = user?.id ?? null;
   const { t } = useI18n();
   const [listing, setListing] = useState<ListingDetail | null>(null);
@@ -91,7 +99,11 @@ function MarketDetailPage({ listingId }: { listingId: string }) {
         setNotice(t('market.subscribedRaised', { n: raised }));
       }
     } catch (err) {
-      setNotice(err instanceof ApiError && err.isNetwork ? t('market.apiDown') : errorMessage(err, t('market.subscribeFail')));
+      setNotice(
+        err instanceof ApiError && err.isNetwork
+          ? t('market.apiDown')
+          : errorMessage(err, t('market.subscribeFail')),
+      );
     } finally {
       setBusy(false);
     }
@@ -179,10 +191,14 @@ function MarketDetailPage({ listingId }: { listingId: string }) {
     const stateName = live.stateName;
     const canFinalize = Boolean(live.canFinalize);
     const failed = listing.status === 'CLOSED_FAILED' || stateName === 'Failed';
-    const success = listing.status === 'CLOSED_SUCCESS' || stateName === 'Successful' || stateName === 'Terminated';
+    const success =
+      listing.status === 'CLOSED_SUCCESS' || stateName === 'Successful' || stateName === 'Terminated';
     const holding = user?.holdings?.find((h) => h.listingId === listing.id);
     const canClaim =
-      success && Boolean(user?.trustlines?.includes(listing.id)) && (holding?.tokensOwed || 0) > 0 && !holding?.refundedAt;
+      success &&
+      Boolean(user?.trustlines?.includes(listing.id)) &&
+      (holding?.tokensOwed || 0) > 0 &&
+      !holding?.refundedAt;
     const canRefund = Boolean(live.live) && failed && Boolean(holding) && !holding?.refundedAt;
     // Units already paid on-ledger to the user's wallet (what Freighter shows)
     // vs. units that exist only in the platform ledger and can still be sent.
@@ -208,7 +224,9 @@ function MarketDetailPage({ listingId }: { listingId: string }) {
 
     return (
       <div className="max-w-5xl mx-auto py-6 space-y-6">
-        <div className="rounded-2xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950 mb-4">{t('market.honestyBanner')}</div>
+        <div className="rounded-2xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950 mb-4">
+          {t('market.honestyBanner')}
+        </div>
         <a href="/market" className="inline-flex items-center gap-1.5 text-sm text-neutral-500">
           <ArrowLeft className="w-4 h-4" /> {t('market.back')}
         </a>
@@ -227,25 +245,60 @@ function MarketDetailPage({ listingId }: { listingId: string }) {
                 <ShieldCheck className="w-5 h-5" /> {t('market.dossier')}
               </h2>
               <dl className="grid sm:grid-cols-2 gap-3 text-sm">
-                <div><dt className="text-neutral-500">CUIT</dt><dd className="font-bold">{d.cuit}</dd></div>
-                <div><dt className="text-neutral-500">ISIN</dt><dd className="font-mono">{d.isin}</dd></div>
-                <div><dt className="text-neutral-500">CNV</dt><dd>{d.cnvRecordId}</dd></div>
-                <div><dt className="text-neutral-500">BYMA</dt><dd>{d.bymaRequestId || '—'}</dd></div>
-                <div><dt className="text-neutral-500">Caja de Valores</dt><dd className="font-mono text-xs">{d.cajaSubaccount}</dd></div>
-                <div><dt className="text-neutral-500">{t('market.custodian')}</dt><dd>{d.custodianCuit}</dd></div>
-                <div><dt className="text-neutral-500">{t('admIss.f.auditor')}</dt><dd>{d.auditor}</dd></div>
-                <div><dt className="text-neutral-500">{t('market.backing')}</dt><dd>{validation.token.backing}</dd></div>
+                <div>
+                  <dt className="text-neutral-500">CUIT</dt>
+                  <dd className="font-bold">{d.cuit}</dd>
+                </div>
+                <div>
+                  <dt className="text-neutral-500">ISIN</dt>
+                  <dd className="font-mono">{d.isin}</dd>
+                </div>
+                <div>
+                  <dt className="text-neutral-500">CNV</dt>
+                  <dd>{d.cnvRecordId}</dd>
+                </div>
+                <div>
+                  <dt className="text-neutral-500">BYMA</dt>
+                  <dd>{d.bymaRequestId || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-neutral-500">Caja de Valores</dt>
+                  <dd className="font-mono text-xs">{d.cajaSubaccount}</dd>
+                </div>
+                <div>
+                  <dt className="text-neutral-500">{t('market.custodian')}</dt>
+                  <dd>{d.custodianCuit}</dd>
+                </div>
+                <div>
+                  <dt className="text-neutral-500">{t('admIss.f.auditor')}</dt>
+                  <dd>{d.auditor}</dd>
+                </div>
+                <div>
+                  <dt className="text-neutral-500">{t('market.backing')}</dt>
+                  <dd>{validation.token.backing}</dd>
+                </div>
               </dl>
               <details className="pt-2">
-                <summary className="text-xs text-neutral-500 cursor-pointer select-none">{t('market.techDetails')}</summary>
+                <summary className="text-xs text-neutral-500 cursor-pointer select-none">
+                  {t('market.techDetails')}
+                </summary>
                 <dl className="grid sm:grid-cols-2 gap-3 text-sm pt-3">
-                  <div className="sm:col-span-2"><dt className="text-neutral-500">{t('market.estatuto')}</dt><dd className="font-mono text-xs break-all">{d.estatutoHash}</dd></div>
-                  <div className="sm:col-span-2"><dt className="text-neutral-500">Stock vault</dt><dd className="font-mono text-xs break-all">{listing.stockContract}</dd></div>
+                  <div className="sm:col-span-2">
+                    <dt className="text-neutral-500">{t('market.estatuto')}</dt>
+                    <dd className="font-mono text-xs break-all">{d.estatutoHash}</dd>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <dt className="text-neutral-500">Stock vault</dt>
+                    <dd className="font-mono text-xs break-all">{listing.stockContract}</dd>
+                  </div>
                   <div className="sm:col-span-2">
                     <dt className="text-neutral-500">{t('market.licitacion')}</dt>
                     <dd className="font-mono text-xs break-all">
                       {String(listing.licitacionContract || '').startsWith('C') ? (
-                        <ExternalLink href={explorerContract(listing.licitacionContract)} className="underline">
+                        <ExternalLink
+                          href={explorerContract(listing.licitacionContract)}
+                          className="underline"
+                        >
                           {listing.licitacionContract}
                         </ExternalLink>
                       ) : (
@@ -253,7 +306,10 @@ function MarketDetailPage({ listingId }: { listingId: string }) {
                       )}
                     </dd>
                   </div>
-                  <div className="sm:col-span-2"><dt className="text-neutral-500">{t('market.cvDeposit')}</dt><dd className="font-mono text-xs break-all">{listing.cvDepositHash}</dd></div>
+                  <div className="sm:col-span-2">
+                    <dt className="text-neutral-500">{t('market.cvDeposit')}</dt>
+                    <dd className="font-mono text-xs break-all">{listing.cvDepositHash}</dd>
+                  </div>
                 </dl>
                 <ul className="text-sm space-y-1 pt-2">
                   {validation.checks.map((c) => (
@@ -270,10 +326,12 @@ function MarketDetailPage({ listingId }: { listingId: string }) {
               <h3 className="font-display font-extrabold">{t('market.subscribe')}</h3>
               <p className="text-sm font-bold">{statusLabel}</p>
               <p className="text-sm text-neutral-600">
-                {formatInt(live.raised ?? listing.raisedUsdc)} / {formatInt(d.offeringHardCapUsdc)} {unit} · {t('market.min')}{' '}
-                {formatInt(d.minInvestmentUsdc || d.pricePerShareUsdc)} {unit}
+                {formatInt(live.raised ?? listing.raisedUsdc)} / {formatInt(d.offeringHardCapUsdc)} {unit} ·{' '}
+                {t('market.min')} {formatInt(d.minInvestmentUsdc || d.pricePerShareUsdc)} {unit}
               </p>
-              {typeof live.investorRwa === 'number' && <p className="text-xs text-neutral-500 font-mono">RWA on-chain: {live.investorRwa}</p>}
+              {typeof live.investorRwa === 'number' && (
+                <p className="text-xs text-neutral-500 font-mono">RWA on-chain: {live.investorRwa}</p>
+              )}
               <input
                 type="number"
                 inputMode="decimal"
@@ -285,9 +343,13 @@ function MarketDetailPage({ listingId }: { listingId: string }) {
                 className="w-full px-3 py-3 rounded-xl border border-black/10 font-mono"
               />
               {listing.status === 'CLOSED_SUCCESS' && (
-                <p className="text-sm text-[#2f6f28] font-bold">{live.live ? t('market.closedSuccess', { u: unit }) : t('market.closed')}</p>
+                <p className="text-sm text-[#2f6f28] font-bold">
+                  {live.live ? t('market.closedSuccess', { u: unit }) : t('market.closed')}
+                </p>
               )}
-              {listing.status === 'CLOSED_FAILED' && <p className="text-sm text-red-800 font-bold">{t('market.closedFailed')}</p>}
+              {listing.status === 'CLOSED_FAILED' && (
+                <p className="text-sm text-red-800 font-bold">{t('market.closedFailed')}</p>
+              )}
               {listing.status === 'LISTED' && (
                 <p className="text-sm text-neutral-600">
                   {live.live
@@ -305,12 +367,18 @@ function MarketDetailPage({ listingId }: { listingId: string }) {
                     </p>
                   )}
                   {typeof live.fiduciaryUsdc === 'number' && (
-                    <p className="text-[11px] text-neutral-500">{t('market.payoutBalance', { n: live.fiduciaryUsdc.toFixed(4), u: 'USDC' })}</p>
+                    <p className="text-[11px] text-neutral-500">
+                      {t('market.payoutBalance', { n: live.fiduciaryUsdc.toFixed(4), u: 'USDC' })}
+                    </p>
                   )}
                   {typeof live.fiduciaryUsdc !== 'number' && typeof live.fiduciaryXlm === 'number' && (
-                    <p className="text-[11px] text-neutral-500">{t('market.payoutBalance', { n: live.fiduciaryXlm.toFixed(4), u: 'XLM' })}</p>
+                    <p className="text-[11px] text-neutral-500">
+                      {t('market.payoutBalance', { n: live.fiduciaryXlm.toFixed(4), u: 'XLM' })}
+                    </p>
                   )}
-                  {live.fiduciaryMismatch && <p className="text-[11px] text-red-800 font-bold">{t('market.payoutMismatch')}</p>}
+                  {live.fiduciaryMismatch && (
+                    <p className="text-[11px] text-red-800 font-bold">{t('market.payoutMismatch')}</p>
+                  )}
                 </div>
               )}
               {user?.kycStatus === 'APPROVED' && !user?.trustlines?.includes(listing.id) && (
@@ -329,14 +397,21 @@ function MarketDetailPage({ listingId }: { listingId: string }) {
               {canClaim && (
                 <div className="space-y-2">
                   <p className="text-xs text-neutral-500">{t('market.claimHint')}</p>
-                  <button type="button" disabled={busy} onClick={claim} className="w-full py-3 rounded-2xl border border-black/10 font-display font-bold">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={claim}
+                    className="w-full py-3 rounded-2xl border border-black/10 font-display font-bold"
+                  >
                     {t('market.claim')}
                   </button>
                 </div>
               )}
               {user && holding && (Number(holding.tokens) > 0 || onChainUnits > 0) && (
                 <div className="space-y-2 border-t border-black/10 pt-3">
-                  <p className="text-xs text-neutral-600">{t('market.walletUnits', { n: onChainUnits.toFixed(4), code: d.tokenTicker })}</p>
+                  <p className="text-xs text-neutral-600">
+                    {t('market.walletUnits', { n: onChainUnits.toFixed(4), code: d.tokenTicker })}
+                  </p>
                   {d.issuerPublicKey ? (
                     <p className="text-[11px] font-mono break-all text-neutral-500">
                       {d.tokenTicker}:{d.issuerPublicKey}
@@ -345,7 +420,9 @@ function MarketDetailPage({ listingId }: { listingId: string }) {
                     <p className="text-[11px] text-neutral-500">{t('market.noIssuerYet')}</p>
                   )}
                   <p className="text-[11px] text-neutral-500">
-                    {user.custodyMode === 'SELF' ? t('market.freighterHintSelf') : t('market.freighterHintCustodial')}
+                    {user.custodyMode === 'SELF'
+                      ? t('market.freighterHintSelf')
+                      : t('market.freighterHintCustodial')}
                   </p>
                   {pendingOnChain > 0 && (
                     <button
@@ -360,11 +437,18 @@ function MarketDetailPage({ listingId }: { listingId: string }) {
                 </div>
               )}
               {canRefund && (
-                <button type="button" disabled={busy} onClick={runRefund} className="w-full py-3 rounded-2xl border border-black/10 font-display font-bold">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={runRefund}
+                  className="w-full py-3 rounded-2xl border border-black/10 font-display font-bold"
+                >
                   {busy ? t('market.refundBusy') : t('market.refund', { u: unit })}
                 </button>
               )}
-              {holding?.refundedAt && <p className="text-sm text-[#2f6f28] font-bold">{t('dash.refunded')}</p>}
+              {holding?.refundedAt && (
+                <p className="text-sm text-[#2f6f28] font-bold">{t('dash.refunded')}</p>
+              )}
               {user?.kycStatus !== 'APPROVED' && (
                 <p className="text-sm text-neutral-600">
                   {t('market.kycOnly')}{' '}
@@ -397,29 +481,44 @@ function MarketDetailPage({ listingId }: { listingId: string }) {
                 </p>
               )}
               {listing.onChain?.explorer && (
-                <ExternalLink href={listing.onChain.explorer} className="block text-xs font-mono underline break-all">
+                <ExternalLink
+                  href={listing.onChain.explorer}
+                  className="block text-xs font-mono underline break-all"
+                >
                   {t('market.contract')}
                 </ExternalLink>
               )}
               {listing.onChain?.contributeExplorer && (
-                <ExternalLink href={listing.onChain.contributeExplorer} className="block text-xs font-mono underline break-all">
+                <ExternalLink
+                  href={listing.onChain.contributeExplorer}
+                  className="block text-xs font-mono underline break-all"
+                >
                   {t('market.contributeTx')}
                 </ExternalLink>
               )}
               {listing.onChain?.finalizeExplorer && (
-                <ExternalLink href={listing.onChain.finalizeExplorer} className="block text-xs font-mono underline break-all">
+                <ExternalLink
+                  href={listing.onChain.finalizeExplorer}
+                  className="block text-xs font-mono underline break-all"
+                >
                   {t('market.finalizeTx')}
                 </ExternalLink>
               )}
               {lastHash?.explorer && (
-                <ExternalLink href={lastHash.explorer} className="block text-xs font-mono underline break-all">
+                <ExternalLink
+                  href={lastHash.explorer}
+                  className="block text-xs font-mono underline break-all"
+                >
                   {lastHashLabel}
                   {': '}
                   {lastHash.hash}
                 </ExternalLink>
               )}
               {listing.onChain?.trustlineExplorer && (
-                <ExternalLink href={listing.onChain.trustlineExplorer} className="block text-xs font-mono underline break-all">
+                <ExternalLink
+                  href={listing.onChain.trustlineExplorer}
+                  className="block text-xs font-mono underline break-all"
+                >
                   {t('market.trustline')}
                 </ExternalLink>
               )}

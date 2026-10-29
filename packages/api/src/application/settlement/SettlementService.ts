@@ -60,7 +60,9 @@ export class SettlementService {
       const result: SettlementResult = { accountId: account.id, claimed: owed };
       if (this.sdexMarket.available(listing)) {
         try {
-          result.distributedHash = (await this.sdexMarket.distributeClaimedTokens({ listingId: listing.id, accountId: account.id })).hash;
+          result.distributedHash = (
+            await this.sdexMarket.distributeClaimedTokens({ listingId: listing.id, accountId: account.id })
+          ).hash;
         } catch (err) {
           result.error = errorMessage(err);
         }
@@ -105,10 +107,15 @@ export class SettlementService {
 
     const result = await this.licitacion.finalize(listing);
     const success = result.state === 1;
-    const updated = this.listings.markClosed(listing.id, success ? 'CLOSED_SUCCESS' : 'CLOSED_FAILED', result.raised, {
-      finalizeHash: result.hash,
-      proceedsPaidTo: result.fiduciary,
-    });
+    const updated = this.listings.markClosed(
+      listing.id,
+      success ? 'CLOSED_SUCCESS' : 'CLOSED_FAILED',
+      result.raised,
+      {
+        finalizeHash: result.hash,
+        proceedsPaidTo: result.fiduciary,
+      },
+    );
     return {
       ...updated,
       settlements: await this.settleHolders(updated),

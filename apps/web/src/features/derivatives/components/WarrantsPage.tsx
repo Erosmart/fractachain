@@ -56,7 +56,8 @@ const PRICE_MAP: Record<Commodity, number> = { Soja: 310, Maíz: 175, Trigo: 220
 /** Warrants / certificates of deposit (roadmap): demo vaults and a loan calculator. */
 function WarrantsPage() {
   const { t } = useI18n();
-  const comLabel = (c: string) => t(c === 'Soja' ? 'misc.comSoja' : c === 'Maíz' ? 'misc.comMaiz' : 'misc.comTrigo');
+  const comLabel = (c: string) =>
+    t(c === 'Soja' ? 'misc.comSoja' : c === 'Maíz' ? 'misc.comMaiz' : 'misc.comTrigo');
   const [calcCommodity, setCalcCommodity] = useState<Commodity>('Soja');
   const [calcTons, setCalcTons] = useState<number>(500);
   const [calcLtv, setCalcLtv] = useState<number>(55);
@@ -73,7 +74,9 @@ function WarrantsPage() {
   }, [issuedSuccess]);
 
   const handleCreateWarrant = () => {
-    setIssuedSuccess(t('wrr.simLoan', { n: formatInt(loanCapacity), tons: calcTons, c: comLabel(calcCommodity) }));
+    setIssuedSuccess(
+      t('wrr.simLoan', { n: formatInt(loanCapacity), tons: calcTons, c: comLabel(calcCommodity) }),
+    );
   };
 
   return (
@@ -84,7 +87,9 @@ function WarrantsPage() {
           <FileText className="w-3.5 h-3.5" />
           {t('wrr.kicker')}
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">{t('pages.warrantsTitle')}</h1>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">
+          {t('pages.warrantsTitle')}
+        </h1>
         <p className="text-neutral-600 text-xs sm:text-sm max-w-2xl">{t('wrr.lead')}</p>
         <MockDisclaimer product="Warrants" />
         <LiveContractLink kind="warrant" />
@@ -111,7 +116,10 @@ function WarrantsPage() {
 
           <div className="space-y-3">
             {MOCK_WARRANTS.map((war) => (
-              <div key={war.id} className="p-4 sm:p-5 rounded-3xl crystal-card hover:border-black/20 transition-all space-y-3">
+              <div
+                key={war.id}
+                className="p-4 sm:p-5 rounded-3xl crystal-card hover:border-black/20 transition-all space-y-3"
+              >
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-start">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -139,7 +147,9 @@ function WarrantsPage() {
                   </div>
                   <div>
                     <span className="text-neutral-500 text-[10px] block">{t('wrr.loan')}</span>
-                    <span className="font-bold font-mono text-[#2f6f28]">${formatInt(war.loanAmountUsd)}</span>
+                    <span className="font-bold font-mono text-[#2f6f28]">
+                      ${formatInt(war.loanAmountUsd)}
+                    </span>
                   </div>
                   <div>
                     <span className="text-neutral-500 text-[10px] block">{t('wrr.health')}</span>
@@ -169,7 +179,9 @@ function WarrantsPage() {
                     aria-pressed={calcCommodity === c}
                     onClick={() => setCalcCommodity(c)}
                     className={`py-2 px-2 rounded-xl text-xs font-semibold border transition-all ${
-                      calcCommodity === c ? 'bg-leaf-100 border-[#7ed86a] text-[#2f6f28]' : 'bg-white/70 border-black/10 text-neutral-500'
+                      calcCommodity === c
+                        ? 'bg-leaf-100 border-[#7ed86a] text-[#2f6f28]'
+                        : 'bg-white/70 border-black/10 text-neutral-500'
                     }`}
                   >
                     <span className="sm:hidden">{comLabel(c)}</span>
@@ -235,7 +247,10 @@ function WarrantsPage() {
             </div>
 
             {issuedSuccess && (
-              <div className="p-3 rounded-xl bg-leaf-100 border border-[#8fcb7a]/50 text-[#2f6f28] text-xs flex items-center gap-2" role="status">
+              <div
+                className="p-3 rounded-xl bg-leaf-100 border border-[#8fcb7a]/50 text-[#2f6f28] text-xs flex items-center gap-2"
+                role="status"
+              >
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>{issuedSuccess}</span>
               </div>

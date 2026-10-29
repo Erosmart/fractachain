@@ -19,8 +19,20 @@ describe('orderbook model', () => {
       ],
       trades: [],
       myOffers: [
-        { id: '1', selling: { asset_code: 'TKN', asset_type: 'credit_alphanum4' }, buying: { asset_type: 'credit_alphanum4' }, amount: 3, price: 11 },
-        { id: '2', selling: { asset_code: 'USDC', asset_type: 'credit_alphanum4' }, buying: { asset_type: 'credit_alphanum4' }, amount: 20, price: 0.1 },
+        {
+          id: '1',
+          selling: { asset_code: 'TKN', asset_type: 'credit_alphanum4' },
+          buying: { asset_type: 'credit_alphanum4' },
+          amount: 3,
+          price: 11,
+        },
+        {
+          id: '2',
+          selling: { asset_code: 'USDC', asset_type: 'credit_alphanum4' },
+          buying: { asset_type: 'credit_alphanum4' },
+          amount: 20,
+          price: 0.1,
+        },
       ],
       authorized: true,
       needsTrustline: false,
@@ -60,7 +72,15 @@ describe('orderbook model', () => {
 
 describe('normalizeStock', () => {
   it('accepts both the legacy custody shape and MervalStock rows', () => {
-    expect(normalizeStock({ tokenTicker: 'tYPF', ticker: 'YPFD', priceUsdc: 24.5, change24hPct: 3.4, custodiedSharesInCajaDeValores: 5 })).toMatchObject({
+    expect(
+      normalizeStock({
+        tokenTicker: 'tYPF',
+        ticker: 'YPFD',
+        priceUsdc: 24.5,
+        change24hPct: 3.4,
+        custodiedSharesInCajaDeValores: 5,
+      }),
+    ).toMatchObject({
       symbol: 'tYPF',
       tickerMerval: 'YPFD',
       priceUsd: 24.5,

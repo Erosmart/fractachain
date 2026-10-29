@@ -66,16 +66,22 @@ src/
 
 ## Seguridad
 
-- **CSP sin `unsafe-inline` en scripts.** Astro (`security.csp`) envía la política como
-  header con el sha256 de cada script inline que genera; el único `is:inline` (bootstrap
-  del tema) se hashea en `astro.config.mjs`. El middleware agrega `frame-ancestors 'none'`,
-  `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, COOP y HSTS (si es
-  HTTPS). `connect-src` se limita al API configurado, Stellar y Firebase.
-- **Token.** Bearer en `localStorage` con expiración (`expiresAt` del API): se descarta al
-  vencer, ante cualquier 401 y al cerrar sesión (que además revoca el token en el servidor
-  vía `POST /api/auth/logout`). El cliente HTTP solo adjunta el token al origen del API.
-- **Imágenes KYC.** Las selfies requieren auth: se descargan con el token y se muestran como
-  `blob:` (`AuthenticatedImage`), nunca con `<img src>` público.
+- **Sesión en cookie.** El API (mismo origen) setea `fc_session` `HttpOnly; SameSite=Strict`
+  (`__Host-` + `Secure` en producción). El JavaScript de la página nunca ve el token: en
+  `localStorage` solo queda una copia no sensible del usuario y `expiresAt` para pintar la UI
+  al instante (`SessionCache`). La verdad es `GET /api/auth/me`; un 401 cierra la sesión.
+- **CSRF.** El cliente HTTP manda `X-Requested-With: fractachain` en cada request al API (que
+  rechaza escrituras con cookie sin ese header) y nunca adjunta credenciales a terceros.
+- **2FA.** Diálogo de código (TOTP o recuperación) para cualquier login con segundo factor;
+  `/account/security` para activarlo (QR generado en el navegador), desactivarlo y cerrar
+  todas las sesiones. El panel admin avisa si el servidor exige 2FA.
+- **Email y contraseña.** `/verify-email`, `/forgot-password`, `/reset-password` (el token se
+  borra de la barra de direcciones); banner para reenviar la verificación.
+- **CSP sin `unsafe-inline` en scripts.** Astro (`security.csp`) envía la política como header
+  con el sha256 de cada script inline; el bootstrap del tema se hashea en `astro.config.mjs`.
+  El middleware agrega `frame-ancestors 'none'`, `X-Frame-Options`, `nosniff`,
+  `Referrer-Policy`, `Permissions-Policy`, COOP y HSTS (si es HTTPS). `connect-src 'self'`
+  (+ Stellar y Firebase).
 - **Redirecciones.** `?next=` solo acepta rutas relativas del mismo sitio.
 - **Selfie.** Se reescala a 1280px/JPEG en el navegador antes de subirla (menos payload y sin
-  metadata EXIF/GPS).
+  metadata EXIF/GPS); se muestra con `<img>` normal porque la cookie viaja sola.

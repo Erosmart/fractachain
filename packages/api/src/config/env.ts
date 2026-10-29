@@ -20,7 +20,9 @@ export const REPO_ROOT = path.resolve(API_ROOT, '..', '..');
 const bool = z
   .string()
   .optional()
-  .transform((v) => (v === undefined ? undefined : ['1', 'true', 'yes', 'on'].includes(v.trim().toLowerCase())));
+  .transform((v) =>
+    v === undefined ? undefined : ['1', 'true', 'yes', 'on'].includes(v.trim().toLowerCase()),
+  );
 
 const csv = z
   .string()
@@ -50,7 +52,11 @@ const EnvSchema = z.object({
   WALLET_PEPPER: z.string().optional(),
   /** Previous WALLET_PEPPER, kept only to decrypt-and-reseal during a key rotation. */
   WALLET_PEPPER_PREVIOUS: z.string().optional(),
-  SESSION_TTL_HOURS: z.coerce.number().positive().max(24 * 30).default(12),
+  SESSION_TTL_HOURS: z.coerce
+    .number()
+    .positive()
+    .max(24 * 30)
+    .default(12),
 
   ADMIN_EMAILS: csv,
   ADMIN_BOOTSTRAP_PASSWORD: z.string().optional(),
@@ -183,9 +189,12 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
 
   let tokenSecret = (e.AUTH_SECRET || e.AUTH_PEPPER || '').trim();
   if (!tokenSecret || PUBLIC_EXAMPLE_SECRETS.has(tokenSecret)) {
-    if (isProduction) problems.push('AUTH_SECRET falta o es un valor de ejemplo (usá 32+ caracteres aleatorios)');
+    if (isProduction)
+      problems.push('AUTH_SECRET falta o es un valor de ejemplo (usá 32+ caracteres aleatorios)');
     tokenSecret = crypto.randomBytes(32).toString('hex');
-    warnings.push('AUTH_SECRET no configurado: se generó uno efímero (las sesiones se invalidan al reiniciar)');
+    warnings.push(
+      'AUTH_SECRET no configurado: se generó uno efímero (las sesiones se invalidan al reiniciar)',
+    );
   } else if (isProduction && tokenSecret.length < 32) {
     problems.push('AUTH_SECRET tiene que tener al menos 32 caracteres');
   }

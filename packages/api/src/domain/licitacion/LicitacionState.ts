@@ -80,7 +80,11 @@ export function canFinalizeFromSnapshot(input: {
   deadlineMs: number | null;
   nowMs?: number;
 }): FinalizeGate {
-  if (input.state === LICITACION_STATE.Successful || input.state === LICITACION_STATE.Failed || input.state === LICITACION_STATE.Terminated) {
+  if (
+    input.state === LICITACION_STATE.Successful ||
+    input.state === LICITACION_STATE.Failed ||
+    input.state === LICITACION_STATE.Terminated
+  ) {
     return { canFinalize: false, reason: 'already_closed' };
   }
   if (input.state !== LICITACION_STATE.Open) {
@@ -105,9 +109,7 @@ export function expectedCloseStatus(input: {
   if (input.state === LICITACION_STATE.Failed) return 'CLOSED_FAILED';
   if (input.state === LICITACION_STATE.Terminated) return 'CLOSED_SUCCESS';
   if (input.state === LICITACION_STATE.Open) {
-    return input.softCap > 0 && input.raised + 1e-9 >= input.softCap
-      ? 'CLOSED_SUCCESS'
-      : 'CLOSED_FAILED';
+    return input.softCap > 0 && input.raised + 1e-9 >= input.softCap ? 'CLOSED_SUCCESS' : 'CLOSED_FAILED';
   }
   return null;
 }

@@ -72,10 +72,14 @@ export class AuthMiddleware {
 
   readonly requireAdmin: RequestHandler = (req, _res, next) => {
     if (!req.account) return next(new UnauthenticatedError('Iniciá sesión'));
-    if (!this.accounts.isAdmin(req.account)) return next(new ForbiddenError('Solo el admin puede hacer esto'));
+    if (!this.accounts.isAdmin(req.account))
+      return next(new ForbiddenError('Solo el admin puede hacer esto'));
     if (this.options.adminRequire2fa && !hasTwoFactor(req.account)) {
       return next(
-        new ForbiddenError('Activá la verificación en dos pasos (Cuenta → Seguridad) para usar el panel de admin.', 'TWO_FACTOR_REQUIRED'),
+        new ForbiddenError(
+          'Activá la verificación en dos pasos (Cuenta → Seguridad) para usar el panel de admin.',
+          'TWO_FACTOR_REQUIRED',
+        ),
       );
     }
     next();

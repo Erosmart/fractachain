@@ -73,7 +73,9 @@ export class ListingPresenter {
         useOfProceeds: d.useOfProceeds,
         deadline:
           listing.settleAt ||
-          (listing.listedAt ? new Date(new Date(listing.listedAt).getTime() + d.offeringDays * DAY_MS).toISOString() : null),
+          (listing.listedAt
+            ? new Date(new Date(listing.listedAt).getTime() + d.offeringDays * DAY_MS).toISOString()
+            : null),
         settlePolicy: listing.settlePolicy || 'ON_MIN',
         settleAt: listing.settleAt || null,
       },
@@ -84,9 +86,17 @@ export class ListingPresenter {
         { key: 'caja', ok: Boolean(d.cajaSubaccount), label: 'Subcuenta Caja de Valores' },
         { key: 'deploy', ok: Boolean(listing.stockContract), label: 'Contrato stock vault deployado' },
         { key: 'mint', ok: listing.tokensMinted > 0, label: 'Tokens 1:1 minteados' },
-        { key: 'por', ok: listing.tokensMinted === listing.sharesCustodied && listing.tokensMinted > 0, label: 'Proof of reserve 1:1' },
+        {
+          key: 'por',
+          ok: listing.tokensMinted === listing.sharesCustodied && listing.tokensMinted > 0,
+          label: 'Proof of reserve 1:1',
+        },
         { key: 'payout', ok: isStellarPublicKey(d.proceedsWallet), label: 'Wallet de cobro de la empresa' },
-        { key: 'paid', ok: Boolean(listing.proceedsPaidAt) || listing.status !== 'CLOSED_SUCCESS', label: 'Fondos acreditados a la empresa' },
+        {
+          key: 'paid',
+          ok: Boolean(listing.proceedsPaidAt) || listing.status !== 'CLOSED_SUCCESS',
+          label: 'Fondos acreditados a la empresa',
+        },
         { key: 'licitacion', ok: listing.status === 'LISTED', label: 'Licitación abierta' },
       ],
     };
@@ -96,7 +106,11 @@ export class ListingPresenter {
   pools() {
     return this.listings
       .list()
-      .filter((l) => l.status === 'LISTED' || (isOnChainListing(l) && (l.status === 'CLOSED_SUCCESS' || l.status === 'CLOSED_FAILED')))
+      .filter(
+        (l) =>
+          l.status === 'LISTED' ||
+          (isOnChainListing(l) && (l.status === 'CLOSED_SUCCESS' || l.status === 'CLOSED_FAILED')),
+      )
       .map((l) => {
         const d = l.dossier;
         const deadline = listingDeadline(l) ?? new Date();

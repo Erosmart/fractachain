@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
-import { ArrowDownRight, ArrowUpRight, Building2, CheckCircle2, DollarSign, ShieldCheck, TrendingUp, Zap } from 'lucide-react';
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Building2,
+  CheckCircle2,
+  DollarSign,
+  ShieldCheck,
+  TrendingUp,
+  Zap,
+} from 'lucide-react';
 import RequireOnboarding from '@/components/guards/RequireOnboarding';
 import { withIsland } from '@/components/island/withIsland';
 import LiveContractLink from '@/components/ui/LiveContractLink';
@@ -62,7 +71,9 @@ function Stocks() {
           <TrendingUp className="w-3.5 h-3.5 shrink-0" />
           {t('stk.kicker')}
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">{t('pages.stocksTitle')}</h1>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">
+          {t('pages.stocksTitle')}
+        </h1>
         <p className="text-neutral-600 text-xs sm:text-sm max-w-2xl">{t('stk.lead')}</p>
         <MockDisclaimer product="Merval" />
         <LiveContractLink kind="stockVault" />
@@ -88,7 +99,9 @@ function Stocks() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 text-xs">
           <div className="p-3 rounded-xl bg-black/5 border border-black/8 min-w-0">
             <span className="text-[10px] text-neutral-500 block">{t('stk.subaccount')}</span>
-            <span className="font-mono font-semibold text-black break-words">84920-CV {t('stk.segregated')}</span>
+            <span className="font-mono font-semibold text-black break-words">
+              84920-CV {t('stk.segregated')}
+            </span>
           </div>
           <div className="p-3 rounded-xl bg-black/5 border border-black/8">
             <span className="text-[10px] text-neutral-500 block">{t('stk.auditor')}</span>
@@ -109,9 +122,13 @@ function Stocks() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left: Stock Cards */}
         <div className="lg:col-span-7 space-y-4">
-          <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('stk.available')}</h3>
+          <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
+            {t('stk.available')}
+          </h3>
 
-          {stocks.length === 0 && <div className="p-5 rounded-3xl crystal-card text-xs text-neutral-600">{t('stk.empty')}</div>}
+          {stocks.length === 0 && (
+            <div className="p-5 rounded-3xl crystal-card text-xs text-neutral-600">{t('stk.empty')}</div>
+          )}
           <div className="space-y-3">
             {stocks.map((stock) => {
               const isSelected = selectedStock?.symbol === stock.symbol;
@@ -133,7 +150,9 @@ function Stocks() {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-bold text-black text-base">{stock.symbol}</span>
                         <span className="text-xs text-neutral-500 font-mono">({stock.tickerMerval})</span>
-                        <span className="px-2 py-0.5 rounded text-[9px] font-mono bg-leaf-100 text-[#2f6f28] border border-[#8fcb7a]/50">{t('stk.custody')}</span>
+                        <span className="px-2 py-0.5 rounded text-[9px] font-mono bg-leaf-100 text-[#2f6f28] border border-[#8fcb7a]/50">
+                          {t('stk.custody')}
+                        </span>
                       </div>
                       <div className="text-xs text-neutral-600 truncate">{stock.companyName}</div>
                       <div className="text-[10px] text-neutral-500 font-mono mt-0.5">ISIN: {stock.isin}</div>
@@ -142,10 +161,17 @@ function Stocks() {
 
                   <div className="text-left sm:text-right space-y-1 pl-14 sm:pl-0 shrink-0">
                     <div className="font-mono font-bold text-black text-base">
-                      ${stock.priceUsd.toFixed(2)} <span className="text-xs text-neutral-500 font-sans">USD</span>
+                      ${stock.priceUsd.toFixed(2)}{' '}
+                      <span className="text-xs text-neutral-500 font-sans">USD</span>
                     </div>
-                    <div className={`inline-flex items-center gap-0.5 text-xs font-mono font-bold ${isPositive ? 'text-[#2f6f28]' : 'text-red-700'}`}>
-                      {isPositive ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
+                    <div
+                      className={`inline-flex items-center gap-0.5 text-xs font-mono font-bold ${isPositive ? 'text-[#2f6f28]' : 'text-red-700'}`}
+                    >
+                      {isPositive ? (
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      ) : (
+                        <ArrowDownRight className="w-3.5 h-3.5" />
+                      )}
                       {isPositive ? `+${stock.change24h}%` : `${stock.change24h}%`}
                     </div>
                     <div className="text-[10px] text-neutral-500 font-mono block">
@@ -177,7 +203,9 @@ function Stocks() {
             <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center">
               <h3 className="text-base font-bold text-black">{t('stk.terminal')}</h3>
               <span className="text-xs font-mono text-[#2f6f28] font-bold">
-                {selectedStock ? `${selectedStock.symbol} • $${selectedStock.priceUsd.toFixed(2)} USD` : t('stk.noAssets')}
+                {selectedStock
+                  ? `${selectedStock.symbol} • $${selectedStock.priceUsd.toFixed(2)} USD`
+                  : t('stk.noAssets')}
               </span>
             </div>
 
@@ -188,7 +216,9 @@ function Stocks() {
                 aria-pressed={orderType === 'BUY'}
                 onClick={() => setOrderType('BUY')}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-                  orderType === 'BUY' ? 'bg-[#7ed86a] text-black shadow-md' : 'text-neutral-500 hover:text-black'
+                  orderType === 'BUY'
+                    ? 'bg-[#7ed86a] text-black shadow-md'
+                    : 'text-neutral-500 hover:text-black'
                 }`}
               >
                 {t('ob.buy')} {selectedStock?.symbol}
@@ -198,7 +228,9 @@ function Stocks() {
                 aria-pressed={orderType === 'SELL'}
                 onClick={() => setOrderType('SELL')}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-                  orderType === 'SELL' ? 'bg-red-500 text-white shadow-md' : 'text-neutral-500 hover:text-black'
+                  orderType === 'SELL'
+                    ? 'bg-red-500 text-white shadow-md'
+                    : 'text-neutral-500 hover:text-black'
                 }`}
               >
                 {t('ob.sell')} {selectedStock?.symbol}
@@ -227,7 +259,9 @@ function Stocks() {
             <div className="p-4 rounded-xl bg-black/5 border border-black/8 space-y-2 text-xs">
               <div className="flex justify-between text-neutral-500">
                 <span>{t('stk.unitPrice')}</span>
-                <span className="font-mono text-black">${(selectedStock?.priceUsd ?? 0).toFixed(2)} USDC</span>
+                <span className="font-mono text-black">
+                  ${(selectedStock?.priceUsd ?? 0).toFixed(2)} USDC
+                </span>
               </div>
               <div className="flex justify-between text-neutral-500">
                 <span>{t('stk.fee')}</span>
@@ -241,7 +275,10 @@ function Stocks() {
 
             {/* Trade Feedback */}
             {tradeSuccess && (
-              <div className="p-3 rounded-xl bg-leaf-100 border border-[#8fcb7a]/50 text-[#2f6f28] text-xs flex items-center gap-2" role="status">
+              <div
+                className="p-3 rounded-xl bg-leaf-100 border border-[#8fcb7a]/50 text-[#2f6f28] text-xs flex items-center gap-2"
+                role="status"
+              >
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>{tradeSuccess}</span>
               </div>
@@ -283,7 +320,10 @@ function Stocks() {
             </div>
 
             {destokenizeDone && (
-              <div className="p-3 rounded-xl bg-leaf-100 border border-[#8fcb7a]/50 text-[#2f6f28] text-xs flex items-center gap-2" role="status">
+              <div
+                className="p-3 rounded-xl bg-leaf-100 border border-[#8fcb7a]/50 text-[#2f6f28] text-xs flex items-center gap-2"
+                role="status"
+              >
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>{t('stk.destokDone')}</span>
               </div>

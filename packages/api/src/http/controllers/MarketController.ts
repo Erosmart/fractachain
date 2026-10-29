@@ -7,7 +7,15 @@ import type { OnChainStatusService } from '../../application/offering/OnChainSta
 import { currentAccount, type AuthMiddleware } from '../middleware/AuthMiddleware';
 import { body, bodyOf, params } from '../middleware/validate';
 import { noStore, ok } from '../respond';
-import { IdParam, ListingIdParam, SandboxOrderBody, SdexCancelBody, SdexOrderBody, TrustlinePrepareBody, XdrBody } from '../schemas';
+import {
+  IdParam,
+  ListingIdParam,
+  SandboxOrderBody,
+  SdexCancelBody,
+  SdexOrderBody,
+  TrustlinePrepareBody,
+  XdrBody,
+} from '../schemas';
 import type { Controller } from './Controller';
 
 /**
@@ -57,22 +65,61 @@ export class MarketController implements Controller {
       ok(res, await this.sdex.book(listingId(req), req.account?.id));
     });
     r.post('/api/sdex/:listingId/orders/prepare', auth, listing, body(SdexOrderBody), async (req, res) => {
-      ok(res, await this.sdex.prepareOrder({ listingId: listingId(req), accountId: currentAccount(req).id, ...bodyOf(req, SdexOrderBody) }));
+      ok(
+        res,
+        await this.sdex.prepareOrder({
+          listingId: listingId(req),
+          accountId: currentAccount(req).id,
+          ...bodyOf(req, SdexOrderBody),
+        }),
+      );
     });
     /** One-shot path for custodial wallets: build, sign and submit. */
     r.post('/api/sdex/:listingId/orders', auth, listing, body(SdexOrderBody), async (req, res) => {
-      ok(res, await this.sdex.placeCustodialOrder({ listingId: listingId(req), accountId: currentAccount(req).id, ...bodyOf(req, SdexOrderBody) }));
+      ok(
+        res,
+        await this.sdex.placeCustodialOrder({
+          listingId: listingId(req),
+          accountId: currentAccount(req).id,
+          ...bodyOf(req, SdexOrderBody),
+        }),
+      );
     });
     /** Custodial cancels are submitted; self-custody gets the XDR to sign. */
     r.post('/api/sdex/:listingId/orders/cancel', auth, listing, body(SdexCancelBody), async (req, res) => {
       const account = currentAccount(req);
       const b = bodyOf(req, SdexCancelBody);
-      const cancel = { listingId: listingId(req), accountId: account.id, side: b.side, offerId: b.offerId, price: b.price, legacy: Boolean(b.legacy) };
-      ok(res, account.custodyMode === 'CUSTODIAL' ? await this.sdex.cancelCustodialOrder(cancel) : await this.sdex.prepareCancel(cancel));
+      const cancel = {
+        listingId: listingId(req),
+        accountId: account.id,
+        side: b.side,
+        offerId: b.offerId,
+        price: b.price,
+        legacy: Boolean(b.legacy),
+      };
+      ok(
+        res,
+        account.custodyMode === 'CUSTODIAL'
+          ? await this.sdex.cancelCustodialOrder(cancel)
+          : await this.sdex.prepareCancel(cancel),
+      );
     });
-    r.post('/api/sdex/:listingId/trustline/prepare', auth, listing, body(TrustlinePrepareBody), async (req, res) => {
-      ok(res, await this.sdex.prepareTrustline({ listingId: listingId(req), accountId: currentAccount(req).id, limit: bodyOf(req, TrustlinePrepareBody).limit }));
-    });
+    r.post(
+      '/api/sdex/:listingId/trustline/prepare',
+      auth,
+      listing,
+      body(TrustlinePrepareBody),
+      async (req, res) => {
+        ok(
+          res,
+          await this.sdex.prepareTrustline({
+            listingId: listingId(req),
+            accountId: currentAccount(req).id,
+            limit: bodyOf(req, TrustlinePrepareBody).limit,
+          }),
+        );
+      },
+    );
 
     /* -------------------------------- portfolio -------------------------------- */
     r.get('/api/portfolio', auth, async (req, res) => {

@@ -21,7 +21,11 @@ export function readActor(file: string, label: string): Actor {
   return { publicKey: row.publicKey, secretKey: row.secretKey, kp: Keypair.fromSecret(row.secretKey) };
 }
 
-export async function initializeForward(soroban: SorobanGateway, contractId: string, a: { registry: string; producer: Actor; buyer: Actor; arbiter: string }) {
+export async function initializeForward(
+  soroban: SorobanGateway,
+  contractId: string,
+  a: { registry: string; producer: Actor; buyer: Actor; arbiter: string },
+) {
   const client = await soroban.client(contractId, a.buyer.kp);
   return soroban.invoke(
     client,
@@ -41,7 +45,11 @@ export async function initializeForward(soroban: SorobanGateway, contractId: str
   );
 }
 
-export async function initializeWarrant(soroban: SorobanGateway, contractId: string, a: { registry: string; producer: Actor; warrantera: Actor }) {
+export async function initializeWarrant(
+  soroban: SorobanGateway,
+  contractId: string,
+  a: { registry: string; producer: Actor; warrantera: Actor },
+) {
   const client = await soroban.client(contractId, a.producer.kp);
   return soroban.invoke(
     client,
@@ -62,7 +70,11 @@ export async function initializeWarrant(soroban: SorobanGateway, contractId: str
 }
 
 /** Reads back `get_registry` (SC-02) when the WASM exposes it; throws on mismatch. */
-export async function verifyRegistry(soroban: SorobanGateway, contractId: string, expected: string): Promise<void> {
+export async function verifyRegistry(
+  soroban: SorobanGateway,
+  contractId: string,
+  expected: string,
+): Promise<void> {
   const client = await soroban.client(contractId);
   const registry = await soroban.readOptional<string>(client, 'get_registry');
   if (registry !== undefined && String(registry) !== expected) {

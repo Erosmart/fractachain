@@ -15,7 +15,15 @@ const money = (n: number, digits = 2) => formatAmount(n, digits);
 
 /** Investor portfolio: balances, positions marked to market and pending actions. */
 function Dashboard() {
-  const { user, approveToken, claimTokens, distributeTokens, claimDividends, refundContribution, fetchWalletSecret } = useAuth();
+  const {
+    user,
+    approveToken,
+    claimTokens,
+    distributeTokens,
+    claimDividends,
+    refundContribution,
+    fetchWalletSecret,
+  } = useAuth();
   const sessionId = user?.id ?? null;
   const { t } = useI18n();
   const [book, setBook] = useState<Portfolio | null>(null);
@@ -131,14 +139,20 @@ function Dashboard() {
     <div className="space-y-8 py-6">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <p className="font-lcd text-[11px] uppercase tracking-[0.22em] text-neutral-500">{t('nav.portfolio')}</p>
+          <p className="font-lcd text-[11px] uppercase tracking-[0.22em] text-neutral-500">
+            {t('nav.portfolio')}
+          </p>
           <h1 className="text-2xl sm:text-3xl font-extrabold font-display text-black break-words">
             {t('dash.hello', { name: user?.legalName || user?.name || '' })}
           </h1>
-          <p className="text-neutral-600 mt-1">{user?.custodyMode === 'SELF' ? t('dash.verifiedSelf') : t('dash.verifiedCustodial')}</p>
+          <p className="text-neutral-600 mt-1">
+            {user?.custodyMode === 'SELF' ? t('dash.verifiedSelf') : t('dash.verifiedCustodial')}
+          </p>
         </div>
         <div className="p-4 rounded-2xl crystal-card max-w-lg">
-          <p className="text-[11px] uppercase tracking-wider text-neutral-500 font-display font-bold mb-1">{t('nav.yourWallet')}</p>
+          <p className="text-[11px] uppercase tracking-wider text-neutral-500 font-display font-bold mb-1">
+            {t('nav.yourWallet')}
+          </p>
           <WalletAddress address={user?.publicKey} />
           {user?.custodyMode === 'CUSTODIAL' && !secret && (
             <button
@@ -153,7 +167,9 @@ function Dashboard() {
             <div className="mt-2 space-y-1.5">
               <p className="text-[10px] text-amber-700">{t('dash.secretWarn')}</p>
               <div className="flex items-start gap-2">
-                <code className="flex-1 p-2 rounded-lg bg-neutral-100 text-[10px] font-mono break-all select-all">{secret}</code>
+                <code className="flex-1 p-2 rounded-lg bg-neutral-100 text-[10px] font-mono break-all select-all">
+                  {secret}
+                </code>
                 <button
                   type="button"
                   onClick={copySecret}
@@ -205,7 +221,9 @@ function Dashboard() {
         <div className="p-5 rounded-3xl crystal-card">
           <div className="text-xs text-neutral-500">{t('dash.dividends')}</div>
           <div className="text-2xl font-lcd font-bold">${money(totals.pendingDividends)}</div>
-          <div className="text-xs text-neutral-500 mt-1">{t('dash.positionsCount', { n: holdings.length })}</div>
+          <div className="text-xs text-neutral-500 mt-1">
+            {t('dash.positionsCount', { n: holdings.length })}
+          </div>
         </div>
       </div>
 
@@ -214,15 +232,21 @@ function Dashboard() {
           <div>
             <p className="font-display font-extrabold">{t('dash.proceeds')}</p>
             <p className="text-sm text-neutral-600 mt-0.5">{t('dash.proceedsLead')}</p>
-            <p className="text-xs text-neutral-500 mt-1">{t('dash.xlmOnChain', { n: money(book?.xlmOnChain ?? 0, 4) })}</p>
+            <p className="text-xs text-neutral-500 mt-1">
+              {t('dash.xlmOnChain', { n: money(book?.xlmOnChain ?? 0, 4) })}
+            </p>
           </div>
           <div className="space-y-2">
             {book?.proceeds?.map((p) => (
               <div key={p.listingId} className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
                 <div>
-                  <span className="font-bold">{p.tokenTicker}</span> <span className="text-neutral-600">{p.legalName}</span>
+                  <span className="font-bold">{p.tokenTicker}</span>{' '}
+                  <span className="text-neutral-600">{p.legalName}</span>
                   {p.explorer && (
-                    <ExternalLink href={p.explorer} className="block text-[11px] font-mono underline break-all">
+                    <ExternalLink
+                      href={p.explorer}
+                      className="block text-[11px] font-mono underline break-all"
+                    >
                       {t('dash.proceedsTx')}
                     </ExternalLink>
                   )}
@@ -231,7 +255,8 @@ function Dashboard() {
                   )}
                 </div>
                 <div className="font-lcd font-bold">
-                  {money(p.amount, p.paymentKind === 'XLM' ? 4 : 2)} {p.paymentKind === 'XLM' ? 'XLM' : 'USDC'}
+                  {money(p.amount, p.paymentKind === 'XLM' ? 4 : 2)}{' '}
+                  {p.paymentKind === 'XLM' ? 'XLM' : 'USDC'}
                 </div>
               </div>
             ))}
@@ -245,10 +270,16 @@ function Dashboard() {
           <p className="text-sm text-neutral-600 mt-0.5">{t('dash.marketCtaLead')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <a href="/orderbook" className="px-5 py-3 rounded-2xl bg-black text-white font-display font-bold text-sm inline-flex items-center gap-2">
+          <a
+            href="/orderbook"
+            className="px-5 py-3 rounded-2xl bg-black text-white font-display font-bold text-sm inline-flex items-center gap-2"
+          >
             <TrendingUp className="w-4 h-4" /> {t('nav.orderbook')} <ArrowRight className="w-4 h-4" />
           </a>
-          <a href="/market" className="px-5 py-3 rounded-2xl border border-black/10 font-display font-bold text-sm inline-flex items-center gap-2">
+          <a
+            href="/market"
+            className="px-5 py-3 rounded-2xl border border-black/10 font-display font-bold text-sm inline-flex items-center gap-2"
+          >
             <Layers className="w-4 h-4" /> {t('nav.market')}
           </a>
         </div>
@@ -264,7 +295,10 @@ function Dashboard() {
         <div className="p-8 rounded-3xl crystal-card text-center space-y-3">
           <p className="text-neutral-600">{t('dash.empty')}</p>
           <div className="flex flex-wrap justify-center gap-3">
-            <a href="/market" className="px-5 py-3 rounded-2xl bg-black text-white font-display font-bold text-sm inline-flex items-center gap-2">
+            <a
+              href="/market"
+              className="px-5 py-3 rounded-2xl bg-black text-white font-display font-bold text-sm inline-flex items-center gap-2"
+            >
               <Layers className="w-4 h-4" /> {t('nav.market')} <ArrowRight className="w-4 h-4" />
             </a>
           </div>
@@ -288,17 +322,31 @@ function Dashboard() {
                     <p className="text-xs text-neutral-500">
                       Precio actual ${money(h.marketPrice)} · {h.priceSourceLabel}
                     </p>
-                    {h.listingStatus === 'CLOSED_SUCCESS' && <p className="text-xs text-[#2f6f28] font-bold mt-1">{t('dash.closedSuccess')}</p>}
-                    {h.listingStatus === 'CLOSED_FAILED' && <p className="text-xs text-red-800 font-bold mt-1">{t('dash.closedFailed')}</p>}
-                    {h.listingStatus === 'LISTED' && <p className="text-xs text-neutral-500 mt-1">{t('dash.listed')}</p>}
-                    {h.refundedAt && <p className="text-xs text-[#2f6f28] font-bold mt-1">{t('dash.refunded')}</p>}
+                    {h.listingStatus === 'CLOSED_SUCCESS' && (
+                      <p className="text-xs text-[#2f6f28] font-bold mt-1">{t('dash.closedSuccess')}</p>
+                    )}
+                    {h.listingStatus === 'CLOSED_FAILED' && (
+                      <p className="text-xs text-red-800 font-bold mt-1">{t('dash.closedFailed')}</p>
+                    )}
+                    {h.listingStatus === 'LISTED' && (
+                      <p className="text-xs text-neutral-500 mt-1">{t('dash.listed')}</p>
+                    )}
+                    {h.refundedAt && (
+                      <p className="text-xs text-[#2f6f28] font-bold mt-1">{t('dash.refunded')}</p>
+                    )}
                     {h.finalizeHash && (
-                      <ExternalLink href={explorerTx(h.finalizeHash)} className="block text-[11px] font-mono underline break-all mt-1">
+                      <ExternalLink
+                        href={explorerTx(h.finalizeHash)}
+                        className="block text-[11px] font-mono underline break-all mt-1"
+                      >
                         {t('market.finalizeTx')}
                       </ExternalLink>
                     )}
                     {h.refundHash && (
-                      <ExternalLink href={explorerTx(h.refundHash)} className="block text-[11px] font-mono underline break-all mt-1">
+                      <ExternalLink
+                        href={explorerTx(h.refundHash)}
+                        className="block text-[11px] font-mono underline break-all mt-1"
+                      >
                         {t('market.refundTx')}
                       </ExternalLink>
                     )}
@@ -314,7 +362,9 @@ function Dashboard() {
                   </div>
                 </div>
                 {h.pendingDividendUsdc > 0 && (
-                  <p className="text-sm text-[#2f6f28] font-bold">Dividendo pendiente: ${money(h.pendingDividendUsdc)} USDC</p>
+                  <p className="text-sm text-[#2f6f28] font-bold">
+                    Dividendo pendiente: ${money(h.pendingDividendUsdc)} USDC
+                  </p>
                 )}
                 <div className="flex flex-wrap gap-2">
                   {!approved && (
@@ -327,16 +377,19 @@ function Dashboard() {
                       {t('dash.approve')}
                     </button>
                   )}
-                  {approved && (h.canClaim ?? h.tokensOwed > 0) && h.listingStatus !== 'CLOSED_FAILED' && !h.refundedAt && (
-                    <button
-                      type="button"
-                      disabled={busy === h.listingId}
-                      onClick={() => run(h.listingId, () => claimTokens(h.listingId))}
-                      className="px-4 py-2 rounded-xl border border-black/10 text-xs font-display font-bold"
-                    >
-                      {t('dash.claim')}
-                    </button>
-                  )}
+                  {approved &&
+                    (h.canClaim ?? h.tokensOwed > 0) &&
+                    h.listingStatus !== 'CLOSED_FAILED' &&
+                    !h.refundedAt && (
+                      <button
+                        type="button"
+                        disabled={busy === h.listingId}
+                        onClick={() => run(h.listingId, () => claimTokens(h.listingId))}
+                        className="px-4 py-2 rounded-xl border border-black/10 text-xs font-display font-bold"
+                      >
+                        {t('dash.claim')}
+                      </button>
+                    )}
                   {approved && h.sdex && h.tokens > 0 && (h.tokensOnChain || 0) + 1e-9 < h.tokens && (
                     <button
                       type="button"

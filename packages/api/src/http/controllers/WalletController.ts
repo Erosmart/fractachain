@@ -30,8 +30,14 @@ export class WalletController implements Controller {
       ok(res, await this.wallets.fundUsdc(currentAccount(req).id));
     });
 
-    r.post('/api/wallet/usdc/submit', this.guard.requireAuth, this.limits.faucet, body(XdrBody), async (req, res) => {
-      ok(res, await this.wallets.submitUsdcTrustline(currentAccount(req).id, bodyOf(req, XdrBody).xdr));
-    });
+    r.post(
+      '/api/wallet/usdc/submit',
+      this.guard.requireAuth,
+      this.limits.faucet,
+      body(XdrBody),
+      async (req, res) => {
+        ok(res, await this.wallets.submitUsdcTrustline(currentAccount(req).id, bodyOf(req, XdrBody).xdr));
+      },
+    );
   }
 }

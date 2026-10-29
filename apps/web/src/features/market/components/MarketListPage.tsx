@@ -29,18 +29,25 @@ function MarketListPage() {
 
   return (
     <div className="space-y-8 py-6">
-      <div className="rounded-2xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950">{t('market.honestyBanner')}</div>
+      <div className="rounded-2xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        {t('market.honestyBanner')}
+      </div>
       <div>
-        <p className="font-lcd text-[11px] uppercase tracking-[0.2em] text-neutral-500">{t('market.kicker')}</p>
+        <p className="font-lcd text-[11px] uppercase tracking-[0.2em] text-neutral-500">
+          {t('market.kicker')}
+        </p>
         <h1 className="text-2xl sm:text-3xl font-extrabold font-display">{t('market.title')}</h1>
-        <p className="text-neutral-600 max-w-xl mt-1">{t(openCount === 1 ? 'market.openOne' : 'market.openMany', { n: openCount })}</p>
+        <p className="text-neutral-600 max-w-xl mt-1">
+          {t(openCount === 1 ? 'market.openOne' : 'market.openMany', { n: openCount })}
+        </p>
         <p className="text-xs text-neutral-500 mt-2">{t('market.live')}</p>
       </div>
       {loading && <p className="text-sm text-neutral-500">{t('market.loading')}</p>}
       {!loading && pools.length === 0 && <p className="text-sm text-neutral-500">{t('market.empty')}</p>}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {pools.map((pool) => {
-          const progress = pool.hardCap > 0 ? Math.min(100, Math.round((pool.raisedAmount / pool.hardCap) * 100)) : 0;
+          const progress =
+            pool.hardCap > 0 ? Math.min(100, Math.round((pool.raisedAmount / pool.hardCap) * 100)) : 0;
           const unit = pool.paymentKind === 'XLM' ? 'XLM' : 'USDC';
           return (
             <article key={pool.id} className="p-6 rounded-3xl crystal-card space-y-4 flex flex-col">
@@ -68,7 +75,10 @@ function MarketListPage() {
                 {formatInt(pool.raisedAmount)} / {formatInt(pool.hardCap)} {unit}
                 {pool.minInvestment ? ` · ${t('market.min')} ${formatInt(pool.minInvestment)} ${unit}` : ''}
               </p>
-              <a href={`/market/${encodeURIComponent(pool.id)}`} className="inline-flex items-center gap-2 text-sm font-display font-bold pt-2">
+              <a
+                href={`/market/${encodeURIComponent(pool.id)}`}
+                className="inline-flex items-center gap-2 text-sm font-display font-bold pt-2"
+              >
                 {t('market.viewDossier')} <ArrowRight className="w-4 h-4" />
               </a>
             </article>

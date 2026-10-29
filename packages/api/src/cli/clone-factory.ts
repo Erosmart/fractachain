@@ -28,8 +28,20 @@ runCli(async () => {
   const cloned = await soroban.deployFromWasmHash(wasmHash, admin);
   const factory = await soroban.client(cloned.contractId, admin);
   await soroban.invoke(factory, 'initialize', { admin: admin.publicKey() });
-  await soroban.invoke(factory, 'set_payment_asset', { admin: admin.publicKey(), kind: PAYMENT_KIND.XLM, token: soroban.xlmSac() });
-  await soroban.invoke(factory, 'set_payment_asset', { admin: admin.publicKey(), kind: PAYMENT_KIND.USDC, token: deployment.usdcSac });
+  await soroban.invoke(factory, 'set_payment_asset', {
+    admin: admin.publicKey(),
+    kind: PAYMENT_KIND.XLM,
+    token: soroban.xlmSac(),
+  });
+  await soroban.invoke(factory, 'set_payment_asset', {
+    admin: admin.publicKey(),
+    kind: PAYMENT_KIND.USDC,
+    token: deployment.usdcSac,
+  });
   deployments.save({ factory: cloned.contractId, sharedFactory: deployment.factory });
-  logger.info('factory clonada', { factory: cloned.contractId, admin: admin.publicKey(), file: config.stellar.deploymentFile });
+  logger.info('factory clonada', {
+    factory: cloned.contractId,
+    admin: admin.publicKey(),
+    file: config.stellar.deploymentFile,
+  });
 });

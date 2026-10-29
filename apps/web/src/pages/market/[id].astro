@@ -8,7 +8,7 @@ const locale = Astro.locals.locale;
 ---
 
 <BaseLayout title={translate(locale, 'market.dossier')}>
-  <MarketDetailPage client:only="react" locale={locale} listingId={Astro.params.id ?? ""}>
+  <MarketDetailPage client:only="react" locale={locale} listingId={Astro.params.id ?? ''}>
     <PageFallback slot="fallback" />
   </MarketDetailPage>
 </BaseLayout>

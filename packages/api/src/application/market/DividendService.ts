@@ -31,14 +31,19 @@ export class DividendService {
   deposit(listingId: string, totalUsdc: number): DividendDistribution {
     const listing = this.listings.require(listingId);
     if (listing.status !== 'CLOSED_SUCCESS') {
-      throw new DomainError('Los dividendos se pagan cuando la licitación ya cerró con éxito y hay accionistas');
+      throw new DomainError(
+        'Los dividendos se pagan cuando la licitación ya cerró con éxito y hay accionistas',
+      );
     }
-    if (!Number.isFinite(totalUsdc) || totalUsdc <= 0) throw new ValidationError('El monto del dividendo tiene que ser mayor a cero');
+    if (!Number.isFinite(totalUsdc) || totalUsdc <= 0)
+      throw new ValidationError('El monto del dividendo tiene que ser mayor a cero');
 
     const holders = this.accounts.holdersOf(listingId);
     const sharesOutstanding = holders.reduce((s, h) => s + h.shares, 0);
     if (sharesOutstanding <= 0) {
-      throw new DomainError('Todavía no hay tenedores para repartir. Esperá a que los inversores reclamen los tokens.');
+      throw new DomainError(
+        'Todavía no hay tenedores para repartir. Esperá a que los inversores reclamen los tokens.',
+      );
     }
     const perShare = totalUsdc / sharesOutstanding;
     let distributed = 0;

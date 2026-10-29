@@ -1,5 +1,11 @@
 import crypto from 'crypto';
-import type { LoginPayload, PublicAccount, SessionPayload, TwoFactorChallengePayload, WalletSignaturePayload } from '@fractachain/shared';
+import type {
+  LoginPayload,
+  PublicAccount,
+  SessionPayload,
+  TwoFactorChallengePayload,
+  WalletSignaturePayload,
+} from '@fractachain/shared';
 import { hasTwoFactor, isWalletEmail, walletEmailFor, type Account } from '../../domain/account/Account';
 import type { IAccountRepository } from '../../domain/account/AccountRepository';
 import { isStellarPublicKey } from '../../domain/stellar/StellarAddress';
@@ -101,7 +107,9 @@ export class AuthService {
 
   /** Sign in, or register when the email is new. */
   async loginWithEmail(input: { email: string; password: string; name?: string }): Promise<LoginPayload> {
-    const email = String(input.email || '').trim().toLowerCase();
+    const email = String(input.email || '')
+      .trim()
+      .toLowerCase();
     const password = String(input.password || '');
     if (!EMAIL_RE.test(email) || isWalletEmail(email)) throw new ValidationError('Email inválido');
     if (!password) throw new ValidationError('Email y contraseña requeridos');
@@ -167,7 +175,12 @@ export class AuthService {
   /** Freighter sign-in: proof of key control via a single-use signed challenge. */
   async loginWithWallet(input: Partial<WalletSignaturePayload>): Promise<LoginPayload> {
     const publicKey = String(input.publicKey || '');
-    const reason = this.walletSignatures.verify('login', publicKey, String(input.message || ''), String(input.signature || ''));
+    const reason = this.walletSignatures.verify(
+      'login',
+      publicKey,
+      String(input.message || ''),
+      String(input.signature || ''),
+    );
     if (reason) throw new UnauthenticatedError(reason);
 
     const email = walletEmailFor(publicKey);
@@ -195,9 +208,17 @@ export class AuthService {
   }
 
   /** Links a Freighter wallet to the signed-in account (proof of key control first). */
-  async linkWallet(accountId: string, input: Partial<WalletSignaturePayload>): Promise<{ success: true; user: PublicAccount }> {
+  async linkWallet(
+    accountId: string,
+    input: Partial<WalletSignaturePayload>,
+  ): Promise<{ success: true; user: PublicAccount }> {
     const publicKey = String(input.publicKey || '');
-    const reason = this.walletSignatures.verify('link', publicKey, String(input.message || ''), String(input.signature || ''));
+    const reason = this.walletSignatures.verify(
+      'link',
+      publicKey,
+      String(input.message || ''),
+      String(input.signature || ''),
+    );
     if (reason) throw new ValidationError(reason);
     const account = this.accounts.require(accountId);
     if (!isStellarPublicKey(publicKey)) throw new ValidationError('Public key Stellar inválida');
@@ -205,7 +226,8 @@ export class AuthService {
       throw new ConflictError('La cuenta ya tiene otra wallet vinculada');
     }
     const owner = this.repo.findByPublicKey(publicKey);
-    if (owner && owner.id !== account.id) throw new ConflictError('Esa wallet ya está vinculada a otra cuenta');
+    if (owner && owner.id !== account.id)
+      throw new ConflictError('Esa wallet ya está vinculada a otra cuenta');
     account.custodyMode = 'SELF';
     account.publicKey = publicKey;
     account.authProvider = account.authProvider || 'wallet';
@@ -218,7 +240,12 @@ export class AuthService {
   private complete(account: Account, message?: string): LoginPayload {
     if (!hasTwoFactor(account)) return this.issue(account, message);
     const { token, expiresAt } = this.challenges.issue('two-factor', account.id, TWO_FACTOR_CHALLENGE_TTL_MS);
-    const challenge: TwoFactorChallengePayload = { success: true, twoFactorRequired: true, challenge: token, expiresAt };
+    const challenge: TwoFactorChallengePayload = {
+      success: true,
+      twoFactorRequired: true,
+      challenge: token,
+      expiresAt,
+    };
     return challenge;
   }
 

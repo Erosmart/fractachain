@@ -45,7 +45,10 @@ export class AccountBootstrapper {
     for (const account of this.repo.list()) {
       // Sandbox cash is play money for the demo market: keep every account able to trade.
       if (typeof account.cashUsdc !== 'number' || account.cashUsdc < 15_000) account.cashUsdc = 50_000;
-      if (this.options.hackathon && (account.kycStatus === 'UNREGISTERED' || account.kycStatus === 'PENDING')) {
+      if (
+        this.options.hackathon &&
+        (account.kycStatus === 'UNREGISTERED' || account.kycStatus === 'PENDING')
+      ) {
         account.kycStatus = 'APPROVED';
       }
     }

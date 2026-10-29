@@ -74,7 +74,14 @@ const google = new FirebaseAuthProvider(config.firebase, config.firebaseConfigur
 
 const authService = new AuthService(api.auth, sessionStore, walletSigner, google, usdcFunding);
 const securityService = new AccountSecurityService(api.auth, sessionStore);
-const onboardingService = new OnboardingService(api.auth, api.kyc, sessionStore, walletSigner, usdcFunding, t);
+const onboardingService = new OnboardingService(
+  api.auth,
+  api.kyc,
+  sessionStore,
+  walletSigner,
+  usdcFunding,
+  t,
+);
 const investorService = new InvestorService(
   api.listings,
   api.market,

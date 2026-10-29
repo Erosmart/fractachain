@@ -73,7 +73,10 @@ export class UsdcFaucet {
    * `onlyIfEmpty` is for automatic heals: they must never top a wallet back up,
    * which would silently undo every purchase.
    */
-  async fund(wallet: string, opts?: { walletSecret?: string | null; grant?: number; onlyIfEmpty?: boolean }): Promise<UsdcFundResult> {
+  async fund(
+    wallet: string,
+    opts?: { walletSecret?: string | null; grant?: number; onlyIfEmpty?: boolean },
+  ): Promise<UsdcFundResult> {
     const issuer = await this.keyring.usdcIssuer();
     const asset = this.asset();
     const grant = opts?.grant ?? this.defaultGrant;
@@ -90,14 +93,32 @@ export class UsdcFaucet {
       ops.push(Operation.changeTrust({ asset, source: wallet }));
     }
     if (needsAuth && !line.authorized) {
-      ops.push(Operation.setTrustLineFlags({ trustor: wallet, asset, flags: { authorized: true }, source: issuer.publicKey() }));
+      ops.push(
+        Operation.setTrustLineFlags({
+          trustor: wallet,
+          asset,
+          flags: { authorized: true },
+          source: issuer.publicKey(),
+        }),
+      );
     }
     const gap = UsdcFaucet.grantGap(line.balance, grant, opts?.onlyIfEmpty);
     if (gap > 0) {
-      ops.push(Operation.payment({ destination: wallet, asset, amount: toStellarAmount(gap), source: issuer.publicKey() }));
+      ops.push(
+        Operation.payment({
+          destination: wallet,
+          asset,
+          amount: toStellarAmount(gap),
+          source: issuer.publicKey(),
+        }),
+      );
     }
     if (!ops.length) return this.result(issuer, line.balance, null, true);
-    const submitted = await this.sdex.buildAndSubmit(issuer.publicKey(), (b) => ops.reduce((acc, op) => acc.addOperation(op), b), signers);
+    const submitted = await this.sdex.buildAndSubmit(
+      issuer.publicKey(),
+      (b) => ops.reduce((acc, op) => acc.addOperation(op), b),
+      signers,
+    );
     return this.result(issuer, await this.balance(wallet), submitted.hash, false);
   }
 
@@ -110,14 +131,32 @@ export class UsdcFaucet {
     const needsAuth = await this.sdex.issuerRequiresAuth(issuer.publicKey());
     const ops: xdr.Operation[] = [];
     if (needsAuth && !line.authorized) {
-      ops.push(Operation.setTrustLineFlags({ trustor: wallet, asset, flags: { authorized: true }, source: issuer.publicKey() }));
+      ops.push(
+        Operation.setTrustLineFlags({
+          trustor: wallet,
+          asset,
+          flags: { authorized: true },
+          source: issuer.publicKey(),
+        }),
+      );
     }
     const gap = UsdcFaucet.grantGap(line.balance, this.defaultGrant, opts?.onlyIfEmpty);
     if (gap > 0) {
-      ops.push(Operation.payment({ destination: wallet, asset, amount: toStellarAmount(gap), source: issuer.publicKey() }));
+      ops.push(
+        Operation.payment({
+          destination: wallet,
+          asset,
+          amount: toStellarAmount(gap),
+          source: issuer.publicKey(),
+        }),
+      );
     }
     if (!ops.length) return this.result(issuer, line.balance, null, true);
-    const submitted = await this.sdex.buildAndSubmit(issuer.publicKey(), (b) => ops.reduce((acc, op) => acc.addOperation(op), b), [issuer]);
+    const submitted = await this.sdex.buildAndSubmit(
+      issuer.publicKey(),
+      (b) => ops.reduce((acc, op) => acc.addOperation(op), b),
+      [issuer],
+    );
     return this.result(issuer, await this.balance(wallet), submitted.hash, false);
   }
 
@@ -139,10 +178,21 @@ export class UsdcFaucet {
       ops.push(Operation.changeTrust({ asset, source: wallet }));
     }
     if (needsAuth && !line.authorized) {
-      ops.push(Operation.setTrustLineFlags({ trustor: wallet, asset, flags: { authorized: true }, source: issuer.publicKey() }));
+      ops.push(
+        Operation.setTrustLineFlags({
+          trustor: wallet,
+          asset,
+          flags: { authorized: true },
+          source: issuer.publicKey(),
+        }),
+      );
     }
     if (!ops.length) return line.exists && (!needsAuth || line.authorized);
-    await this.sdex.buildAndSubmit(issuer.publicKey(), (b) => ops.reduce((acc, op) => acc.addOperation(op), b), signers);
+    await this.sdex.buildAndSubmit(
+      issuer.publicKey(),
+      (b) => ops.reduce((acc, op) => acc.addOperation(op), b),
+      signers,
+    );
     const after = await this.sdex.trustlineState(wallet, asset);
     return after.exists && after.authorized;
   }

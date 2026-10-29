@@ -143,12 +143,15 @@ export function describeHorizonError(err: unknown): string {
   if (opCodes.includes('op_not_authorized')) {
     return 'La cuenta no está autorizada para operar este activo. Aprobá el KYC para habilitar la trustline.';
   }
-  if (opCodes.includes('op_no_trust')) return 'La cuenta no tiene trustline con el token. Tiene que aprobarlo antes de operar.';
+  if (opCodes.includes('op_no_trust'))
+    return 'La cuenta no tiene trustline con el token. Tiene que aprobarlo antes de operar.';
   if (opCodes.includes('op_underfunded')) return 'Saldo insuficiente para cubrir la orden.';
   if (opCodes.includes('op_line_full')) return 'La orden excede el límite de la trustline del comprador.';
   if (opCodes.includes('op_cross_self')) return 'La orden cruzaría contra una orden propia.';
-  if (txCode === 'tx_insufficient_balance') return 'La cuenta no tiene XLM suficiente para la reserva y la comisión.';
-  if (opCodes.length || txCode) return `Stellar rechazó la operación (${txCode ?? ''} ${opCodes.join(', ')}).`.trim();
+  if (txCode === 'tx_insufficient_balance')
+    return 'La cuenta no tiene XLM suficiente para la reserva y la comisión.';
+  if (opCodes.length || txCode)
+    return `Stellar rechazó la operación (${txCode ?? ''} ${opCodes.join(', ')}).`.trim();
   return e?.message || 'Error desconocido al enviar la transacción a Stellar.';
 }
 
@@ -195,7 +198,11 @@ export class SdexGateway {
    * open offers; `allowUnwind` keeps `authorizedToMaintainLiabilities` so a
    * lapsed KYC can close positions but not open new ones.
    */
-  async deauthorizeHolder(asset: Asset, trustor: string, opts?: { allowUnwind?: boolean }): Promise<SubmitResult> {
+  async deauthorizeHolder(
+    asset: Asset,
+    trustor: string,
+    opts?: { allowUnwind?: boolean },
+  ): Promise<SubmitResult> {
     const issuer = this.keyring.issuerFor(asset.getIssuer() || '');
     const flags = opts?.allowUnwind
       ? { authorized: false, authorizedToMaintainLiabilities: true }
@@ -261,10 +268,14 @@ export class SdexGateway {
 
   /** Recent trades, newest first, prices always in counter-per-security. */
   async recentTrades(security: Asset, counter: Asset, limit = 20): Promise<SdexTrade[]> {
-    return this.cached('trades', this.tradesCache, SdexGateway.pairKey(security, counter, String(limit)), () =>
-      this.fetchRecentTrades(security, counter, limit).catch((err) => {
-        throw new UpstreamError(`Horizon no devolvió los trades: ${describeHorizonError(err)}`);
-      }),
+    return this.cached(
+      'trades',
+      this.tradesCache,
+      SdexGateway.pairKey(security, counter, String(limit)),
+      () =>
+        this.fetchRecentTrades(security, counter, limit).catch((err) => {
+          throw new UpstreamError(`Horizon no devolvió los trades: ${describeHorizonError(err)}`);
+        }),
     );
   }
 
@@ -309,7 +320,10 @@ export class SdexGateway {
           })),
         )
         .catch(() => [] as PairOffer[]);
-    const [asks, bids] = await Promise.all([query(security, counter, 'SELL'), query(counter, security, 'BUY')]);
+    const [asks, bids] = await Promise.all([
+      query(security, counter, 'SELL'),
+      query(counter, security, 'BUY'),
+    ]);
     return [...asks, ...bids];
   }
 
@@ -358,7 +372,9 @@ export class SdexGateway {
 
   async buildTrustlineXdr(accountId: string, asset: Asset, limit?: number): Promise<string> {
     const builder = await this.builderFor(accountId);
-    builder.addOperation(Operation.changeTrust({ asset, ...(limit !== undefined ? { limit: toStellarAmount(limit) } : {}) }));
+    builder.addOperation(
+      Operation.changeTrust({ asset, ...(limit !== undefined ? { limit: toStellarAmount(limit) } : {}) }),
+    );
     return builder.setTimeout(TX_TIMEOUT_SECONDS).build().toXDR();
   }
 
@@ -447,7 +463,13 @@ export class SdexGateway {
   }
 
   private async fetchRecentTrades(security: Asset, counter: Asset, limit: number): Promise<SdexTrade[]> {
-    const page = await this.clients.horizon().trades().forAssetPair(security, counter).order('desc').limit(limit).call();
+    const page = await this.clients
+      .horizon()
+      .trades()
+      .forAssetPair(security, counter)
+      .order('desc')
+      .limit(limit)
+      .call();
     return page.records.map((t) => {
       const rec = t as unknown as {
         id: string;
@@ -461,7 +483,8 @@ export class SdexGateway {
         counter_amount: string;
         ledger_close_time: string;
       };
-      const securityIsBase = rec.base_asset_code === security.getCode() && rec.base_asset_issuer === security.getIssuer();
+      const securityIsBase =
+        rec.base_asset_code === security.getCode() && rec.base_asset_issuer === security.getIssuer();
       const n = Number(rec.price?.n ?? 0);
       const d = Number(rec.price?.d ?? 1);
       const raw = d === 0 ? 0 : n / d;
@@ -479,7 +502,12 @@ export class SdexGateway {
     });
   }
 
-  private cached<T>(namespace: string, map: Map<string, CacheEntry<T>>, key: string, produce: () => Promise<T>): Promise<T> {
+  private cached<T>(
+    namespace: string,
+    map: Map<string, CacheEntry<T>>,
+    key: string,
+    produce: () => Promise<T>,
+  ): Promise<T> {
     const hit = map.get(key);
     if (hit && Date.now() - hit.at < READ_TTL_MS) return Promise.resolve(hit.value);
     // Book and trades share the pair key: the in-flight map must keep them apart.

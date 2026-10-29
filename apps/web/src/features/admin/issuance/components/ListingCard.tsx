@@ -15,7 +15,14 @@ interface ListingCardProps {
 }
 
 /** Steps 2–4 for one listing: payout wallet, deploy, mint, open, close, dividends. */
-export default function ListingCard({ listing: l, admin, mintAmount, onMintAmount, dividendAmount, onDividendAmount }: ListingCardProps) {
+export default function ListingCard({
+  listing: l,
+  admin,
+  mintAmount,
+  onMintAmount,
+  dividendAmount,
+  onDividendAmount,
+}: ListingCardProps) {
   const { t } = useI18n();
   const { busy } = admin;
   const [wallet, setWallet] = useState(l.dossier.proceedsWallet || '');
@@ -56,7 +63,8 @@ export default function ListingCard({ listing: l, admin, mintAmount, onMintAmoun
         </p>
       )}
       <p className="text-xs text-neutral-600">
-        {t('admIss.paysTo')} <span className="font-mono break-all">{l.dossier.proceedsWallet || t('admIss.notConfigured')}</span>
+        {t('admIss.paysTo')}{' '}
+        <span className="font-mono break-all">{l.dossier.proceedsWallet || t('admIss.notConfigured')}</span>
         {l.proceedsPaidAt
           ? ` · ${t('admIss.paidAt', { d: new Date(l.proceedsPaidAt).toLocaleString() })}`
           : l.status === 'CLOSED_SUCCESS'
@@ -130,7 +138,9 @@ export default function ListingCard({ listing: l, admin, mintAmount, onMintAmoun
               disabled={Boolean(busy)}
               className="px-3 py-2 rounded-xl border border-black/10 text-xs font-bold disabled:opacity-40"
             >
-              {l.dossier.paymentKind === 'XLM' ? t('admIss.finalizeXlm') : t('admIss.closeNow', { n: l.dossier.offeringSoftCapUsdc })}
+              {l.dossier.paymentKind === 'XLM'
+                ? t('admIss.finalizeXlm')
+                : t('admIss.closeNow', { n: l.dossier.offeringSoftCapUsdc })}
             </button>
           </>
         )}
@@ -150,7 +160,11 @@ export default function ListingCard({ listing: l, admin, mintAmount, onMintAmoun
             onFocus={(e) => e.target.select()}
           />
           <span className="text-xs text-neutral-500">{t('admIss.proRata')}</span>
-          <button type="button" onClick={() => admin.payDividend(l.id, dividendAmount)} className="px-3 py-2 rounded-xl bg-black text-white text-xs font-bold">
+          <button
+            type="button"
+            onClick={() => admin.payDividend(l.id, dividendAmount)}
+            className="px-3 py-2 rounded-xl bg-black text-white text-xs font-bold"
+          >
             {t('admIss.depositSplit')}
           </button>
         </div>

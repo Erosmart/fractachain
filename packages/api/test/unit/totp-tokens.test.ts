@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { RecoveryCodes, TotpService, base32Decode, base32Encode } from '../../src/infrastructure/security/Totp';
+import {
+  RecoveryCodes,
+  TotpService,
+  base32Decode,
+  base32Encode,
+} from '../../src/infrastructure/security/Totp';
 import { SignedTokenCodec } from '../../src/infrastructure/security/SignedTokens';
 import type { IClock } from '../../src/shared/clock';
 
@@ -50,7 +55,15 @@ describe('TotpService (RFC 6238)', () => {
 });
 
 describe('SignedTokenCodec', () => {
-  const clock: IClock & { t: number } = { t: 1_000_000, now() { return this.t; }, isoNow() { return new Date(this.t).toISOString(); } };
+  const clock: IClock & { t: number } = {
+    t: 1_000_000,
+    now() {
+      return this.t;
+    },
+    isoNow() {
+      return new Date(this.t).toISOString();
+    },
+  };
   const codec = new SignedTokenCodec('k'.repeat(40), clock);
 
   it('binds tokens to a purpose, an expiry and a fingerprint', () => {
@@ -65,7 +78,9 @@ describe('SignedTokenCodec', () => {
   it('rejects forged tokens', () => {
     const { token } = codec.issue('two-factor', 'usr_1', 60_000);
     const [body] = token.split('.');
-    const forged = Buffer.from(JSON.stringify({ purpose: 'two-factor', sub: 'admin', exp: Date.now() * 2 })).toString('base64url');
+    const forged = Buffer.from(
+      JSON.stringify({ purpose: 'two-factor', sub: 'admin', exp: Date.now() * 2 }),
+    ).toString('base64url');
     expect(codec.verify('two-factor', `${forged}.${token.split('.')[1]}`)).toBeNull();
     expect(codec.verify('two-factor', `${body}.AAAA`)).toBeNull();
   });

@@ -87,7 +87,11 @@ export class HmacTokenService implements ITokenService {
     if (expected.length !== actual.length || !crypto.timingSafeEqual(expected, actual)) return null;
     try {
       const claims = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as SessionClaims;
-      if (typeof claims.sub !== 'string' || typeof claims.jti !== 'string' || typeof claims.exp !== 'number') {
+      if (
+        typeof claims.sub !== 'string' ||
+        typeof claims.jti !== 'string' ||
+        typeof claims.exp !== 'number'
+      ) {
         return null;
       }
       return claims;
@@ -97,7 +101,10 @@ export class HmacTokenService implements ITokenService {
   }
 
   private sign(body: string): string {
-    return crypto.createHmac('sha256', this.secret).update(`${HmacTokenService.PREFIX}.${body}`).digest('base64url');
+    return crypto
+      .createHmac('sha256', this.secret)
+      .update(`${HmacTokenService.PREFIX}.${body}`)
+      .digest('base64url');
   }
 }
 

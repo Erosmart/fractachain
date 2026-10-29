@@ -15,7 +15,8 @@ export interface IIdentityTokenVerifier {
 }
 
 /** Google's public keys for Firebase ID tokens (rotated by Google; cached by jose). */
-const FIREBASE_JWKS_URL = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
+const FIREBASE_JWKS_URL =
+  'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
 
 /**
  * Verifies Firebase Authentication ID tokens server-side.

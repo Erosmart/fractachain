@@ -94,5 +94,7 @@ export function handleShutdownSignals(platform: RunningPlatform): void {
   };
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
-  process.on('unhandledRejection', (reason) => platform.logger.error('promesa rechazada sin manejar', { reason: String(reason) }));
+  process.on('unhandledRejection', (reason) =>
+    platform.logger.error('promesa rechazada sin manejar', { reason: String(reason) }),
+  );
 }

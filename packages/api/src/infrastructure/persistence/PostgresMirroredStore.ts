@@ -30,7 +30,12 @@ export class PostgresMirroredStore implements IDocumentStore, IFlushable {
     allowedKeys: ReadonlySet<string>,
     logger: ILogger,
   ): PostgresMirroredStore {
-    return new PostgresMirroredStore(local, new Pool({ connectionString: databaseUrl, max: 4 }), allowedKeys, logger);
+    return new PostgresMirroredStore(
+      local,
+      new Pool({ connectionString: databaseUrl, max: 4 }),
+      allowedKeys,
+      logger,
+    );
   }
 
   /** Pulls every known document from Postgres into the local cache. Never throws. */
@@ -49,7 +54,9 @@ export class PostgresMirroredStore implements IDocumentStore, IFlushable {
       this.logger.info('documentos restaurados desde Postgres', { restored });
       return restored;
     } catch (err) {
-      this.logger.error('restore desde Postgres falló; se arranca con archivos locales', { err: String(err) });
+      this.logger.error('restore desde Postgres falló; se arranca con archivos locales', {
+        err: String(err),
+      });
       return 0;
     }
   }

@@ -15,7 +15,9 @@ export class SettlementSweepJob {
   start(): void {
     if (this.intervalMs <= 0 || this.timer) return;
     this.timer = setInterval(() => {
-      this.settlement.sweepDueOfferings().catch((err) => this.logger.warn('sweep de settlement falló', { err: errorMessage(err) }));
+      this.settlement
+        .sweepDueOfferings()
+        .catch((err) => this.logger.warn('sweep de settlement falló', { err: errorMessage(err) }));
     }, this.intervalMs);
     this.timer.unref();
   }

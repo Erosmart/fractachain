@@ -46,8 +46,15 @@ function timingSafeEqualStr(a: string, b: string): boolean {
 export class ScryptPasswordHasher implements IPasswordHasher {
   async hash(password: string): Promise<string> {
     const salt = crypto.randomBytes(SALT_LEN);
-    const key = await scryptAsync(password, salt, KEY_LEN, { N: SCRYPT_N, r: SCRYPT_R, p: SCRYPT_P, maxmem: MAX_MEM });
-    return ['scrypt', SCRYPT_N, SCRYPT_R, SCRYPT_P, salt.toString('base64'), key.toString('base64')].join('$');
+    const key = await scryptAsync(password, salt, KEY_LEN, {
+      N: SCRYPT_N,
+      r: SCRYPT_R,
+      p: SCRYPT_P,
+      maxmem: MAX_MEM,
+    });
+    return ['scrypt', SCRYPT_N, SCRYPT_R, SCRYPT_P, salt.toString('base64'), key.toString('base64')].join(
+      '$',
+    );
   }
 
   async verify(password: string, stored: string): Promise<PasswordCheck> {

@@ -13,7 +13,10 @@ const positive = num.refine((n) => n > 0, 'Tiene que ser mayor a cero');
 const side = z.enum(['BUY', 'SELL']);
 const settlePolicy = z.enum(['ON_MIN', 'ON_DATE']);
 const xdr = z.string().trim().min(1, 'Falta el XDR firmado').max(20_000);
-const stellarKey = z.string().trim().regex(/^G[A-Z2-7]{55}$/, 'Dirección Stellar inválida');
+const stellarKey = z
+  .string()
+  .trim()
+  .regex(/^G[A-Z2-7]{55}$/, 'Dirección Stellar inválida');
 const httpUrl = z
   .string()
   .trim()
@@ -23,7 +26,9 @@ const httpUrl = z
 /* ------------------------------- params ------------------------------- */
 
 export const IdParam = z.object({ id: z.string().regex(/^[A-Za-z0-9_.:-]{1,120}$/, 'Id inválido') });
-export const ListingIdParam = z.object({ listingId: z.string().regex(/^[A-Za-z0-9_.:-]{1,120}$/, 'Id inválido') });
+export const ListingIdParam = z.object({
+  listingId: z.string().regex(/^[A-Za-z0-9_.:-]{1,120}$/, 'Id inválido'),
+});
 export const TickerParam = z.object({ ticker: z.string().regex(/^[A-Za-z0-9]{1,12}$/, 'Ticker inválido') });
 export const CropParam = z.object({ crop: z.string().regex(/^[a-zA-Z]{1,30}$/, 'Cultivo inválido') });
 
@@ -45,10 +50,16 @@ export const WalletSignatureBody = z.object({
 
 /** 6-digit TOTP or a `XXXXX-XXXXX` recovery code. */
 export const CodeBody = z.object({ code: str(16).min(6, 'Código inválido') });
-export const TwoFactorVerifyBody = z.object({ challenge: str(2_000).min(1), code: str(16).min(6, 'Código inválido') });
+export const TwoFactorVerifyBody = z.object({
+  challenge: str(2_000).min(1),
+  code: str(16).min(6, 'Código inválido'),
+});
 export const TokenBody = z.object({ token: str(2_000).min(1, 'Falta el token') });
 export const ForgotPasswordBody = z.object({ email: str(254).min(3) });
-export const ResetPasswordBody = z.object({ token: str(2_000).min(1, 'Falta el token'), password: z.string().max(256) });
+export const ResetPasswordBody = z.object({
+  token: str(2_000).min(1, 'Falta el token'),
+  password: z.string().max(256),
+});
 
 export const AuditQuery = z.object({
   limit: z.coerce.number().int().min(1).max(1_000).optional(),
@@ -145,7 +156,9 @@ export const CreateProductBody = z.object({
   contractAddress: optStr(56),
   notes: optStr(1000),
 });
-export const ProductPriceBody = z.object({ pricePerUnit: z.union([z.string().trim().max(40), z.number()]).transform(String) });
+export const ProductPriceBody = z.object({
+  pricePerUnit: z.union([z.string().trim().max(40), z.number()]).transform(String),
+});
 export const ProductBindBody = z.object({ contractAddress: str(56).min(1, 'contractAddress requerido') });
 
 /* -------------------------------- listings ------------------------------- */
@@ -195,7 +208,15 @@ export const SandboxOrderBody = z.object({ side, price: positive, amount: positi
 export const SdexOrderBody = z.object({ side, price: positive, quantity: positive, offerId: optStr(30) });
 export const SdexCancelBody = z.object({
   side,
-  offerId: z.union([z.string().trim().regex(/^\d{1,20}$/), z.number().int().nonnegative()]).transform(String),
+  offerId: z
+    .union([
+      z
+        .string()
+        .trim()
+        .regex(/^\d{1,20}$/),
+      z.number().int().nonnegative(),
+    ])
+    .transform(String),
   price: positive,
   legacy: z.coerce.boolean().optional(),
 });

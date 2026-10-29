@@ -22,14 +22,17 @@ export class NetworkAdminService {
       // The issuer the backend can sign for: new listings default to it, since
       // tokens issued by an account we cannot sign with are undistributable.
       activeIssuer:
-        this.keyring.platformIssuerPublicKey() || (await this.keyring.ensurePlatformIssuer().catch(() => null))?.publicKey() || null,
+        this.keyring.platformIssuerPublicKey() ||
+        (await this.keyring.ensurePlatformIssuer().catch(() => null))?.publicKey() ||
+        null,
     };
   }
 
   update(partial: Partial<NetworkSettings> & SettlePolicyInput): NetworkSettings {
     const current = this.settings.get();
     const next: NetworkSettings = { ...current, ...partial, updatedAt: new Date().toISOString() };
-    next.settlePolicy = partial.settlePolicy === 'ON_DATE' || next.settlePolicy === 'ON_DATE' ? 'ON_DATE' : 'ON_MIN';
+    next.settlePolicy =
+      partial.settlePolicy === 'ON_DATE' || next.settlePolicy === 'ON_DATE' ? 'ON_DATE' : 'ON_MIN';
     if (partial.settlePolicy === 'ON_MIN') {
       next.settlePolicy = 'ON_MIN';
       next.settleAt = undefined;

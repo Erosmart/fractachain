@@ -103,7 +103,9 @@ export class WalletService implements IWalletHydrator {
     // Recorded up front: a failing heal (e.g. faucet not configured) backs off too.
     this.healedAt.set(account.publicKey, Date.now());
     try {
-      await this.usdc.ensureWalletFunded(account.publicKey, { walletSecret: this.custody.optionalSecretOf(account) });
+      await this.usdc.ensureWalletFunded(account.publicKey, {
+        walletSecret: this.custody.optionalSecretOf(account),
+      });
     } catch (err) {
       this.logger.warn('auto-fondeo de wallet falló', { accountId: account.id, err: errorMessage(err) });
     }
@@ -130,7 +132,10 @@ export class WalletService implements IWalletHydrator {
     if (!account.publicKey) throw new DomainError('La cuenta no tiene wallet de Stellar asociada');
     try {
       if (account.custodyMode === 'CUSTODIAL') {
-        return { status: 'FUNDED', ...(await this.usdc.fund(account.publicKey, { walletSecret: this.custody.secretOf(account) })) };
+        return {
+          status: 'FUNDED',
+          ...(await this.usdc.fund(account.publicKey, { walletSecret: this.custody.secretOf(account) })),
+        };
       }
       return { status: 'FUNDED', ...(await this.usdc.payGrant(account.publicKey)) };
     } catch (err) {

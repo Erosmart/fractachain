@@ -12,13 +12,19 @@ function FooterAdminLinks() {
       <h4 className="font-display font-extrabold text-black text-xs tracking-wider uppercase mb-3">Admin</h4>
       <ul className="space-y-2 text-sm">
         <li>
-          <a href="/admin/issuance" className="hover:text-black">{t('nav.issuance')}</a>
+          <a href="/admin/issuance" className="hover:text-black">
+            {t('nav.issuance')}
+          </a>
         </li>
         <li>
-          <a href="/admin/kyc" className="hover:text-black">{t('nav.kyc')}</a>
+          <a href="/admin/kyc" className="hover:text-black">
+            {t('nav.kyc')}
+          </a>
         </li>
         <li>
-          <a href="/admin/audit" className="hover:text-black">{t('admAudit.nav')}</a>
+          <a href="/admin/audit" className="hover:text-black">
+            {t('admAudit.nav')}
+          </a>
         </li>
       </ul>
     </div>

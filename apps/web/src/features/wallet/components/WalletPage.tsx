@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, ArrowRight, Check, Copy, ExternalLink as ExternalIcon, Shield, Wallet } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowRight,
+  Check,
+  Copy,
+  ExternalLink as ExternalIcon,
+  Shield,
+  Wallet,
+} from 'lucide-react';
 import { withIsland } from '@/components/island/withIsland';
 import ExternalLink from '@/components/ui/ExternalLink';
 import { container } from '@/core/container';
@@ -91,7 +99,9 @@ function WalletPage() {
         <p className="text-neutral-600 text-sm">{t('pages.walletLead')}</p>
       </div>
 
-      <div className="rounded-2xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950">{t('wallet.honesty')}</div>
+      <div className="rounded-2xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        {t('wallet.honesty')}
+      </div>
 
       <div className="p-6 rounded-3xl crystal-card space-y-4">
         <div className="flex items-center gap-2 text-[#2f6f28] font-semibold">
@@ -103,7 +113,11 @@ function WalletPage() {
             <p className="text-xs text-neutral-500">{t('wallet.publicKey')}</p>
             <div className="flex items-start gap-2">
               <code className="text-xs sm:text-sm break-all font-mono flex-1">{publicKey}</code>
-              <button type="button" onClick={handleCopy} className="shrink-0 inline-flex items-center gap-1 text-xs font-bold">
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="shrink-0 inline-flex items-center gap-1 text-xs font-bold"
+              >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 {copied ? t('wallet.copied') : t('wallet.copy')}
               </button>
@@ -134,7 +148,10 @@ function WalletPage() {
               </button>
             )}
             {fundNotice && <p className="text-sm text-neutral-700">{fundNotice}</p>}
-            <ExternalLink href={explorerAccount(publicKey)} className="inline-flex items-center gap-2 text-sm font-bold text-[#2f6f28]">
+            <ExternalLink
+              href={explorerAccount(publicKey)}
+              className="inline-flex items-center gap-2 text-sm font-bold text-[#2f6f28]"
+            >
               Stellar Expert <ExternalIcon className="w-4 h-4" />
             </ExternalLink>
           </>
@@ -156,7 +173,10 @@ function WalletPage() {
         <p>{t('wallet.selfCustodyBody')}</p>
       </div>
 
-      <a href="/market/IPO-SOJA-PERGAMINO-2026" className="inline-flex items-center gap-2 font-display font-bold">
+      <a
+        href="/market/IPO-SOJA-PERGAMINO-2026"
+        className="inline-flex items-center gap-2 font-display font-bold"
+      >
         {t('wallet.ctaInvest')} <ArrowRight className="w-4 h-4" />
       </a>
     </div>

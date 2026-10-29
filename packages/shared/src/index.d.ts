@@ -130,12 +130,7 @@ export type ProductKind = 'LICITACION' | 'FORWARD' | 'WARRANT' | 'STOCK';
 export type OrderSide = 'BUY' | 'SELL';
 
 export type ListingStatus =
-  | 'DRAFT'
-  | 'DEPLOYED'
-  | 'TOKENS_MINTED'
-  | 'LISTED'
-  | 'CLOSED_SUCCESS'
-  | 'CLOSED_FAILED';
+  'DRAFT' | 'DEPLOYED' | 'TOKENS_MINTED' | 'LISTED' | 'CLOSED_SUCCESS' | 'CLOSED_FAILED';
 
 export type PoolStatus = 'OPEN' | 'SUCCESSFUL' | 'SETTLED' | 'FAILED';
 

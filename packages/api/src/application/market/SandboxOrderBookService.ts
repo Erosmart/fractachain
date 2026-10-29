@@ -39,7 +39,9 @@ export class SandboxOrderBookService {
   reservedTokens(accountId: string, listingId: string): number {
     return this.repo
       .load()
-      .orders.filter((o) => o.accountId === accountId && o.listingId === listingId && o.side === 'SELL' && isLive(o))
+      .orders.filter(
+        (o) => o.accountId === accountId && o.listingId === listingId && o.side === 'SELL' && isLive(o),
+      )
       .reduce((s, o) => s + o.remaining, 0);
   }
 
@@ -84,11 +86,15 @@ export class SandboxOrderBookService {
       throw new ValidationError('Precio o cantidad inválidos');
     }
     if (side === 'BUY') {
-      if (!this.accounts.hasTrustline(accountId, listingId)) throw new DomainError('Aprobá el token (trustline) para poder recibirlo');
+      if (!this.accounts.hasTrustline(accountId, listingId))
+        throw new DomainError('Aprobá el token (trustline) para poder recibirlo');
       if (this.accounts.cashBalance(accountId) - this.reservedCash(accountId) + EPSILON < amount * price) {
         throw new DomainError('USDC insuficiente (saldo sandbox menos órdenes abiertas)');
       }
-    } else if (this.accounts.tokenBalance(accountId, listingId) - this.reservedTokens(accountId, listingId) + EPSILON < amount) {
+    } else if (
+      this.accounts.tokenBalance(accountId, listingId) - this.reservedTokens(accountId, listingId) + EPSILON <
+      amount
+    ) {
       throw new DomainError('No tenés tokens libres para vender');
     }
 
@@ -126,7 +132,13 @@ export class SandboxOrderBookService {
   }
 
   /** Moves the cash and token legs of one cross between the two accounts. */
-  private settleFill(buy: BookOrder, sell: BookOrder, qty: number, price: number, trades: ReturnType<ISandboxBookRepository['load']>['trades']) {
+  private settleFill(
+    buy: BookOrder,
+    sell: BookOrder,
+    qty: number,
+    price: number,
+    trades: ReturnType<ISandboxBookRepository['load']>['trades'],
+  ) {
     const usdc = round6(qty * price);
     this.accounts.debitCash(buy.accountId, usdc);
     this.accounts.creditCash(sell.accountId, usdc);

@@ -21,7 +21,9 @@ export function isContractId(value?: string | null): value is string {
 }
 
 export function normalizeAddress(value?: string | null): string {
-  return String(value ?? '').trim().toUpperCase();
+  return String(value ?? '')
+    .trim()
+    .toUpperCase();
 }
 
 /** Stellar amounts carry at most 7 decimals. */

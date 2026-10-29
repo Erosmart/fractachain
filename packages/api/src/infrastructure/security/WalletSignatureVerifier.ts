@@ -11,7 +11,12 @@ const PREFIX: Record<WalletChallengePurpose, string> = {
 
 export interface IWalletSignatureVerifier {
   /** Returns `null` when valid, or the reason it was refused. */
-  verify(purpose: WalletChallengePurpose, publicKey: string, message: string, signature: string): string | null;
+  verify(
+    purpose: WalletChallengePurpose,
+    publicKey: string,
+    message: string,
+    signature: string,
+  ): string | null;
 }
 
 /**
@@ -28,12 +33,21 @@ export class Sep53WalletSignatureVerifier implements IWalletSignatureVerifier {
 
   constructor(private readonly clock: IClock) {}
 
-  verify(purpose: WalletChallengePurpose, publicKey: string, message: string, signature: string): string | null {
+  verify(
+    purpose: WalletChallengePurpose,
+    publicKey: string,
+    message: string,
+    signature: string,
+  ): string | null {
     if (!isStellarPublicKey(publicKey)) return 'Public key Stellar inválida';
     const prefix = PREFIX[purpose];
     const ts = Number(message.slice(prefix.length));
     const now = this.clock.now();
-    if (!message.startsWith(prefix) || !Number.isFinite(ts) || Math.abs(now - ts) > Sep53WalletSignatureVerifier.MAX_AGE_MS) {
+    if (
+      !message.startsWith(prefix) ||
+      !Number.isFinite(ts) ||
+      Math.abs(now - ts) > Sep53WalletSignatureVerifier.MAX_AGE_MS
+    ) {
       return 'Mensaje de firma inválido o vencido';
     }
     let ok = false;

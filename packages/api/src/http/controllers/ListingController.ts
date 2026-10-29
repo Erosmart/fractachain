@@ -55,7 +55,11 @@ export class ListingController implements Controller {
     r.get('/api/listings/:id', id, async (req, res) => {
       const payload = await this.offerings.detail(listingId(req), req.account?.publicKey);
       if (!payload) throw new NotFoundError('Listing no encontrado');
-      res.json({ success: true, data: { ...payload.listing, onChain: payload.onChain }, validation: payload.validation });
+      res.json({
+        success: true,
+        data: { ...payload.listing, onChain: payload.onChain },
+        validation: payload.validation,
+      });
     });
 
     r.get('/api/listings/:id/validation', id, (req, res) => {
@@ -67,46 +71,112 @@ export class ListingController implements Controller {
     });
 
     /* ------------------------------ admin: issuance ------------------------------ */
-    r.post('/api/admin/demo-dossier', admin, this.audit.route('listing.demo_dossier'), this.limits.heavyAdmin, async (_req, res) => {
-      ok(res, await this.demo.build());
-    });
+    r.post(
+      '/api/admin/demo-dossier',
+      admin,
+      this.audit.route('listing.demo_dossier'),
+      this.limits.heavyAdmin,
+      async (_req, res) => {
+        ok(res, await this.demo.build());
+      },
+    );
 
-    r.post('/api/listings', admin, this.audit.route('listing.create'), body(DossierBody), async (req, res) => {
-      ok(res, await this.issuance.create(bodyOf(req, DossierBody)), 201);
-    });
+    r.post(
+      '/api/listings',
+      admin,
+      this.audit.route('listing.create'),
+      body(DossierBody),
+      async (req, res) => {
+        ok(res, await this.issuance.create(bodyOf(req, DossierBody)), 201);
+      },
+    );
 
-    r.post('/api/listings/:id/deploy', admin, audited('listing.deploy'), this.limits.heavyAdmin, id, async (req, res) => {
-      ok(res, await this.issuance.deploy(listingId(req)));
-    });
+    r.post(
+      '/api/listings/:id/deploy',
+      admin,
+      audited('listing.deploy'),
+      this.limits.heavyAdmin,
+      id,
+      async (req, res) => {
+        ok(res, await this.issuance.deploy(listingId(req)));
+      },
+    );
 
-    r.post('/api/listings/:id/mint', admin, audited('listing.mint'), this.limits.heavyAdmin, id, body(MintBody), async (req, res) => {
-      ok(res, await this.issuance.mint(listingId(req), bodyOf(req, MintBody).amount));
-    });
+    r.post(
+      '/api/listings/:id/mint',
+      admin,
+      audited('listing.mint'),
+      this.limits.heavyAdmin,
+      id,
+      body(MintBody),
+      async (req, res) => {
+        ok(res, await this.issuance.mint(listingId(req), bodyOf(req, MintBody).amount));
+      },
+    );
 
-    r.post('/api/listings/:id/licitacion', admin, audited('listing.open'), this.limits.heavyAdmin, id, body(SettleBody), async (req, res) => {
-      ok(res, await this.issuance.openLicitacion(listingId(req), bodyOf(req, SettleBody)));
-    });
+    r.post(
+      '/api/listings/:id/licitacion',
+      admin,
+      audited('listing.open'),
+      this.limits.heavyAdmin,
+      id,
+      body(SettleBody),
+      async (req, res) => {
+        ok(res, await this.issuance.openLicitacion(listingId(req), bodyOf(req, SettleBody)));
+      },
+    );
 
-    r.post('/api/listings/:id/settle', admin, audited('listing.settle_policy'), id, body(SettleBody), (req, res) => {
-      ok(res, this.issuance.setSettle(listingId(req), bodyOf(req, SettleBody)));
-    });
+    r.post(
+      '/api/listings/:id/settle',
+      admin,
+      audited('listing.settle_policy'),
+      id,
+      body(SettleBody),
+      (req, res) => {
+        ok(res, this.issuance.setSettle(listingId(req), bodyOf(req, SettleBody)));
+      },
+    );
 
-    r.post('/api/listings/:id/proceeds-wallet', admin, audited('listing.proceeds_wallet'), id, body(ProceedsWalletBody), async (req, res) => {
-      ok(res, await this.issuance.setProceedsWallet(listingId(req), bodyOf(req, ProceedsWalletBody).wallet));
-    });
+    r.post(
+      '/api/listings/:id/proceeds-wallet',
+      admin,
+      audited('listing.proceeds_wallet'),
+      id,
+      body(ProceedsWalletBody),
+      async (req, res) => {
+        ok(
+          res,
+          await this.issuance.setProceedsWallet(listingId(req), bodyOf(req, ProceedsWalletBody).wallet),
+        );
+      },
+    );
 
     r.post('/api/listings/:id/close', admin, audited('listing.close'), id, async (req, res) => {
       ok(res, await this.settlement.finalize(listingId(req)));
     });
 
-    r.post('/api/listings/:id/withdraw-proceeds', admin, audited('listing.withdraw_proceeds'), this.limits.heavyAdmin, id, async (req, res) => {
-      ok(res, await this.offerings.withdrawProceeds(listingId(req)));
-    });
+    r.post(
+      '/api/listings/:id/withdraw-proceeds',
+      admin,
+      audited('listing.withdraw_proceeds'),
+      this.limits.heavyAdmin,
+      id,
+      async (req, res) => {
+        ok(res, await this.offerings.withdrawProceeds(listingId(req)));
+      },
+    );
 
-    r.post('/api/listings/:id/dividends', admin, audited('listing.dividends'), id, body(DividendBody), (req, res) => {
-      const b = bodyOf(req, DividendBody);
-      ok(res, this.dividends.deposit(listingId(req), Number(b.amountUsdc ?? b.amount)), 201);
-    });
+    r.post(
+      '/api/listings/:id/dividends',
+      admin,
+      audited('listing.dividends'),
+      id,
+      body(DividendBody),
+      (req, res) => {
+        const b = bodyOf(req, DividendBody);
+        ok(res, this.dividends.deposit(listingId(req), Number(b.amountUsdc ?? b.amount)), 201);
+      },
+    );
 
     r.get('/api/listings/:id/dividends', id, (req, res) => {
       ok(res, this.dividends.list(listingId(req)));
@@ -118,18 +188,53 @@ export class ListingController implements Controller {
       ok(res, await this.offerings.finalizeByInvestor(listingId(req)));
     });
 
-    r.post('/api/listings/:id/contribute', auth, audited('offering.contribute'), id, body(ContributeBody), async (req, res) => {
-      ok(res, await this.offerings.contribute(listingId(req), currentAccount(req).id, bodyOf(req, ContributeBody).usdcAmount));
-    });
+    r.post(
+      '/api/listings/:id/contribute',
+      auth,
+      audited('offering.contribute'),
+      id,
+      body(ContributeBody),
+      async (req, res) => {
+        ok(
+          res,
+          await this.offerings.contribute(
+            listingId(req),
+            currentAccount(req).id,
+            bodyOf(req, ContributeBody).usdcAmount,
+          ),
+        );
+      },
+    );
 
     r.post('/api/listings/:id/contribute/prepare', auth, id, body(ContributeBody), async (req, res) => {
-      ok(res, await this.offerings.prepareContribute(listingId(req), currentAccount(req).id, bodyOf(req, ContributeBody).usdcAmount));
+      ok(
+        res,
+        await this.offerings.prepareContribute(
+          listingId(req),
+          currentAccount(req).id,
+          bodyOf(req, ContributeBody).usdcAmount,
+        ),
+      );
     });
 
     /** `usdcAmount` in the body is ignored: the booked amount is read from the contract. */
-    r.post('/api/listings/:id/contribute/submit', auth, audited('offering.contribute'), id, body(ContributeSubmitBody), async (req, res) => {
-      ok(res, await this.offerings.submitContribute(listingId(req), currentAccount(req).id, bodyOf(req, ContributeSubmitBody).xdr));
-    });
+    r.post(
+      '/api/listings/:id/contribute/submit',
+      auth,
+      audited('offering.contribute'),
+      id,
+      body(ContributeSubmitBody),
+      async (req, res) => {
+        ok(
+          res,
+          await this.offerings.submitContribute(
+            listingId(req),
+            currentAccount(req).id,
+            bodyOf(req, ContributeSubmitBody).xdr,
+          ),
+        );
+      },
+    );
 
     r.post('/api/listings/:id/refund', auth, audited('offering.refund'), id, async (req, res) => {
       ok(res, await this.offerings.refund(listingId(req), currentAccount(req).id));
@@ -139,9 +244,19 @@ export class ListingController implements Controller {
       ok(res, await this.offerings.prepareRefund(listingId(req), currentAccount(req).id));
     });
 
-    r.post('/api/listings/:id/refund/submit', auth, audited('offering.refund'), id, body(XdrBody), async (req, res) => {
-      ok(res, await this.offerings.submitRefund(listingId(req), currentAccount(req).id, bodyOf(req, XdrBody).xdr));
-    });
+    r.post(
+      '/api/listings/:id/refund/submit',
+      auth,
+      audited('offering.refund'),
+      id,
+      body(XdrBody),
+      async (req, res) => {
+        ok(
+          res,
+          await this.offerings.submitRefund(listingId(req), currentAccount(req).id, bodyOf(req, XdrBody).xdr),
+        );
+      },
+    );
 
     r.post('/api/listings/:id/trustline', auth, id, async (req, res) => {
       ok(res, await this.offerings.approveToken(listingId(req), currentAccount(req).id));

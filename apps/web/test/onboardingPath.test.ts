@@ -17,7 +17,9 @@ describe('nextOnboardingPath', () => {
   });
 
   it('never gates admins', () => {
-    expect(nextOnboardingPath({ isAdmin: true, custodyMode: null, kycStatus: 'UNREGISTERED' })).toBe('/dashboard');
+    expect(nextOnboardingPath({ isAdmin: true, custodyMode: null, kycStatus: 'UNREGISTERED' })).toBe(
+      '/dashboard',
+    );
   });
 });
 

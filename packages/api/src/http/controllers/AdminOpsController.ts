@@ -29,13 +29,26 @@ export class AdminOpsController implements Controller {
       ok(res, await this.network.overview());
     });
 
-    r.post('/api/admin/testnet', admin, this.audit.route('testnet.settings'), body(NetworkSettingsBody), (req, res) => {
-      ok(res, this.network.update(bodyOf(req, NetworkSettingsBody)));
-    });
+    r.post(
+      '/api/admin/testnet',
+      admin,
+      this.audit.route('testnet.settings'),
+      body(NetworkSettingsBody),
+      (req, res) => {
+        ok(res, this.network.update(bodyOf(req, NetworkSettingsBody)));
+      },
+    );
 
-    r.post('/api/admin/testnet/configure-issuer', admin, this.limits.heavyAdmin, this.audit.route('testnet.configure_issuer'), body(ConfigureIssuerBody), async (req, res) => {
-      ok(res, await this.network.configureIssuer(Boolean(bodyOf(req, ConfigureIssuerBody).clawback)));
-    });
+    r.post(
+      '/api/admin/testnet/configure-issuer',
+      admin,
+      this.limits.heavyAdmin,
+      this.audit.route('testnet.configure_issuer'),
+      body(ConfigureIssuerBody),
+      async (req, res) => {
+        ok(res, await this.network.configureIssuer(Boolean(bodyOf(req, ConfigureIssuerBody).clawback)));
+      },
+    );
 
     /** Security audit trail, newest first. */
     r.get('/api/admin/audit', admin, (req, res) => {
@@ -46,9 +59,16 @@ export class AdminOpsController implements Controller {
     });
 
     /** Reconciles one holder's on-chain authorization with their KYC status. */
-    r.post('/api/admin/compliance/sync', admin, this.limits.heavyAdmin, this.audit.route('compliance.sync'), body(ComplianceSyncBody), async (req, res) => {
-      const b = bodyOf(req, ComplianceSyncBody);
-      ok(res, await this.compliance.sync(b.address, b.approved));
-    });
+    r.post(
+      '/api/admin/compliance/sync',
+      admin,
+      this.limits.heavyAdmin,
+      this.audit.route('compliance.sync'),
+      body(ComplianceSyncBody),
+      async (req, res) => {
+        const b = bodyOf(req, ComplianceSyncBody);
+        ok(res, await this.compliance.sync(b.address, b.approved));
+      },
+    );
   }
 }
