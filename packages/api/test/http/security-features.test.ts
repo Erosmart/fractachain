@@ -1,6 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { Keypair } from '@stellar/stellar-sdk';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadConfig } from '../../src/config/env';
@@ -136,6 +137,27 @@ describe('email verification and password reset', () => {
     const verified = await api().post('/api/auth/email/verify').send({ token });
     expect(verified.status).toBe(200);
     expect(verified.body.data.user.emailVerified).toBe(true);
+  });
+
+  it('verifies the email a wallet account adopts in the KYC form', async () => {
+    const kp = Keypair.random();
+    const message = `fractachain-login:${clock.now()}`;
+    const signature = Buffer.from(kp.sign(Buffer.from(message, 'utf8'))).toString('base64');
+    const login = await api()
+      .post('/api/auth/freighter')
+      .send({ publicKey: kp.publicKey(), message, signature });
+    expect(login.status).toBe(200);
+    const kyc = await api()
+      .post('/api/kyc/onboard')
+      .set('Authorization', `Bearer ${login.body.token}`)
+      .send({ legalName: 'Wally', cuit: '20123456789', email: 'wally@example.com' });
+    expect(kyc.status).toBe(200);
+    expect(kyc.body.user.email).toBe('wally@example.com');
+    expect(kyc.body.user.emailVerified).toBe(false);
+    const token = mailer.lastLinkTo('wally@example.com', '/verify-email');
+    expect((await api().post('/api/auth/email/verify').send({ token })).body.data.user.emailVerified).toBe(
+      true,
+    );
   });
 
   it('resets the password through the emailed link and kills old sessions', async () => {
