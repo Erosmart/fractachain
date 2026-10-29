@@ -1,0 +1,14 @@
+---
+import LoginPage from '@/features/auth/components/LoginPage';
+import PageFallback from '@/components/ui/PageFallback.astro';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { translate } from '@/core/i18n/translate';
+
+const locale = Astro.locals.locale;
+---
+
+<BaseLayout title={translate(locale, 'nav.login')}>
+  <LoginPage client:only="react" locale={locale}>
+    <PageFallback slot="fallback" />
+  </LoginPage>
+</BaseLayout>

@@ -332,3 +332,18 @@ fn an_unfunded_vault_cannot_be_liquidated() {
     f.env.ledger().set_timestamp(T0 + 100 * DAY);
     assert!(f.client.try_execute_liquidation(&f.lender).is_err());
 }
+
+/// SC-10 (security review 2026-10): at exactly `due + grace` the loan was both
+/// repayable and liquidatable, so the lender could front-run a timely payment.
+#[test]
+fn repayment_and_liquidation_do_not_overlap_at_the_grace_boundary() {
+    let f = setup();
+    init_default(&f, 10);
+    f.client.fund_loan(&f.lender);
+    // Loan funded at T0 for 10 days + 15 days of grace.
+    f.env.ledger().set_timestamp(T0 + 25 * DAY);
+    assert!(f.client.try_execute_liquidation(&f.lender).is_err());
+    f.env.ledger().set_timestamp(T0 + 25 * DAY + 1);
+    f.client.execute_liquidation(&f.lender);
+    assert_eq!(f.client.get_status(), WarrantStatus::Liquidated);
+}

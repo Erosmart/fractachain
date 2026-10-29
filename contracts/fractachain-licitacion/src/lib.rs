@@ -155,6 +155,15 @@ fn set_contribution(env: &Env, user: &Address, amount: i128) {
 }
 
 /// Tracks the highest observed unit price, which floors the squeeze-out price.
+/// The tender offer only exists over a successful issuance. During `Open`
+/// an acceptor could be paid by the OPA *and* refunded if the raise failed.
+fn require_successful(env: &Env) {
+    let state: State = env.storage().persistent().get(&DataKey::State).unwrap();
+    if state != State::Successful {
+        panic!("Tender offer only after a successful licitacion");
+    }
+}
+
 fn record_price(env: &Env, price: i128) {
     let highest: i128 = env
         .storage()
@@ -556,6 +565,11 @@ impl FractachainLicitacionContract {
         if !is_investor_verified(&env, &order.seller) {
             panic!("Seller KYC expired or revoked");
         }
+        // A self-fill moves nothing but still records a print: it was a free
+        // way to pump `HighestPrice`, the floor every OPA / squeeze-out pays.
+        if buyer == order.seller {
+            panic!("Cannot fill your own order");
+        }
 
         let total = order
             .amount_rwa
@@ -564,7 +578,8 @@ impl FractachainLicitacionContract {
         require_positive(total);
 
         let client = token_client(&env, &payment_token(&env));
-        let fee = (total * 25) / 10000;
+        // 0.25%, rounded up: truncation made every trade under 400 fee-free.
+        let fee = (total * 25 + 9_999) / 10_000;
         let seller_net = total - fee;
         client.transfer(&buyer, &order.seller, &seller_net);
         if fee > 0 {
@@ -604,6 +619,7 @@ impl FractachainLicitacionContract {
     /// "offer" revocable at will.
     pub fn launch_opa(env: Env, acquirer: Address, price_per_share: i128) {
         acquirer.require_auth();
+        require_successful(&env);
         require_kyc_to_receive(&env, &acquirer);
         require_positive(price_per_share);
         let rec = get_record(&env).expect("OPA not triggered");
@@ -645,6 +661,7 @@ impl FractachainLicitacionContract {
     /// A minority holder accepts the tender offer and is paid from escrow.
     pub fn accept_opa(env: Env, seller: Address) {
         seller.require_auth();
+        require_successful(&env);
         let rec = get_record(&env).expect("No OPA");
         if rec.state != OpaState::ActiveOffer {
             panic!("No active OPA offer");

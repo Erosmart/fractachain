@@ -28,3 +28,18 @@ fractalchain.md
 backend/data/users.json
 backend/data/selfies/
 agents_secrets.json
+
+# Monorepo (v2)
+apps/*/dist/
+apps/web/.astro/
+apps/api/data/users.json
+apps/api/data/selfies/
+apps/api/data/orderbook.json
+apps/api/data/dividends.json
+apps/api/data/revoked-sessions.json
+apps/api/.env
+apps/web/.env
+coverage/
+
+# Local live-copy state (never committed)
+apps/api/.local-data/

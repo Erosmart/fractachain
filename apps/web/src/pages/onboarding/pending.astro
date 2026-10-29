@@ -1,0 +1,14 @@
+---
+import PendingKycPage from '@/features/onboarding/components/PendingKycPage';
+import PageFallback from '@/components/ui/PageFallback.astro';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { translate } from '@/core/i18n/translate';
+
+const locale = Astro.locals.locale;
+---
+
+<BaseLayout title={translate(locale, 'onboarding.pendingTitle')}>
+  <PendingKycPage client:only="react" locale={locale}>
+    <PageFallback slot="fallback" />
+  </PendingKycPage>
+</BaseLayout>

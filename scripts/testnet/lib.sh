@@ -11,7 +11,7 @@ POR_ID="${POR_ID:-fc-por}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONTRACTS="$ROOT/contracts"
 DEPLOYMENTS="$ROOT/deployments"
-BACKEND_ENV="$ROOT/backend/.env"
+BACKEND_ENV="$ROOT/apps/api/.env"
 # Host path for copies; the stellar wrapper docker-mounts $(pwd) as /workspace,
 # so invoke/deploy must use paths relative to ROOT.
 WASM_HOST="$DEPLOYMENTS/wasm"

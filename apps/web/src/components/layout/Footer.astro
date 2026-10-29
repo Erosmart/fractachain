@@ -1,0 +1,52 @@
+---
+import { Lock } from 'lucide-react';
+import BrandMark from '@/components/ui/BrandMark';
+import { translatorFor } from '@/core/i18n/translate';
+import FooterAdminLinks from './FooterAdminLinks';
+
+const locale = Astro.locals.locale;
+const t = translatorFor(locale);
+const year = new Date().getFullYear();
+---
+
+<footer class="relative z-10 border-t border-black/10 pt-8 sm:pt-14 pb-8 sm:pb-10 text-neutral-600 text-sm">
+  <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+    <div class="flex flex-col md:flex-row md:items-start justify-between gap-8 md:gap-12 mb-8 sm:mb-10">
+      <div class="space-y-4 max-w-sm shrink-0">
+        <BrandMark />
+        <p class="text-neutral-600 text-sm leading-relaxed">
+          {t('footer.blurb')} <strong class="text-black">Stellar</strong>.
+        </p>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-8">
+        <div>
+          <h4 class="font-display font-extrabold text-black text-xs tracking-wider uppercase mb-3">{t('footer.markets')}</h4>
+          <ul class="space-y-2 text-sm">
+            <li><a href="/market" class="hover:text-black">{t('nav.market')}</a></li>
+            <li><a href="/orderbook" class="hover:text-black">{t('nav.orderbook')}</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-display font-extrabold text-black text-xs tracking-wider uppercase mb-3">{t('footer.platform')}</h4>
+          <ul class="space-y-2 text-sm">
+            <li><a href="/dashboard" class="hover:text-black">{t('nav.portfolio')}</a></li>
+            <li><a href="/wallet" class="hover:text-black">{t('nav.wallet')}</a></li>
+            <li><a href="/login" class="hover:text-black">{t('nav.login')}</a></li>
+          </ul>
+        </div>
+        <FooterAdminLinks client:only="react" locale={locale} />
+      </div>
+    </div>
+    <div class="p-4 rounded-2xl crystal-card mb-8">
+      <div class="flex items-center gap-2 text-black font-display font-bold text-xs uppercase tracking-wider">
+        <Lock className="w-4 h-4" />
+        {t('footer.notice')}
+      </div>
+      <p class="text-[11px] leading-relaxed text-neutral-600 mt-2">{t('footer.legal')}</p>
+    </div>
+    <div class="flex justify-between text-xs text-neutral-500 font-lcd">
+      <p>© {year} Fractachain</p>
+      <p>TESTNET</p>
+    </div>
+  </div>
+</footer>

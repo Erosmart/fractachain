@@ -555,3 +555,67 @@ fn pubnet_rejects_kyc_outside_argentine_business_hours() {
     );
     assert!(f.client.is_verified(&who));
 }
+
+/// SC-01 (security review 2026-10): a self-fill moved nothing but recorded a
+/// print, a free way to raise the equitable price floor every OPA pays.
+#[test]
+fn an_order_cannot_be_filled_by_its_own_seller() {
+    let f = setup();
+    let seller = fund_and_finalize(&f);
+    let order_id = f.client.place_order(&seller, &1, &1_000_000);
+    assert!(f.client.try_fill_order(&seller, &order_id).is_err());
+    assert_eq!(f.client.get_equitable_price_floor(), PRICE);
+}
+
+/// SC-01: the 0.25% fee truncated to zero on every fill under 400.
+#[test]
+fn small_fills_still_pay_the_platform_fee() {
+    let f = setup();
+    let seller = fund_and_finalize(&f);
+    let buyer = investor(&f, 50_000);
+    let order_id = f.client.place_order(&seller, &1, &PRICE);
+    let before = balance(&f, &f.admin);
+    f.client.fill_order(&buyer, &order_id);
+    assert_eq!(balance(&f, &f.admin) - before, 1);
+}
+
+/// SC-05: during `Open` an acceptor could be paid by the tender offer and
+/// still refunded in full if the issuance then failed.
+#[test]
+fn a_tender_offer_waits_for_a_successful_issuance() {
+    let f = setup();
+    let small = investor(&f, 1_000_000);
+    let whale = investor(&f, 1_000_000);
+    f.client.contribute(&small, &40_000);
+    f.client.contribute(&whale, &60_000);
+    assert!(f.client.get_opa_record().is_some(), "the primary still arms the OPA");
+    assert!(f.client.try_launch_opa(&whale, &PRICE).is_err());
+    assert!(f.client.try_accept_opa(&small).is_err());
+}
+
+/// SC-09: re-verifying a KYC silently restored votes Art. 88 had suspended.
+#[test]
+fn kyc_renewal_keeps_a_suspended_vote_suspended() {
+    let f = setup();
+    let whale = fund_and_finalize(&f);
+    let minority = investor(&f, 1_000_000);
+    let o1 = f.client.place_order(&whale, &400, &PRICE);
+    f.client.fill_order(&minority, &o1);
+    let o2 = f.client.place_order(&minority, &100, &PRICE);
+    f.client.fill_order(&whale, &o2);
+    f.env
+        .ledger()
+        .set_timestamp(BIZ_TS + 31 * DAY + crate::opa::OPA_DEADLINE_SECONDS + 1);
+    let o3 = f.client.place_order(&minority, &50, &PRICE);
+    f.client.fill_order(&whale, &o3);
+    assert!(!f.client.has_votes(&whale));
+
+    f.client.verify_investor(
+        &f.admin,
+        &whale,
+        &32,
+        &InvestorType::National,
+        &(BIZ_TS + 400 * DAY),
+    );
+    assert!(!f.client.has_votes(&whale));
+}

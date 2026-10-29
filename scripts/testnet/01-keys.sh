@@ -17,7 +17,7 @@ echo "issuer    $(addr "$ISSUER_ID")  XLM=$(horizon_balance "$ISSUER_ID")"
 echo "por       $(addr "$POR_ID")  XLM=$(horizon_balance "$POR_ID")"
 
 if [[ ! -f "$BACKEND_ENV" ]]; then
-  cp "$ROOT/backend/.env.example" "$BACKEND_ENV"
+  cp "$ROOT/apps/api/.env.example" "$BACKEND_ENV"
   chmod 600 "$BACKEND_ENV"
 fi
 
@@ -65,5 +65,5 @@ PY
 
 echo
 echo "Públicas escritas en deployments/testnet.json"
-echo "Secretos (S…) escritos en backend/.env — no lo subas."
+echo "Secretos (S…) escritos en apps/api/.env — no lo subas."
 echo "Siguiente: scripts/testnet/02-build.sh"

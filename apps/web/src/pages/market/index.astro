@@ -1,0 +1,11 @@
+---
+import MarketListPage from '@/features/market/components/MarketListPage';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { translate } from '@/core/i18n/translate';
+
+const locale = Astro.locals.locale;
+---
+
+<BaseLayout title={translate(locale, 'market.title')}>
+  <MarketListPage client:load locale={locale} />
+</BaseLayout>

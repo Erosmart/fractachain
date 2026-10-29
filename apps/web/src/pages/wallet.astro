@@ -1,0 +1,14 @@
+---
+import WalletPage from '@/features/wallet/components/WalletPage';
+import PageFallback from '@/components/ui/PageFallback.astro';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { translate } from '@/core/i18n/translate';
+
+const locale = Astro.locals.locale;
+---
+
+<BaseLayout title={translate(locale, 'pages.walletTitle')}>
+  <WalletPage client:only="react" locale={locale}>
+    <PageFallback slot="fallback" />
+  </WalletPage>
+</BaseLayout>

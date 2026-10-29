@@ -80,12 +80,19 @@ pub fn verify_investor(
         panic!("Whitelist authorization only allowed during Argentine business hours (Mon-Fri 08:00-16:00 ART)");
     }
 
+    // Renewing a KYC must not lift an Art. 88 vote suspension.
+    let voting_rights = env
+        .storage()
+        .persistent()
+        .get::<_, InvestorInfo>(&KycKey::Investor(investor.clone()))
+        .map(|existing| existing.voting_rights)
+        .unwrap_or(true);
     let info = InvestorInfo {
         country_code,
         investor_type,
         kyc_expiry: expiry,
         is_active: true,
-        voting_rights: true,
+        voting_rights,
         registered_at: now,
     };
 

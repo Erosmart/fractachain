@@ -457,6 +457,11 @@ impl ForwardContract {
         if new_buyer == addr(&env, ForwardKey::Producer) {
             panic!("Producer cannot buy the position");
         }
+        // The arbiter rules disputes over this position: owning it would let
+        // them decide their own case.
+        if new_buyer == addr(&env, ForwardKey::Arbiter) {
+            panic!("Arbiter cannot buy the position");
+        }
         // A position awaiting acceptance or under dispute is mid-settlement.
         // Allowing its sale let the original buyer hand a frozen escrow to a
         // third party who had no way to see the problem.

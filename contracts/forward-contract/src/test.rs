@@ -402,3 +402,16 @@ fn double_initialization_is_rejected() {
     init_default(&f);
     init_default(&f);
 }
+
+/// SC-07 (security review 2026-10): the arbiter could buy the buyer position
+/// and then rule its own dispute.
+#[test]
+fn the_arbiter_cannot_buy_the_position() {
+    let f = setup();
+    init_default(&f);
+    StellarAssetClient::new(&f.env, &f.token_id).mint(&f.arbiter, &1_000_000);
+    assert!(f
+        .client
+        .try_transfer_position(&f.buyer, &f.arbiter, &90_000)
+        .is_err());
+}

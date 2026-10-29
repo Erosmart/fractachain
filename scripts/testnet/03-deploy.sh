@@ -197,4 +197,4 @@ PY
 echo
 echo "Listo. IDs públicos en deployments/testnet.json"
 echo "Lab: https://stellar.expert/explorer/testnet/contract/$FACTORY_ID"
-echo "Reiniciá el backend para que lea el deployment."
+echo "Reiniciá el API (npm run dev:api) para que lea el deployment."

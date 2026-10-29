@@ -264,7 +264,9 @@ impl WarrantVaultContract {
         let grace_end = due
             .checked_add(GRACE_DAYS * SECONDS_PER_DAY)
             .expect("overflow");
-        if now < grace_end {
+        // Repayment is still accepted at `now == grace_end`; liquidation opens
+        // one second later so the lender cannot front-run a timely payment.
+        if now <= grace_end {
             panic!("Grace period has not expired yet");
         }
 

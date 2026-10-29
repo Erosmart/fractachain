@@ -1,0 +1,11 @@
+---
+import ForwardsPage from '@/features/derivatives/components/ForwardsPage';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { translate } from '@/core/i18n/translate';
+
+const locale = Astro.locals.locale;
+---
+
+<BaseLayout title={translate(locale, 'pages.forwardsTitle')}>
+  <ForwardsPage client:load locale={locale} />
+</BaseLayout>

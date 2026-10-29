@@ -3,5 +3,5 @@
 # Requiere STELLAR_DEPLOYER_SECRET (set_warrantera en la factory).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-cd "$ROOT/backend"
-npx ts-node src/stellar/deploy_forward_warrant.ts
+cd "$ROOT"
+npm run deploy:forward-warrant -w @fractachain/api

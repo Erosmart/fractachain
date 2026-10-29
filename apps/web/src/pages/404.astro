@@ -1,0 +1,16 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { translatorFor } from '@/core/i18n/translate';
+
+const t = translatorFor(Astro.locals.locale);
+Astro.response.status = 404;
+---
+
+<BaseLayout title={t('misc.notFoundTitle')}>
+  <div class="max-w-lg mx-auto py-20 text-center space-y-5">
+    <p class="font-lcd text-[11px] uppercase tracking-[0.22em] text-neutral-500">404</p>
+    <h1 class="text-3xl font-extrabold font-display">{t('misc.notFoundTitle')}</h1>
+    <p class="text-neutral-600">{t('misc.notFoundBody')}</p>
+    <a href="/" class="inline-flex px-6 py-3 rounded-2xl bg-black text-white font-display font-bold">{t('misc.goHome')}</a>
+  </div>
+</BaseLayout>

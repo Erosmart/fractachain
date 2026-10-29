@@ -1,0 +1,15 @@
+---
+/**
+ * Server-rendered placeholder shown while a `client:only` island loads.
+ * Usage: `<Page client:only="react"><PageFallback slot="fallback" /></Page>`.
+ */
+import { translate } from '@/core/i18n/translate';
+
+interface Props {
+  messageKey?: string;
+}
+
+const text = translate(Astro.locals.locale, Astro.props.messageKey ?? 'misc.loading');
+---
+
+<p class="py-16 text-center text-neutral-500" aria-busy="true">{text}</p>
