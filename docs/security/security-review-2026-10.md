@@ -156,7 +156,14 @@ implementado y con tests (`packages/api/test/http/security-features.test.ts`):
    admin tiene que llamar `set_payment_asset(1, <usdcSac>)`. Para desarrollo:
    `testnet:clone-factory` + `testnet:setup-usdc`.
 4. **Contratos ya desplegados:** las correcciones aplican a instancias nuevas
-   tras subir el WASM (`scripts/testnet/02-build.sh` + `testnet:upload-wasm`).
+   tras subir el WASM. Build reproducible de esta rama (`npm run contracts:build`,
+   sin el *spec shaking* de `stellar contract build`): licitación
+   `2d9124e5…3aa2` (66 079 B), stock-vault `b97af48b…b7da`, forward
+   `5cd1c78a…a222`, warrant `1a654be5…f77c`. Ya están subidos a testnet y
+   probados end-to-end (emisión USDC → aporte → `finalize` → reparto) contra
+   una factory propia. Para el entorno compartido: `scripts/testnet/02-build.sh`
+   (stellar CLI) + `03-deploy.sh`, o `testnet:upload-wasm` y actualizar
+   `deployments/testnet.json`.
 
 ## Contratos Soroban
 

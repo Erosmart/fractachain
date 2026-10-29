@@ -64,3 +64,12 @@ init atómicos), lo que implica cambiar también el flujo de deploy del API.
 - No toca pubnet.
 - No cubre autocustodia / Freighter: el `contribute` on-chain firma con la clave custodial.
 - No rota peppers de sesión: cambialos en `.env` si el host no es solo tu máquina.
+
+## Sin Stellar CLI
+
+`stellar contract build` además poda la spec del contrato. Si no podés
+instalar el CLI (p. ej. por memoria: `stellar-xdr` necesita varios GB para
+compilar), `npm run contracts:build` genera WASM desplegables con cargo
+(spec sin podar, mismo código ejecutable) y `npm run testnet:upload-wasm -w
+@fractachain/api -- licitacion=… stockVault=…` los sube y actualiza una copia
+local del deployment.

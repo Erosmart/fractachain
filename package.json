@@ -24,7 +24,8 @@
     "contracts:test": "cargo test --manifest-path contracts/Cargo.toml",
     "testnet:deploy-licitacion": "npm run deploy:licitacion -w @fractachain/api",
     "testnet:deploy-forward-warrant": "npm run deploy:forward-warrant -w @fractachain/api",
-    "testnet:clone-factory": "npm run testnet:clone-factory -w @fractachain/api"
+    "testnet:clone-factory": "npm run testnet:clone-factory -w @fractachain/api",
+    "contracts:build": "cd contracts && SOROBAN_SDK_BUILD_SYSTEM_SUPPORTS_SPEC_SHAKING_V2=1 cargo build --locked --release --target wasm32v1-none"
   },
   "devDependencies": {
     "prettier": "^3.9.10",

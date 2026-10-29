@@ -117,10 +117,13 @@ echo "STELLAR_DEPLOYMENT_FILE=$PWD/packages/api/.local-data/testnet-deployment.j
 
 npm run testnet:clone-factory                     # factory propia (XLM + USDC registrados)
 npm run testnet:setup-usdc -w @fractachain/api    # emisor USDC + SAC propios, faucet funcionando
-# contratos corregidos (requiere stellar CLI):
-bash scripts/testnet/02-build.sh
+# contratos corregidos: con stellar CLI → bash scripts/testnet/02-build.sh
+# sin stellar CLI (solo cargo + target wasm32v1-none):
+npm run contracts:build
+W=contracts/target/wasm32v1-none/release
 npm run testnet:upload-wasm -w @fractachain/api -- \
-  licitacion=deployments/wasm/fractachain_licitacion.wasm stockVault=deployments/wasm/stock_vault.wasm
+  licitacion=$PWD/$W/fractachain_licitacion.wasm stockVault=$PWD/$W/stock_vault.wasm \
+  forward=$PWD/$W/forward_contract.wasm warrant=$PWD/$W/warrant_vault.wasm
 ```
 
 ## Qué no va en Docker
