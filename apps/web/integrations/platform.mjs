@@ -1,6 +1,7 @@
 // @ts-check
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import { legacyRedirectMiddleware } from '../server/legacyRoutes.mjs';
 
 /**
  * Mounts the Fractachain API inside `astro dev`, so development runs as one
@@ -26,6 +27,7 @@ export default function fractachainPlatform() {
         const running = await api.startPlatform({ listen: false });
         platform = running;
         server.middlewares.use(running.apiMiddleware);
+        server.middlewares.use(legacyRedirectMiddleware);
         server.httpServer?.once('close', () => void running.close());
         logger.info('API montado en el servidor de desarrollo: /api/* y /health');
       },

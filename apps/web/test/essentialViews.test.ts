@@ -160,3 +160,15 @@ describe('support inbox', () => {
     );
   });
 });
+
+describe('legacy Spanish URLs', () => {
+  it('redirect to the English routes and translate ?tema=', async () => {
+    const { legacyRedirect } = await import('../server/legacyRoutes.mjs');
+    expect(legacyRedirect('/contacto?tema=emisor')).toBe('/contact?topic=issuer');
+    expect(legacyRedirect('/legal/terminos')).toBe('/legal/terms');
+    expect(legacyRedirect('/ayuda/')).toBe('/help');
+    expect(legacyRedirect('/account/privacidad?x=1')).toBe('/account/privacy?x=1');
+    expect(legacyRedirect('/legal/terms')).toBeNull();
+    expect(legacyRedirect('/market')).toBeNull();
+  });
+});

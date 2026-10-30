@@ -1,5 +1,6 @@
 import { defineMiddleware } from 'astro:middleware';
 import { DEFAULT_LOCALE, LOCALE_COOKIE, isLocale } from './core/i18n/translate';
+import { legacyRedirect } from '../server/legacyRoutes.mjs';
 import { headerPolicy } from './core/security/csp.mjs';
 
 /**
@@ -37,45 +38,13 @@ function contentSecurityPolicy(astroPolicy: string | null): string {
     : `${astroPolicy.replace(/;\s*$/, '')}; frame-ancestors 'none'`;
 }
 
-/** Routes are English; the first Spanish URLs keep working through a permanent redirect. */
-const MOVED: Record<string, string> = {
-  '/legal/terminos': '/legal/terms',
-  '/legal/privacidad': '/legal/privacy',
-  '/legal/riesgos': '/legal/risks',
-  '/ayuda': '/help',
-  '/transparencia': '/transparency',
-  '/contacto': '/contact',
-  '/account/privacidad': '/account/privacy',
-  '/admin/soporte': '/admin/support',
-};
-
-const LEGACY_TOPICS: Record<string, string> = {
-  emisor: 'issuer',
-  emisores: 'issuer',
-  privacidad: 'privacy',
-  seguridad: 'security',
-  verificacion: 'kyc',
-};
-
-function movedTarget(url: URL): string | null {
-  const target = MOVED[url.pathname.replace(/\/+$/, '')];
-  if (!target) return null;
-  const params = new URLSearchParams(url.search);
-  const tema = params.get('tema');
-  if (tema) {
-    params.delete('tema');
-    params.set('topic', LEGACY_TOPICS[tema.toLowerCase()] ?? tema);
-  }
-  const query = params.toString();
-  return `${target}${query ? `?${query}` : ''}${url.hash}`;
-}
-
 function isHttps(request: Request, url: URL): boolean {
   return url.protocol === 'https:' || request.headers.get('x-forwarded-proto') === 'https';
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {
-  const moved = movedTarget(context.url);
+  // Moved routes are normally answered by the server before Astro (see server/legacyRoutes.mjs).
+  const moved = legacyRedirect(`${context.url.pathname}${context.url.search}`);
   if (moved) return context.redirect(moved, 301);
 
   const cookie = context.cookies.get(LOCALE_COOKIE)?.value;
