@@ -16,10 +16,10 @@ export interface LegalDoc {
 }
 
 export const LEGAL_DOCS: readonly LegalDoc[] = [
-  { id: 'terms', path: '/legal/terminos', version: '1.0', effective: '2026-10-30' },
-  { id: 'privacy', path: '/legal/privacidad', version: '1.0', effective: '2026-10-30' },
+  { id: 'terms', path: '/legal/terms', version: '1.0', effective: '2026-10-30' },
+  { id: 'privacy', path: '/legal/privacy', version: '1.0', effective: '2026-10-30' },
   { id: 'cookies', path: '/legal/cookies', version: '1.0', effective: '2026-10-30' },
-  { id: 'risks', path: '/legal/riesgos', version: '1.0', effective: '2026-10-30' },
+  { id: 'risks', path: '/legal/risks', version: '1.0', effective: '2026-10-30' },
 ];
 
 export function legalDoc(id: LegalDocId): LegalDoc {
@@ -49,9 +49,9 @@ export const PUBLIC_PATHS: readonly string[] = [
   '/login',
   '/register',
   '/forgot-password',
-  '/contacto',
-  '/ayuda',
-  '/transparencia',
+  '/contact',
+  '/help',
+  '/transparency',
   '/legal',
   ...LEGAL_DOCS.map((d) => d.path),
 ];

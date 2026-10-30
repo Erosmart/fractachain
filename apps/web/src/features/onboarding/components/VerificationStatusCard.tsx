@@ -75,7 +75,7 @@ export default function VerificationStatusCard({
         {showSupport && (
           <p className="mt-2 max-w-xl text-sm text-muted">
             {t('onboard.status.supportNote')}{' '}
-            <a href="/contacto?tema=kyc" className="font-medium text-ink underline underline-offset-2">
+            <a href="/contact?topic=kyc" className="font-medium text-ink underline underline-offset-2">
               {t('onboard.status.supportCta')}
             </a>
           </p>

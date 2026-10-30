@@ -37,11 +37,47 @@ function contentSecurityPolicy(astroPolicy: string | null): string {
     : `${astroPolicy.replace(/;\s*$/, '')}; frame-ancestors 'none'`;
 }
 
+/** Routes are English; the first Spanish URLs keep working through a permanent redirect. */
+const MOVED: Record<string, string> = {
+  '/legal/terminos': '/legal/terms',
+  '/legal/privacidad': '/legal/privacy',
+  '/legal/riesgos': '/legal/risks',
+  '/ayuda': '/help',
+  '/transparencia': '/transparency',
+  '/contacto': '/contact',
+  '/account/privacidad': '/account/privacy',
+  '/admin/soporte': '/admin/support',
+};
+
+const LEGACY_TOPICS: Record<string, string> = {
+  emisor: 'issuer',
+  emisores: 'issuer',
+  privacidad: 'privacy',
+  seguridad: 'security',
+  verificacion: 'kyc',
+};
+
+function movedTarget(url: URL): string | null {
+  const target = MOVED[url.pathname.replace(/\/+$/, '')];
+  if (!target) return null;
+  const params = new URLSearchParams(url.search);
+  const tema = params.get('tema');
+  if (tema) {
+    params.delete('tema');
+    params.set('topic', LEGACY_TOPICS[tema.toLowerCase()] ?? tema);
+  }
+  const query = params.toString();
+  return `${target}${query ? `?${query}` : ''}${url.hash}`;
+}
+
 function isHttps(request: Request, url: URL): boolean {
   return url.protocol === 'https:' || request.headers.get('x-forwarded-proto') === 'https';
 }
 
 export const onRequest = defineMiddleware(async (context, next) => {
+  const moved = movedTarget(context.url);
+  if (moved) return context.redirect(moved, 301);
+
   const cookie = context.cookies.get(LOCALE_COOKIE)?.value;
   context.locals.locale = isLocale(cookie) ? cookie : DEFAULT_LOCALE;
 

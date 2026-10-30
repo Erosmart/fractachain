@@ -1,5 +1,5 @@
 /**
- * Copy for the legal and information pages (/legal/*, /ayuda, /transparencia,
+ * Copy for the legal and information pages (/legal/*, /help, /transparency,
  * 500). The legal documents themselves are written in Spanish in their pages
  * (the Spanish text is the canonical one); here live their titles, summaries
  * and the surrounding UI. `en` must mirror `es` (the type check fails otherwise).
@@ -100,14 +100,14 @@ export const es = {
     contact: 'Escribinos',
     guidesTitle: 'Más información',
     guides: [
-      ['Términos y condiciones', '/legal/terminos'],
-      ['Política de privacidad', '/legal/privacidad'],
-      ['Aviso de riesgos', '/legal/riesgos'],
-      ['Transparencia: contratos desplegados', '/transparencia'],
+      ['Términos y condiciones', '/legal/terms'],
+      ['Política de privacidad', '/legal/privacy'],
+      ['Aviso de riesgos', '/legal/risks'],
+      ['Transparencia: contratos desplegados', '/transparency'],
     ],
     categories: [
       {
-        id: 'cuenta',
+        id: 'account',
         title: 'Cuenta y acceso',
         items: [
           [
@@ -195,7 +195,7 @@ export const es = {
         ],
       },
       {
-        id: 'licitaciones',
+        id: 'offerings',
         title: 'Licitaciones',
         items: [
           [
@@ -225,7 +225,7 @@ export const es = {
         ],
       },
       {
-        id: 'seguridad',
+        id: 'security',
         title: 'Seguridad',
         items: [
           [
@@ -243,7 +243,7 @@ export const es = {
         ],
       },
       {
-        id: 'privacidad',
+        id: 'privacy',
         title: 'Privacidad',
         items: [
           [
@@ -425,14 +425,14 @@ export const en: typeof es = {
     contact: 'Write to us',
     guidesTitle: 'More information',
     guides: [
-      ['Terms and conditions', '/legal/terminos'],
-      ['Privacy policy', '/legal/privacidad'],
-      ['Risk disclosure', '/legal/riesgos'],
-      ['Transparency: deployed contracts', '/transparencia'],
+      ['Terms and conditions', '/legal/terms'],
+      ['Privacy policy', '/legal/privacy'],
+      ['Risk disclosure', '/legal/risks'],
+      ['Transparency: deployed contracts', '/transparency'],
     ],
     categories: [
       {
-        id: 'cuenta',
+        id: 'account',
         title: 'Account and access',
         items: [
           [
@@ -520,7 +520,7 @@ export const en: typeof es = {
         ],
       },
       {
-        id: 'licitaciones',
+        id: 'offerings',
         title: 'Offerings',
         items: [
           [
@@ -550,7 +550,7 @@ export const en: typeof es = {
         ],
       },
       {
-        id: 'seguridad',
+        id: 'security',
         title: 'Security',
         items: [
           [
@@ -568,7 +568,7 @@ export const en: typeof es = {
         ],
       },
       {
-        id: 'privacidad',
+        id: 'privacy',
         title: 'Privacy',
         items: [
           [

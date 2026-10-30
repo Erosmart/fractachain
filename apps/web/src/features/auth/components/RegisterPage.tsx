@@ -249,12 +249,12 @@ function RegisterPage() {
                   text={t('account.signup.acceptTerms')}
                   parts={{
                     terms: (
-                      <DocLink href="/legal/terminos" newTab={newTab}>
+                      <DocLink href="/legal/terms" newTab={newTab}>
                         {t('account.signup.termsLink')}
                       </DocLink>
                     ),
                     privacy: (
-                      <DocLink href="/legal/privacidad" newTab={newTab}>
+                      <DocLink href="/legal/privacy" newTab={newTab}>
                         {t('account.signup.privacyLink')}
                       </DocLink>
                     ),
@@ -268,7 +268,7 @@ function RegisterPage() {
                   text={t('account.signup.acceptRisks')}
                   parts={{
                     risks: (
-                      <DocLink href="/legal/riesgos" newTab={newTab}>
+                      <DocLink href="/legal/risks" newTab={newTab}>
                         {t('account.signup.risksLink')}
                       </DocLink>
                     ),

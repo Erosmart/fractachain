@@ -8,18 +8,18 @@ const controller = config.legalEntity ?? 'los responsables del proyecto Fractach
 const contact = config.contactEmail;
 
 const sections = [
-  { id: 'responsable', title: '1. Responsable del tratamiento' },
-  { id: 'datos', title: '2. Qué datos tratamos' },
-  { id: 'finalidades', title: '3. Para qué los usamos' },
+  { id: 'controller', title: '1. Responsable del tratamiento' },
+  { id: 'data-we-collect', title: '2. Qué datos tratamos' },
+  { id: 'purposes', title: '3. Para qué los usamos' },
   { id: 'blockchain', title: '4. Datos en la blockchain' },
-  { id: 'terceros', title: '5. Con quién los compartimos' },
-  { id: 'conservacion', title: '6. Cuánto tiempo los guardamos' },
-  { id: 'derechos', title: '7. Tus derechos' },
-  { id: 'seguridad', title: '8. Cómo los protegemos' },
-  { id: 'menores', title: '9. Menores de edad' },
+  { id: 'third-parties', title: '5. Con quién los compartimos' },
+  { id: 'retention', title: '6. Cuánto tiempo los guardamos' },
+  { id: 'your-rights', title: '7. Tus derechos' },
+  { id: 'security', title: '8. Cómo los protegemos' },
+  { id: 'minors', title: '9. Menores de edad' },
   { id: 'cookies', title: '10. Cookies y almacenamiento local' },
-  { id: 'cambios', title: '11. Cambios a esta política' },
-  { id: 'contacto', title: '12. Contacto' },
+  { id: 'changes', title: '11. Cambios a esta política' },
+  { id: 'contact', title: '12. Contacto' },
 ];
 ---
 
@@ -33,7 +33,7 @@ const sections = [
     </p>
     <p>
       Para cualquier consulta sobre tus datos, escribinos desde el{' '}
-      <a href="/contacto?tema=privacidad">formulario de contacto (tema Privacidad)</a>
+      <a href="/contact?topic=privacy">formulario de contacto (tema Privacidad)</a>
       {contact && (
         <>
           {' '}
@@ -216,8 +216,8 @@ const sections = [
     </ul>
     <p>
       Para ejercerlos usá las opciones de Cuenta → Privacidad o escribinos desde el{' '}
-      <a href="/contacto?tema=privacidad">formulario de contacto</a>. Respondemos dentro de los plazos de la
-      Ley 25.326: 10 días corridos para el acceso y 5 días hábiles para la rectificación, actualización o
+      <a href="/contact?topic=privacy">formulario de contacto</a>. Respondemos dentro de los plazos de la Ley
+      25.326: 10 días corridos para el acceso y 5 días hábiles para la rectificación, actualización o
       supresión.
     </p>
     <blockquote>
@@ -280,7 +280,7 @@ const sections = [
 
   <LegalSection {...sections[11]}>
     <p>
-      Escribinos desde el <a href="/contacto?tema=privacidad">formulario de contacto</a>
+      Escribinos desde el <a href="/contact?topic=privacy">formulario de contacto</a>
       {contact && (
         <>
           {' '}

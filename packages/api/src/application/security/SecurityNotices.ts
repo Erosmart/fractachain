@@ -21,7 +21,7 @@ export class MailSecurityNotices implements IPasswordChangeNotifier {
         text:
           'La contraseña de tu cuenta se cambió recién y cerramos las demás sesiones abiertas.\n\n' +
           `Si no fuiste vos, recuperá el acceso en ${this.appUrl}/forgot-password y escribinos desde ` +
-          `${this.appUrl}/contacto.`,
+          `${this.appUrl}/contact.`,
       });
     } catch (err) {
       this.logger.warn('no se pudo avisar el cambio de contraseña', {

@@ -130,7 +130,7 @@ function AdminOverview() {
                 t,
               ),
             }),
-            href: '/admin/soporte',
+            href: '/admin/support',
           },
         ]
       : []),

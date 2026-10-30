@@ -44,9 +44,9 @@ export const CONSOLE_TAB: TabDef = {
 export const PUBLIC_TABS = [
   { key: 'offerings', href: '/market', label: 'shell.tabs.offerings' },
   // Trading screens need an account: visitors get the product overview.
-  { key: 'markets', href: '/#productos', label: 'shell.tabs.markets' },
-  { key: 'issuers', href: '/#emisores', label: 'shell.tabs.issuers' },
-  { key: 'how', href: '/#como-funciona', label: 'shell.tabs.howItWorks' },
+  { key: 'markets', href: '/#products', label: 'shell.tabs.markets' },
+  { key: 'issuers', href: '/#issuers', label: 'shell.tabs.issuers' },
+  { key: 'how', href: '/#how-it-works', label: 'shell.tabs.howItWorks' },
 ] as const;
 
 const matches = (pathname: string, prefix: string) =>
@@ -70,7 +70,7 @@ export const SECTIONS = {
     { key: 'wallet', href: '/wallet', label: 'account.nav.wallet' },
     { key: 'verification', href: '/onboarding/kyc', label: 'account.nav.verification' },
     { key: 'security', href: '/account/security', label: 'account.nav.security' },
-    { key: 'privacy', href: '/account/privacidad', label: 'account.nav.privacy' },
+    { key: 'privacy', href: '/account/privacy', label: 'account.nav.privacy' },
   ],
   console: [
     { key: 'overview', href: '/admin', label: 'admin.nav.overview' },
@@ -79,7 +79,7 @@ export const SECTIONS = {
     { key: 'opa', href: '/admin/opa', label: 'admin.nav.opa' },
     { key: 'testnet', href: '/admin/testnet', label: 'admin.nav.testnet' },
     { key: 'audit', href: '/admin/audit', label: 'admin.nav.audit' },
-    { key: 'support', href: '/admin/soporte', label: 'admin.nav.support' },
+    { key: 'support', href: '/admin/support', label: 'admin.nav.support' },
   ],
 } as const;
 

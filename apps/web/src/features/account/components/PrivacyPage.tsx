@@ -17,10 +17,10 @@ const { api, stores } = container;
 const { signer } = container.wallet;
 
 const DOCS = [
-  ['/legal/terminos', 'terms'],
-  ['/legal/privacidad', 'privacy'],
+  ['/legal/terms', 'terms'],
+  ['/legal/privacy', 'privacy'],
   ['/legal/cookies', 'cookies'],
-  ['/legal/riesgos', 'risks'],
+  ['/legal/risks', 'risks'],
 ] as const;
 
 function ConsentCard({ user, legal }: { user: SessionUser; legal: LegalVersions | null }) {
@@ -50,7 +50,7 @@ function ConsentCard({ user, legal }: { user: SessionUser; legal: LegalVersions 
         )}
       </div>
       {!accepted && (
-        <a href={termsPath('/account/privacidad')} className="btn btn-primary btn-sm mt-4">
+        <a href={termsPath('/account/privacy')} className="btn btn-primary btn-sm mt-4">
           {t('account.privacy.consentAccept')}
         </a>
       )}
@@ -249,7 +249,7 @@ function CloseAccount({ user, onClosed }: { user: SessionUser; onClosed: () => v
               <Notice tone="warn">
                 {t('account.privacy.reauth')}{' '}
                 <a
-                  href={`/login?next=${encodeURIComponent('/account/privacidad')}`}
+                  href={`/login?next=${encodeURIComponent('/account/privacy')}`}
                   className="font-medium underline underline-offset-2"
                 >
                   {t('account.privacy.signInAgain')}
@@ -320,7 +320,7 @@ function Privacy({ onClosed }: { onClosed: () => void }) {
         <div className="space-y-5">
           <ExportCard />
           <Card title={t('account.privacy.rightsTitle')} subtitle={t('account.privacy.rightsBody')}>
-            <a href="/contacto?tema=privacidad" className="btn btn-secondary">
+            <a href="/contact?topic=privacy" className="btn btn-secondary">
               <Scale className="h-4 w-4" aria-hidden="true" />
               {t('account.privacy.rightsAction')}
             </a>

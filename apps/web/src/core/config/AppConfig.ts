@@ -21,7 +21,7 @@ export interface AppConfigValues {
   firebase: FirebaseWebConfig;
   /** Legal name shown in the legal documents (optional; never invented). */
   legalEntity?: string;
-  /** Public contact email for legal/privacy requests (optional; the /contacto form otherwise). */
+  /** Public contact email for legal/privacy requests (optional; the /contact form otherwise). */
   contactEmail?: string;
 }
 
@@ -67,7 +67,7 @@ export class AppConfig {
     return this.values.legalEntity || null;
   }
 
-  /** Contact email for legal and privacy requests; null → the /contacto form. */
+  /** Contact email for legal and privacy requests; null → the /contact form. */
   get contactEmail(): string | null {
     const email = this.values.contactEmail;
     return email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;

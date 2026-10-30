@@ -10,7 +10,7 @@ export const SUPPORT_TOPICS: readonly SupportTopic[] = [
   'bug',
 ];
 
-/** `?tema=` values (Spanish, shareable) → topics. */
+/** `?topic=` values → topics (old Spanish `?tema=` values still map, for links already shared). */
 const TOPIC_PARAM: Record<string, SupportTopic> = {
   general: 'general',
   kyc: 'kyc',

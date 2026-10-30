@@ -8,26 +8,26 @@ const provider = config.legalEntity ?? 'los responsables del proyecto Fractachai
 const contact = config.contactEmail;
 
 const sections = [
-  { id: 'servicio', title: '1. Quiénes somos y qué es Fractachain' },
-  { id: 'etapa', title: '2. Etapa del servicio: red de pruebas' },
-  { id: 'definiciones', title: '3. Definiciones' },
-  { id: 'aceptacion', title: '4. Aceptación y cambios' },
-  { id: 'requisitos', title: '5. Requisitos para usar el servicio' },
-  { id: 'cuenta', title: '6. Tu cuenta y su seguridad' },
-  { id: 'custodia', title: '7. Wallets y custodia' },
+  { id: 'service', title: '1. Quiénes somos y qué es Fractachain' },
+  { id: 'stage', title: '2. Etapa del servicio: red de pruebas' },
+  { id: 'definitions', title: '3. Definiciones' },
+  { id: 'acceptance', title: '4. Aceptación y cambios' },
+  { id: 'eligibility', title: '5. Requisitos para usar el servicio' },
+  { id: 'account', title: '6. Tu cuenta y su seguridad' },
+  { id: 'custody', title: '7. Wallets y custodia' },
   { id: 'kyc', title: '8. Verificación de identidad y prevención del lavado de activos' },
-  { id: 'licitaciones', title: '9. Cómo funcionan las licitaciones' },
-  { id: 'otros-productos', title: '10. Mercado secundario y otros productos' },
-  { id: 'costos', title: '11. Costos y comisiones' },
-  { id: 'prohibidos', title: '12. Usos prohibidos' },
-  { id: 'propiedad', title: '13. Propiedad intelectual' },
-  { id: 'disponibilidad', title: '14. Disponibilidad y cambios del servicio' },
-  { id: 'responsabilidad', title: '15. Limitación de responsabilidad' },
+  { id: 'offerings', title: '9. Cómo funcionan las licitaciones' },
+  { id: 'other-products', title: '10. Mercado secundario y otros productos' },
+  { id: 'fees', title: '11. Costos y comisiones' },
+  { id: 'prohibited-uses', title: '12. Usos prohibidos' },
+  { id: 'intellectual-property', title: '13. Propiedad intelectual' },
+  { id: 'availability', title: '14. Disponibilidad y cambios del servicio' },
+  { id: 'liability', title: '15. Limitación de responsabilidad' },
   { id: 'suspension', title: '16. Suspensión y cierre de cuentas' },
-  { id: 'comunicaciones', title: '17. Comunicaciones' },
-  { id: 'consumidor', title: '18. Derechos del consumidor' },
-  { id: 'ley', title: '19. Ley aplicable y jurisdicción' },
-  { id: 'contacto', title: '20. Contacto' },
+  { id: 'notices', title: '17. Comunicaciones' },
+  { id: 'consumer-rights', title: '18. Derechos del consumidor' },
+  { id: 'governing-law', title: '19. Ley aplicable y jurisdicción' },
+  { id: 'contact', title: '20. Contacto' },
 ];
 ---
 
@@ -40,9 +40,9 @@ const sections = [
     </p>
     <p>
       Estos Términos y condiciones regulan el uso del sitio, de la aplicación y de las interfaces de
-      programación (API) de Fractachain. Junto con la <a href="/legal/privacidad">Política de privacidad</a>,
-      la <a href="/legal/cookies">Política de cookies</a> y el <a href="/legal/riesgos">Aviso de riesgos</a>{' '}
-      forman el acuerdo entre vos y Fractachain.
+      programación (API) de Fractachain. Junto con la <a href="/legal/privacy">Política de privacidad</a>, la{' '}
+      <a href="/legal/cookies">Política de cookies</a> y el <a href="/legal/risks">Aviso de riesgos</a> forman
+      el acuerdo entre vos y Fractachain.
     </p>
   </LegalSection>
 
@@ -205,7 +205,7 @@ const sections = [
     <p>
       Fractachain no garantiza que una licitación alcance su mínimo, ni el rendimiento estimado del
       expediente, ni el desempeño del emisor. Leé el expediente y el{' '}
-      <a href="/legal/riesgos">Aviso de riesgos</a> antes de aportar.
+      <a href="/legal/risks">Aviso de riesgos</a> antes de aportar.
     </p>
   </LegalSection>
 
@@ -287,7 +287,7 @@ const sections = [
       Podés cerrar tu cuenta cuando quieras desde Cuenta → Privacidad. Si tu wallet custodiada tiene fondos o
       tenés posiciones abiertas, primero hay que retirarlos. Las transacciones ya registradas en la blockchain
       no se borran, y algunos datos se conservan el tiempo que exige la ley (ver la{' '}
-      <a href="/legal/privacidad">Política de privacidad</a>).
+      <a href="/legal/privacy">Política de privacidad</a>).
     </p>
   </LegalSection>
 
@@ -307,7 +307,7 @@ const sections = [
       Cuando contrates a distancia un servicio alcanzado por el derecho de revocación, podés revocar la
       aceptación dentro de los 10 días corridos (artículo 34 de la Ley 24.240 y artículos 1110 y siguientes
       del Código Civil y Comercial), sin costo ni responsabilidad, escribiéndonos desde el{' '}
-      <a href="/contacto">formulario de contacto</a>. Tené en cuenta que una transacción ya confirmada en la
+      <a href="/contact">formulario de contacto</a>. Tené en cuenta que una transacción ya confirmada en la
       blockchain no puede revertirse técnicamente; en ese caso analizaremos cómo restituir lo que corresponda
       según la normativa.
     </p>
@@ -324,7 +324,7 @@ const sections = [
   <LegalSection {...sections[19]}>
     <p>
       Para consultas, reclamos o para ejercer tus derechos, escribinos desde el{' '}
-      <a href="/contacto">formulario de contacto</a>
+      <a href="/contact">formulario de contacto</a>
       {contact && (
         <>
           {' '}

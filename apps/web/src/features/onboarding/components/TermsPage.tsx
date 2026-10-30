@@ -13,9 +13,9 @@ import OnboardingFrame, { LoadingLine } from './OnboardingFrame';
 const { navigator, api } = container;
 
 const DOCS = [
-  ['/legal/terminos', 'terms'],
-  ['/legal/privacidad', 'privacy'],
-  ['/legal/riesgos', 'risks'],
+  ['/legal/terms', 'terms'],
+  ['/legal/privacy', 'privacy'],
+  ['/legal/risks', 'risks'],
   ['/legal/cookies', 'cookies'],
 ] as const;
 

@@ -36,7 +36,7 @@ const EMPTY: ContactForm = {
 /**
  * Contact & support: questions, KYC problems, privacy requests (Ley 25.326),
  * security reports and issuers who want to tokenize ("Tokenizar mi empresa"
- * lands here with `?tema=emisor`). Works signed in or not.
+ * lands here with `?topic=issuer`). Works signed in or not.
  */
 function ContactPage() {
   const { user } = useSession();
@@ -52,7 +52,10 @@ function ContactPage() {
   const doneRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
-    setForm((f) => ({ ...f, topic: topicFromParam(navigator.searchParam('tema')) }));
+    setForm((f) => ({
+      ...f,
+      topic: topicFromParam(navigator.searchParam('topic') ?? navigator.searchParam('tema')),
+    }));
   }, []);
 
   // Signed-in users: prefill what we already know (still editable).
@@ -116,9 +119,9 @@ function ContactPage() {
         <ul className="mt-4 space-y-2">
           {(
             [
-              ['/ayuda', LifeBuoy, 'support.contact.asideHelp', 'support.contact.asideHelpBody'],
+              ['/help', LifeBuoy, 'support.contact.asideHelp', 'support.contact.asideHelpBody'],
               [
-                '/transparencia',
+                '/transparency',
                 ShieldCheck,
                 'support.contact.asideStatus',
                 'support.contact.asideStatusBody',
@@ -352,7 +355,7 @@ function ContactPage() {
                   text={t('support.contact.privacyNote')}
                   parts={{
                     privacy: (
-                      <DocLink href="/legal/privacidad" newTab={t('account.signup.newTab')}>
+                      <DocLink href="/legal/privacy" newTab={t('account.signup.newTab')}>
                         {t('support.contact.privacyLink')}
                       </DocLink>
                     ),

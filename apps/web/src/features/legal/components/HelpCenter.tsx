@@ -40,7 +40,7 @@ function HelpCenter() {
   const [category, setCategory] = useState('all');
   const [query, setQuery] = useState('');
 
-  // `/ayuda#wallet` opens that category.
+  // `/help#wallet` opens that category.
   useEffect(() => {
     const hash = window.location.hash.slice(1);
     if (help.categories.some((c) => c.id === hash)) setCategory(hash);
@@ -94,7 +94,7 @@ function HelpCenter() {
               title={help.emptyTitle}
               body={help.emptyBody}
               action={
-                <a href="/contacto" className="btn btn-primary">
+                <a href="/contact" className="btn btn-primary">
                   {help.contact}
                 </a>
               }
@@ -131,7 +131,7 @@ function HelpCenter() {
         <div className="gradient-panel p-5 sm:p-6">
           <p className="title">{help.notFoundTitle}</p>
           <p className="mt-1.5 text-[13px] leading-relaxed text-ink-2">{help.notFoundBody}</p>
-          <a href="/contacto" className="btn btn-primary mt-4">
+          <a href="/contact" className="btn btn-primary mt-4">
             {help.contact}
           </a>
         </div>

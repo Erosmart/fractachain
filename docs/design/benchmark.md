@@ -32,7 +32,7 @@ Octubre 2026. Insumo para el rediseño "oncopath". Republic, Wefunder, Crowdcube
 3. **Licitaciones abiertas**: 3 cards con progreso. Producto antes que explicación.
 4. **Cómo funciona**: 4 pasos para el inversor, con un toggle para ver la versión del emisor.
 5. **Productos**: Licitaciones RWA, Merval tokenizado, Mercado secundario, Renta y dividendos. Cada card lleva un dato vivo.
-6. **Regulación y custodia**: régimen de tokenización CNV (RG 1069/2025), fideicomiso y fiduciaria, Caja de Valores, contratos auditados. Un bloque "¿Qué pasa si…?" y un link a /transparencia.
+6. **Regulación y custodia**: régimen de tokenización CNV (RG 1069/2025), fideicomiso y fiduciaria, Caja de Valores, contratos auditados. Un bloque "¿Qué pasa si…?" y un link a /transparency.
 7. **Banda para emisores**: casos y "de la idea a la licitación".
 8. **Seguridad**: 2FA, wallet propia (Freighter) o custodia, auditorías.
 9. **Ecosistema**: Stellar, USDC, Freighter, fiduciaria.

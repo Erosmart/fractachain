@@ -45,7 +45,7 @@ const steps = landing.how.investorSteps;
               {h.ctaInvest}
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </a>
-            <a href="/contacto?tema=emisor" class="btn btn-secondary btn-lg">
+            <a href="/contact?topic=issuer" class="btn btn-secondary btn-lg">
               <Building2 className="h-4 w-4" aria-hidden="true" />
               {h.ctaIssuer}
             </a>
@@ -98,7 +98,7 @@ const steps = landing.how.investorSteps;
       </div>
     </section>
 
-    <section id="como-funciona" aria-labelledby="how-title" class="scroll-mt-24 space-y-6">
+    <section id="how-it-works" aria-labelledby="how-title" class="scroll-mt-24 space-y-6">
       <SectionHeading id="how-title" eyebrow={landing.how.eyebrow} title={landing.how.title} />
       <div>
         <HowItWorks client:visible locale={locale} />

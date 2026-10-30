@@ -81,7 +81,7 @@ describe('contact form', () => {
     website: '',
   };
 
-  it('maps shareable ?tema= values to topics', () => {
+  it('maps ?topic= values (and legacy ?tema= ones) to topics', () => {
     expect(topicFromParam('emisor')).toBe('issuer');
     expect(topicFromParam('privacidad')).toBe('privacy');
     expect(topicFromParam('KYC')).toBe('kyc');
