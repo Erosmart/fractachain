@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { ArrowRight, Check, Copy, KeyRound, Landmark, ShieldAlert, Wallet } from 'lucide-react';
 import { withIsland } from '@/components/island/withIsland';
 import { Notice, StatusChip } from '@/components/ui/kit';
+import { needsTerms, termsPath } from '@/core/auth/onboardingPath';
 import { container } from '@/core/container';
 import { errorMessage } from '@/core/errors';
 import { useAuth } from '@/hooks/useAuth';
@@ -66,8 +67,9 @@ function WalletOnboardingPage() {
 
   useEffect(() => {
     if (mustLogin) navigator.replace(navigator.loginUrl());
+    else if (needsTerms(user)) navigator.replace(termsPath(navigator.currentPath()));
     else if (alreadyChosen) navigator.replace('/onboarding/kyc');
-  }, [mustLogin, alreadyChosen]);
+  }, [mustLogin, alreadyChosen, user]);
 
   const pick = async (mode: 'CUSTODIAL' | 'SELF', publicKey?: string) => {
     setError('');

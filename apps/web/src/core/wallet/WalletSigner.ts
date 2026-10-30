@@ -55,6 +55,8 @@ export interface IWalletSigner {
   signLoginChallenge(): Promise<WalletSignaturePayload>;
   /** Signs `fractachain-link:<ts>` — attaches the key to an existing account. */
   signLinkChallenge(): Promise<WalletSignaturePayload>;
+  /** Signs `fractachain-close:<ts>` — proves control of the key to close the account. */
+  signCloseChallenge(): Promise<WalletSignaturePayload>;
   /** Signs a transaction XDR the backend already built and simulated. */
   signTransaction(xdr: string, options?: SignOptions): Promise<string>;
 }

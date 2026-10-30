@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Activity, CalendarClock, Landmark, ServerCrash, UserCheck, Wallet } from 'lucide-react';
-import type { Listing } from '@fractachain/shared';
+import { Activity, CalendarClock, Landmark, LifeBuoy, ServerCrash, UserCheck, Wallet } from 'lucide-react';
+import type { Listing, SupportMessage } from '@fractachain/shared';
 import RequireAdmin from '@/components/guards/RequireAdmin';
 import { withIsland } from '@/components/island/withIsland';
 import {
@@ -37,6 +37,8 @@ interface OverviewData {
   paying: Set<string>;
   network: NetworkStatus | null;
   activity: AuditEntry[] | null;
+  /** Open support messages (null until loaded or when the endpoint is unavailable). */
+  support: SupportMessage[] | null;
 }
 
 function AdminOverview() {
@@ -49,6 +51,7 @@ function AdminOverview() {
     paying: new Set(),
     network: null,
     activity: null,
+    support: null,
   });
   const [loading, setLoading] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -75,6 +78,7 @@ function AdminOverview() {
       api.admin.kycQueue().then((kyc) => patch({ kyc })),
       api.admin.networkStatus().then((network) => patch({ network })),
       api.admin.audit({ limit: 6 }).then((activity) => patch({ activity })),
+      api.admin.supportMessages('open').then((support) => patch({ support })),
     ]);
     setNow(Date.now());
     setLoading(false);
@@ -107,6 +111,26 @@ function AdminOverview() {
                 : t('admin.overview.kycWaiting', { n: summary.pendingKyc.length }),
             subtitle: t('admin.overview.oldest', { age: relativeAge(oldest?.createdAt, now, t) }),
             href: '/admin/kyc',
+          },
+        ]
+      : []),
+    ...(data.support?.length
+      ? [
+          {
+            key: 'support',
+            icon: <LifeBuoy className="h-4 w-4" aria-hidden="true" />,
+            title:
+              data.support.length === 1
+                ? t('admin.support.pendingTitleOne')
+                : t('admin.support.pendingTitle', { n: data.support.length }),
+            subtitle: t('admin.support.pendingSub', {
+              age: relativeAge(
+                [...data.support].sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0]?.createdAt,
+                now,
+                t,
+              ),
+            }),
+            href: '/admin/soporte',
           },
         ]
       : []),

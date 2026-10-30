@@ -1,11 +1,13 @@
-import { useState, type ReactNode, type SubmitEvent } from 'react';
+import { useId, useRef, useState, type ReactNode, type SubmitEvent } from 'react';
 import { Check, Copy, KeyRound, LogOut, Mail } from 'lucide-react';
 import RequireAuth from '@/components/guards/RequireAuth';
 import { withIsland } from '@/components/island/withIsland';
 import { Notice, PageHeader, StatusChip } from '@/components/ui/kit';
 import type { TwoFactorSetup } from '@/core/api/types';
 import { container } from '@/core/container';
+import { MIN_PASSWORD_LENGTH, passwordProblem } from '@/core/auth/passwordRules';
 import { errorMessage } from '@/core/errors';
+import { ApiError } from '@/core/http/HttpClient';
 import { formatSecret, totpQrDataUrl } from '@/core/security/otpauth';
 import { useI18n } from '@/hooks/useI18n';
 import { useSession } from '@/hooks/useSession';
@@ -71,6 +73,133 @@ function CodeField({
         className="input font-mono tracking-widest"
       />
     </label>
+  );
+}
+
+/** Email accounts only: current + new password; the API ends every other session. */
+function ChangePassword({ provider }: { provider?: string }) {
+  const { t } = useI18n();
+  const ids = useId();
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [repeat, setRepeat] = useState('');
+  const [error, setError] = useState('');
+  const [field, setField] = useState<'current' | 'next' | 'repeat' | null>(null);
+  const [state, setState] = useState<'idle' | 'saving' | 'done'>('idle');
+  const refs = {
+    current: useRef<HTMLInputElement>(null),
+    next: useRef<HTMLInputElement>(null),
+    repeat: useRef<HTMLInputElement>(null),
+  };
+
+  if (provider !== 'email') {
+    const who = provider === 'wallet' ? 'wallet' : 'google';
+    return (
+      <Section icon={<KeyRound className="h-4 w-4" />} title={t('account.password.title')}>
+        <p className="text-sm text-muted">
+          {t('account.password.notEmail', { provider: t(`account.password.providers.${who}`) })}
+        </p>
+      </Section>
+    );
+  }
+
+  const fail = (which: 'current' | 'next' | 'repeat', message: string) => {
+    setField(which);
+    setError(message);
+    refs[which].current?.focus();
+  };
+
+  const submit = async (e: SubmitEvent) => {
+    e.preventDefault();
+    setError('');
+    setField(null);
+    if (!current) return fail('current', t('account.password.wrongCurrent'));
+    const problem = passwordProblem(next, repeat);
+    if (problem === 'too-short')
+      return fail('next', t('account.signup.errors.password', { n: MIN_PASSWORD_LENGTH }));
+    if (problem === 'mismatch') return fail('repeat', t('account.signup.errors.mismatch'));
+    if (next === current) return fail('next', t('account.password.same'));
+    setState('saving');
+    try {
+      await security.changePassword(current, next);
+      setState('done');
+      setCurrent('');
+      setNext('');
+      setRepeat('');
+    } catch (err) {
+      setState('idle');
+      if (err instanceof ApiError && (err.code === 'WRONG_PASSWORD' || err.status === 401))
+        fail('current', t('account.password.wrongCurrent'));
+      else setError(errorMessage(err));
+    }
+  };
+
+  const inputProps = (which: 'current' | 'next' | 'repeat') => ({
+    id: `${ids}-${which}`,
+    ref: refs[which],
+    type: 'password' as const,
+    className: 'input aria-[invalid=true]:border-bad',
+    'aria-invalid': field === which ? true : undefined,
+    'aria-describedby': field === which ? `${ids}-error` : undefined,
+  });
+
+  return (
+    <Section icon={<KeyRound className="h-4 w-4" />} title={t('account.password.title')}>
+      <p className="text-sm text-ink-2">{t('account.password.body')}</p>
+      <form onSubmit={submit} noValidate className="space-y-3">
+        <div>
+          <label htmlFor={`${ids}-current`} className="label">
+            {t('account.password.current')}
+          </label>
+          <input
+            {...inputProps('current')}
+            autoComplete="current-password"
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+          />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label htmlFor={`${ids}-next`} className="label">
+              {t('account.password.next')}
+            </label>
+            <input
+              {...inputProps('next')}
+              autoComplete="new-password"
+              value={next}
+              onChange={(e) => setNext(e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor={`${ids}-repeat`} className="label">
+              {t('account.password.confirm')}
+            </label>
+            <input
+              {...inputProps('repeat')}
+              autoComplete="new-password"
+              value={repeat}
+              onChange={(e) => setRepeat(e.target.value)}
+            />
+          </div>
+        </div>
+        <p className="text-xs text-muted">{t('account.signup.rules.length', { n: MIN_PASSWORD_LENGTH })}</p>
+        <div aria-live="polite">
+          {error && (
+            <p
+              id={`${ids}-error`}
+              role="alert"
+              className="rounded-xl bg-bad-soft px-3.5 py-2.5 text-sm text-bad"
+            >
+              {error}
+            </p>
+          )}
+          {state === 'done' && <Notice tone="good">{t('account.password.done')}</Notice>}
+        </div>
+        <button type="submit" disabled={state === 'saving'} className="btn btn-secondary btn-sm">
+          {state === 'saving' ? t('account.password.saving') : t('account.password.submit')}
+        </button>
+      </form>
+    </Section>
   );
 }
 
@@ -305,6 +434,8 @@ function SecurityPage() {
               <p className="text-sm text-muted">{t('sec.emailNa')}</p>
             )}
           </Section>
+
+          <ChangePassword provider={user.authProvider} />
 
           <Section icon={<LogOut className="h-4 w-4" />} title={t('sec.sessionsTitle')}>
             <p className="text-sm text-ink-2">{t('sec.sessionsBody')}</p>

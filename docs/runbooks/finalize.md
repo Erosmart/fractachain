@@ -24,10 +24,10 @@ Lectura live (2026-09-20, testnet, `CDHKGEJNNFYKXW4XOEDXXE5LOF5HCYVORR2JT7AOK2FA
 
 ## Qué hay y qué no hay para el inversor
 
-| Estado | Qué pasa on-chain | Qué clickea el inversor |
-|---|---|---|
+| Estado     | Qué pasa on-chain                                                                                                        | Qué clickea el inversor                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
 | Successful | XLM ya fue a la empresa. Las unidades RWA se mintearon en `contribute()`. **No hay `claim()` de tokens en el contrato.** | “Anotar unidades RWA en el portfolio” — ledger de la plataforma, **no** un segundo transfer de XLM/USDC. |
-| Failed | `refund(contributor)` devuelve XLM testnet a la wallet custodial y quema el RWA. | “Reembolsar XLM (refund on-chain)” y ver el hash en Stellar Expert testnet. |
+| Failed     | `refund(contributor)` devuelve XLM testnet a la wallet custodial y quema el RWA.                                         | “Reembolsar XLM (refund on-chain)” y ver el hash en Stellar Expert testnet.                              |
 
 No hay payout de USDC Circle. No hay claim de un asset clásico LILAS en Freighter: el RWA vive en el storage del contrato.
 
@@ -42,25 +42,25 @@ No hay payout de USDC Circle. No hay claim de un asset clásico LILAS en Freight
 
 ## Endpoints
 
-| Método | Ruta | Quién | Contrato |
-|---|---|---|---|
-| GET | `/api/listings/:id` | público (Bearer opcional para RWA del inversor) | `get_state`, `get_total_raised`, `proceeds_withdrawn` |
-| POST | `/api/listings/:id/finalize` | logueado | `finalize()` |
-| POST | `/api/listings/:id/close` | admin | mismo `finalize()` si es XLM |
-| POST | `/api/listings/:id/refund` | inversor custodial | `refund(contributor)` |
-| POST | `/api/listings/:id/claim` | inversor | **no** llama al contrato; anota el ledger |
-| POST | `/api/listings/:id/withdraw-proceeds` | admin | `withdraw_proceeds` (reintento) |
+| Método | Ruta                                  | Quién                                           | Contrato                                              |
+| ------ | ------------------------------------- | ----------------------------------------------- | ----------------------------------------------------- |
+| GET    | `/api/listings/:id`                   | público (Bearer opcional para RWA del inversor) | `get_state`, `get_total_raised`, `proceeds_withdrawn` |
+| POST   | `/api/listings/:id/finalize`          | logueado                                        | `finalize()`                                          |
+| POST   | `/api/listings/:id/close`             | admin                                           | mismo `finalize()` si es XLM                          |
+| POST   | `/api/listings/:id/refund`            | inversor custodial                              | `refund(contributor)`                                 |
+| POST   | `/api/listings/:id/claim`             | inversor                                        | **no** llama al contrato; anota el ledger             |
+| POST   | `/api/listings/:id/withdraw-proceeds` | admin                                           | `withdraw_proceeds` (reintento)                       |
 
 Hashes salen con URL `https://stellar.expert/explorer/testnet/tx/<hash>`.
 
 ## Si falla
 
-| Síntoma | Qué hacer |
-|---|---|
-| “Todavía no se puede cerrar” | Falta hard cap on-chain o el deadline. Un aporte de 100 XLM debería bastar. |
-| 401 en finalize | Hay que estar logueado. `/close` pide admin. |
-| refund rechazado | Solo si el estado es Failed. En Successful el dinero ya no está en el contrato. |
-| Falta admin secret | `STELLAR_LICITACION_ADMIN_SECRET` o `STELLAR_DEPLOYER_SECRET` en `apps/api/.env` (nunca en git). |
+| Síntoma                      | Qué hacer                                                                                        |
+| ---------------------------- | ------------------------------------------------------------------------------------------------ |
+| “Todavía no se puede cerrar” | Falta hard cap on-chain o el deadline. Un aporte de 100 XLM debería bastar.                      |
+| 401 en finalize              | Hay que estar logueado. `/close` pide admin.                                                     |
+| refund rechazado             | Solo si el estado es Failed. En Successful el dinero ya no está en el contrato.                  |
+| Falta admin secret           | `STELLAR_LICITACION_ADMIN_SECRET` o `STELLAR_DEPLOYER_SECRET` en `apps/api/.env` (nunca en git). |
 
 ## Honestidad para el jurado
 

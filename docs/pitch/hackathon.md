@@ -8,7 +8,7 @@
 
 1. Registrarse y elegir wallet (custodial o propia).
 2. KYC in-app.
-3. Abrir la licitación *Agropecuaria Las Lilas* (soja, Pergamino).
+3. Abrir la licitación _Agropecuaria Las Lilas_ (soja, Pergamino).
 4. Aportar USDC. El cupo se actualiza. Si hay emisor y wallet custodial, la trustline sale en testnet (hash en Stellar Expert).
 5. Ver la posición en Portfolio.
 

@@ -6,6 +6,7 @@ type FreighterApi = typeof import('@stellar/freighter-api');
 
 const LOGIN_PREFIX = 'fractachain-login:';
 const LINK_PREFIX = 'fractachain-link:';
+const CLOSE_PREFIX = 'fractachain-close:';
 
 function toBase64(bytes: Uint8Array): string {
   let bin = '';
@@ -84,6 +85,10 @@ export class FreighterWalletSigner implements IWalletSigner {
 
   signLinkChallenge(): Promise<WalletSignaturePayload> {
     return this.signChallenge(LINK_PREFIX);
+  }
+
+  signCloseChallenge(): Promise<WalletSignaturePayload> {
+    return this.signChallenge(CLOSE_PREFIX);
   }
 
   async signTransaction(xdr: string, options: SignOptions = {}): Promise<string> {

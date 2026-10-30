@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { withIsland } from '@/components/island/withIsland';
+import { needsTerms, termsPath } from '@/core/auth/onboardingPath';
 import { container } from '@/core/container';
 import { stepperIndex, verificationStage } from '@/core/onboarding/verification';
 import { useAuth } from '@/hooks/useAuth';
@@ -23,6 +24,7 @@ function PendingKycPage() {
   useEffect(() => {
     if (isLoading) return;
     if (!user) navigator.replace(navigator.loginUrl());
+    else if (needsTerms(user) && !user.isAdmin) navigator.replace(termsPath(navigator.currentPath()));
     else if (!user.custodyMode && !user.isAdmin) navigator.replace('/onboarding/wallet');
     else if (user.kycStatus === 'UNREGISTERED') navigator.replace('/onboarding/kyc');
   }, [user, isLoading]);

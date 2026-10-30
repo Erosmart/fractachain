@@ -48,6 +48,10 @@ export class AccountSecurityService {
 
   readonly resendVerification = (): Promise<void> => this.api.resendVerification();
 
+  /** The API closes every other session; this one keeps working. */
+  readonly changePassword = (currentPassword: string, newPassword: string): Promise<void> =>
+    this.api.changePassword(currentPassword, newPassword);
+
   readonly requestPasswordReset = (email: string): Promise<void> => this.api.forgotPassword(email.trim());
 
   private updateUser(raw: unknown): void {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MailWarning, ShieldAlert, X } from 'lucide-react';
 import { container } from '@/core/container';
+import { termsPath, TERMS_PATH } from '@/core/auth/onboardingPath';
 import { errorMessage } from '@/core/errors';
 import { useI18n } from '@/hooks/useI18n';
 import { useSession } from '@/hooks/useSession';
@@ -41,6 +42,14 @@ export default function AccountNotices() {
   useEffect(() => {
     setDismissedFor(readDismissed());
   }, []);
+
+  // Any call refused with TERMS_REQUIRED (new terms version, wallet/Google sign-up)
+  // sends the user to accept them, coming back to where they were.
+  useEffect(() => {
+    if (notice?.code !== 'TERMS_REQUIRED') return;
+    if (container.navigator.pathname() === TERMS_PATH) return;
+    container.navigator.navigate(termsPath(container.navigator.currentPath()));
+  }, [notice]);
 
   const needsEmail = Boolean(
     user && user.authProvider === 'email' && !user.emailVerified && dismissedFor !== user.id,

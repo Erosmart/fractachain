@@ -1,0 +1,18 @@
+---
+import AdminSupportPage from '@/features/admin/support/components/AdminSupportPage';
+import SectionNav from '@/components/layout/SectionNav';
+import PageFallback from '@/components/ui/PageFallback.astro';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { translate } from '@/core/i18n/translate';
+
+const locale = Astro.locals.locale;
+---
+
+<BaseLayout title={translate(locale, 'admin.support.title')}>
+  <div class="space-y-6">
+    <SectionNav section="console" active="support" client:load locale={locale} />
+    <AdminSupportPage client:only="react" locale={locale}>
+      <PageFallback slot="fallback" />
+    </AdminSupportPage>
+  </div>
+</BaseLayout>

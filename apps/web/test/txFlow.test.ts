@@ -98,6 +98,9 @@ class FakeSigner implements IWalletSigner {
   async signLinkChallenge(): Promise<never> {
     throw new Error('unused');
   }
+  async signCloseChallenge(): Promise<never> {
+    throw new Error('unused');
+  }
   async signTransaction(xdr: string, options?: SignOptions) {
     this.signed.push({ xdr, options });
     if (this.error) throw this.error;

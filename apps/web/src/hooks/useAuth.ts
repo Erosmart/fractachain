@@ -15,6 +15,8 @@ export function useAuth() {
     () => ({
       ...session,
       loginWithEmail: auth.loginWithEmail,
+      register: auth.register,
+      acceptTerms: auth.acceptTerms,
       loginWithWallet: auth.loginWithWallet,
       loginWithGoogle: auth.loginWithGoogle,
       completeTwoFactor: auth.completeTwoFactor,

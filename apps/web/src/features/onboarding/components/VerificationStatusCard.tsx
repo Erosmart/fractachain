@@ -72,7 +72,14 @@ export default function VerificationStatusCard({
             <span className="text-muted">{t('onboard.status.reason')}:</span> {view.reason}
           </p>
         )}
-        {showSupport && <p className="mt-2 max-w-xl text-sm text-muted">{t('onboard.status.supportNote')}</p>}
+        {showSupport && (
+          <p className="mt-2 max-w-xl text-sm text-muted">
+            {t('onboard.status.supportNote')}{' '}
+            <a href="/contacto?tema=kyc" className="font-medium text-ink underline underline-offset-2">
+              {t('onboard.status.supportCta')}
+            </a>
+          </p>
+        )}
       </div>
 
       {p.stage === 'approved' && identity?.fullName && (

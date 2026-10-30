@@ -1,4 +1,4 @@
-import type { Listing, SettlePolicy } from '@fractachain/shared';
+import type { Listing, SettlePolicy, SupportMessage } from '@fractachain/shared';
 import type { IHttpClient } from '../http/HttpClient';
 import { CHAIN_TIMEOUT_MS, DEPLOY_TIMEOUT_MS, enc } from './timeouts';
 import type {
@@ -187,5 +187,20 @@ export class AdminApi {
       { clawback },
       { timeoutMs: CHAIN_TIMEOUT_MS },
     );
+  }
+
+  /* ------------------------------- support inbox ------------------------------- */
+
+  async supportMessages(status: 'open' | 'closed' | 'all' = 'open'): Promise<SupportMessage[]> {
+    const data = await this.http.get<unknown>(`/api/admin/support?status=${enc(status)}`);
+    return Array.isArray(data) ? (data as SupportMessage[]) : [];
+  }
+
+  closeSupportMessage(id: string): Promise<SupportMessage> {
+    return this.http.post<SupportMessage>(`/api/admin/support/${enc(id)}/close`, {});
+  }
+
+  reopenSupportMessage(id: string): Promise<SupportMessage> {
+    return this.http.post<SupportMessage>(`/api/admin/support/${enc(id)}/reopen`, {});
   }
 }

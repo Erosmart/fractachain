@@ -3,6 +3,7 @@ import { Camera, IdCard, ShieldCheck, Smartphone, SunMedium } from 'lucide-react
 import { withIsland } from '@/components/island/withIsland';
 import { GradientPanel, Notice, PageHeader, PanelNote } from '@/components/ui/kit';
 import SectionNav from '@/components/layout/SectionNav';
+import { needsTerms, termsPath } from '@/core/auth/onboardingPath';
 import { container } from '@/core/container';
 import { errorMessage } from '@/core/errors';
 import { ApiError } from '@/core/http/HttpClient';
@@ -94,6 +95,7 @@ function KycOnboardingPage() {
   useEffect(() => {
     if (isLoading) return;
     if (!user) navigator.replace(navigator.loginUrl());
+    else if (needsTerms(user) && !user.isAdmin) navigator.replace(termsPath(navigator.currentPath()));
     else if (!user.custodyMode && !user.isAdmin) navigator.replace('/onboarding/wallet');
   }, [user, isLoading]);
 

@@ -4,6 +4,7 @@
  * so all islands on a page share the same stores and services.
  */
 import { AccountSecurityService } from './account/AccountSecurityService';
+import { AccountApi } from './api/AccountApi';
 import { AdminApi } from './api/AdminApi';
 import { ChainApi } from './api/ChainApi';
 import { TxApi } from './api/TxApi';
@@ -14,6 +15,7 @@ import { ListingsApi } from './api/ListingsApi';
 import { MarketApi } from './api/MarketApi';
 import { OnChainApi } from './api/OnChainApi';
 import { PortfolioApi } from './api/PortfolioApi';
+import { SupportApi } from './api/SupportApi';
 import { READ_TIMEOUT_MS } from './api/timeouts';
 import { WalletApi } from './api/WalletApi';
 import { AuthService } from './auth/AuthService';
@@ -69,6 +71,8 @@ const api = Object.freeze({
   admin: new AdminApi(http),
   tx: new TxApi(http),
   chain: new ChainApi(http),
+  account: new AccountApi(http),
+  support: new SupportApi(http),
 });
 
 const walletSigner = new FreighterWalletSigner(config.networkPassphrase, t);

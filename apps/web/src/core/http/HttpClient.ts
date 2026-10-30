@@ -87,10 +87,11 @@ export interface IUnauthorizedHandler {
 }
 
 /** 403 codes that describe the account, not the request: surfaced app-wide. */
-export type PolicyViolationCode = 'TWO_FACTOR_REQUIRED' | 'EMAIL_NOT_VERIFIED';
+export type PolicyViolationCode = 'TWO_FACTOR_REQUIRED' | 'EMAIL_NOT_VERIFIED' | 'TERMS_REQUIRED';
 export const POLICY_VIOLATION_CODES: ReadonlySet<string> = new Set<PolicyViolationCode>([
   'TWO_FACTOR_REQUIRED',
   'EMAIL_NOT_VERIFIED',
+  'TERMS_REQUIRED',
 ]);
 
 export function isPolicyViolationCode(code: unknown): code is PolicyViolationCode {

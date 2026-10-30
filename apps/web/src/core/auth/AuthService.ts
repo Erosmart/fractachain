@@ -47,6 +47,35 @@ export class AuthService {
       this.conclude(await this.api.loginWithEmail(email, password, name), 'fund-if-wallet'),
     );
 
+  /** Email sign-up with explicit acceptance of the current terms; signs the new account in. */
+  readonly register = (input: { name: string; email: string; password: string; termsVersion: string }) =>
+    this.withLoading(async () =>
+      this.conclude(
+        await this.api.register({
+          name: input.name.trim(),
+          email: input.email.trim(),
+          password: input.password,
+          acceptTerms: true,
+          termsVersion: input.termsVersion,
+        }),
+        'none',
+      ),
+    );
+
+  /** Accepts the current terms (wallet / Google sign-ups, or after a new version). */
+  readonly acceptTerms = async (version: string): Promise<SessionUser | null> => {
+    const raw = await this.api.acceptTerms(version);
+    if (raw && typeof raw === 'object') {
+      const user = normalizeUser(raw);
+      this.session.updateUser(user);
+      this.session.dismissNotice();
+      return user;
+    }
+    await this.refresh();
+    this.session.dismissNotice();
+    return this.session.getSnapshot().user;
+  };
+
   readonly loginWithWallet = (): Promise<LoginResult> =>
     // One more Freighter signature inside the login opens the USDC trustline
     // and triggers the grant; without it the wallet cannot receive USDC.

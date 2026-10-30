@@ -1,4 +1,4 @@
-import type { WalletSignaturePayload } from '@fractachain/shared';
+import type { RegisterRequest, WalletSignaturePayload } from '@fractachain/shared';
 import type { IHttpClient } from '../http/HttpClient';
 import { CHAIN_TIMEOUT_MS } from './timeouts';
 import type {
@@ -27,6 +27,35 @@ export interface FirebaseLoginBody {
 export class AuthApi {
   constructor(private readonly http: IHttpClient) {}
 
+  /** Creates an email/password account (terms accepted explicitly) and signs it in. */
+  register(request: RegisterRequest): Promise<LoginResponse> {
+    return this.http.send<LoginResponse>('/api/auth/register', {
+      method: 'POST',
+      body: request,
+      auth: 'none',
+    });
+  }
+
+  /** Records the acceptance of the current terms for the signed-in account. */
+  async acceptTerms(version: string): Promise<unknown> {
+    const body = await this.http.send<{ success: true; user?: unknown; data?: { user?: unknown } }>(
+      '/api/auth/terms/accept',
+      { method: 'POST', body: { version } },
+    );
+    return body.user ?? body.data?.user;
+  }
+
+  /** Email accounts only; the API closes every other session. A wrong current password answers 401. */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    // A 401 means "wrong current password": keep the session (the cookie still travels).
+    await this.http.send('/api/auth/password/change', {
+      method: 'POST',
+      body: { currentPassword, newPassword },
+      auth: 'none',
+    });
+  }
+
+  /** Sign in only: an unknown email answers the same 401 as a wrong password. */
   loginWithEmail(email: string, password: string, name?: string): Promise<LoginResponse> {
     return this.http.send<LoginResponse>('/api/auth/email', {
       method: 'POST',

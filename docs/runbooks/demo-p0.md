@@ -28,12 +28,12 @@ Detalle del cierre: [`finalize.md`](finalize.md).
 
 ## Si falla
 
-| Sintoma | Que hacer |
-|---------|-----------|
-| 401 / no contribute | Falta admin secret o listing no live |
-| Caps inalcanzables | Redeploy `deploy_licitacion.ts` (100/100) |
-| Market vacio | Backend abajo o `/api/market/pools` vacio |
-| Wallet sin G... | Pasar por `/onboarding/wallet` custodial |
+| Sintoma             | Que hacer                                 |
+| ------------------- | ----------------------------------------- |
+| 401 / no contribute | Falta admin secret o listing no live      |
+| Caps inalcanzables  | Redeploy `deploy_licitacion.ts` (100/100) |
+| Market vacio        | Backend abajo o `/api/market/pools` vacio |
+| Wallet sin G...     | Pasar por `/onboarding/wallet` custodial  |
 
 ## No hacer en este runbook
 

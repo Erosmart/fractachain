@@ -5,7 +5,7 @@
 export const es = {
   steps: {
     label: 'Pasos para empezar a invertir',
-    account: 'Cuenta',
+    account: 'Cuenta y términos',
     wallet: 'Wallet',
     data: 'Tus datos',
     identity: 'Validá tu identidad',
@@ -131,6 +131,7 @@ export const es = {
     autoRefresh: 'Se actualiza sola mientras esperás.',
     meanwhile: 'Mientras tanto',
     meanwhileSub: 'Ya podés mirar el mercado y proteger tu cuenta.',
+    supportCta: 'Contactar soporte',
     supportNote: 'Si creés que es un error, contactá al equipo de compliance de Fractachain.',
     reason: 'Motivo',
     verifiedAs: 'Verificado como',
@@ -151,12 +152,30 @@ export const es = {
     startFail: 'No pudimos abrir la validación. Probá de nuevo.',
     providerFail: 'No pudimos saber cómo validar tu identidad. Recargá la página.',
   },
+  terms: {
+    eyebrow: 'Paso 1 · Términos',
+    title: 'Antes de seguir, los términos',
+    lead: 'Leé lo esencial y aceptá los documentos para usar Fractachain.',
+    points: [
+      'Fractachain opera en Stellar testnet: los activos y el USDC de prueba no tienen valor real.',
+      'Invertir implica riesgos: podés perder parte o todo lo invertido y la liquidez no está garantizada.',
+      'Tus transacciones en Stellar son públicas y permanentes; tus datos personales los tratamos según la política de privacidad.',
+      'Para invertir tenés que verificar tu identidad (prevención de lavado de activos).',
+    ],
+    docsTitle: 'Documentos',
+    accept: 'Leí y acepto los Términos y condiciones, la Política de privacidad y el Aviso de riesgos.',
+    version: 'Versión {version}',
+    submit: 'Aceptar y continuar',
+    saving: 'Guardando…',
+    required: 'Marcá la casilla para continuar.',
+    updated: 'Actualizamos los términos: revisalos y aceptá la nueva versión para seguir operando.',
+  },
 };
 
 export const en: typeof es = {
   steps: {
     label: 'Steps to start investing',
-    account: 'Account',
+    account: 'Account & terms',
     wallet: 'Wallet',
     data: 'Your details',
     identity: 'Verify your identity',
@@ -282,6 +301,7 @@ export const en: typeof es = {
     autoRefresh: 'It refreshes on its own while you wait.',
     meanwhile: 'Meanwhile',
     meanwhileSub: 'You can already browse the market and secure your account.',
+    supportCta: 'Contact support',
     supportNote: "If you think it's a mistake, contact Fractachain's compliance team.",
     reason: 'Reason',
     verifiedAs: 'Verified as',
@@ -301,5 +321,23 @@ export const en: typeof es = {
     badRedirect: "The verification link isn't from Didit, so we didn't redirect you.",
     startFail: "We couldn't open the verification. Try again.",
     providerFail: "We couldn't tell how to verify your identity. Reload the page.",
+  },
+  terms: {
+    eyebrow: 'Step 1 · Terms',
+    title: 'Before you continue, the terms',
+    lead: 'Read the essentials and accept the documents to use Fractachain.',
+    points: [
+      'Fractachain runs on Stellar testnet: assets and test USDC have no real value.',
+      'Investing involves risk: you can lose part or all of your investment and liquidity is not guaranteed.',
+      'Your Stellar transactions are public and permanent; we handle your personal data as the privacy policy says.',
+      'To invest you have to verify your identity (anti-money-laundering).',
+    ],
+    docsTitle: 'Documents',
+    accept: 'I read and accept the Terms and conditions, the Privacy policy and the Risk notice.',
+    version: 'Version {version}',
+    submit: 'Accept and continue',
+    saving: 'Saving…',
+    required: 'Tick the box to continue.',
+    updated: 'We updated the terms: review them and accept the new version to keep using the platform.',
   },
 };

@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type SubmitEvent } from 'react';
+import { useId, useState, type SubmitEvent } from 'react';
 import { ArrowRight, Wallet } from 'lucide-react';
 import { withIsland } from '@/components/island/withIsland';
 import { Notice, StatusChip } from '@/components/ui/kit';
@@ -19,15 +19,10 @@ function LoginPage() {
   const { user, loginWithEmail, loginWithWallet, linkFreighterWallet, isLoading, logout } = useAuth();
   const { t } = useI18n();
   const ids = useId();
-  const [register, setRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-
-  // `/login?mode=register` (and the old /register route) opens the sign-up wording.
-  useEffect(() => setRegister(navigator.searchParam('mode') === 'register'), []);
 
   const goAfterAuth = (u: SessionUser) => navigator.navigate(afterAuthPath(u, navigator.searchParam('next')));
   /** A 2FA account stops here: the dialog (mounted in the Navbar) finishes the login. */
@@ -39,8 +34,8 @@ function LoginPage() {
     e.preventDefault();
     setError('');
     try {
-      // The name only matters when the account is created: signing in with it would rename the account.
-      onResult(await loginWithEmail(email, password, register ? name : ''));
+      // Sign in only: accounts are created on /register, with the terms accepted.
+      onResult(await loginWithEmail(email, password));
     } catch (err) {
       setError(errorMessage(err, t('misc.loginFail')));
     }
@@ -100,9 +95,9 @@ function LoginPage() {
   return (
     <AuthShell
       aside
-      eyebrow={t('landing.auth.eyebrow')}
-      title={register ? t('landing.auth.registerTitle') : t('landing.auth.title')}
-      subtitle={register ? t('landing.auth.registerSubtitle') : t('landing.auth.subtitle')}
+      eyebrow={t('account.signin.eyebrow')}
+      title={t('account.signin.title')}
+      subtitle={t('account.signin.subtitle')}
     >
       <div className="grid gap-2.5 sm:grid-cols-2">
         <GoogleLoginButton className="w-full" onSuccess={goAfterAuth} />
@@ -124,22 +119,6 @@ function LoginPage() {
       </div>
 
       <form onSubmit={handleEmail} className="space-y-4">
-        {register && (
-          <div>
-            <label htmlFor={`${ids}-name`} className="label">
-              {t('landing.auth.name')}{' '}
-              <span className="font-normal text-muted">· {t('landing.auth.nameHint')}</span>
-            </label>
-            <input
-              id={`${ids}-name`}
-              type="text"
-              autoComplete="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="input"
-            />
-          </div>
-        )}
         <div>
           <label htmlFor={`${ids}-email`} className="label">
             {t('auth.email')}
@@ -158,41 +137,39 @@ function LoginPage() {
         <div>
           <div className="flex items-baseline justify-between gap-3">
             <label htmlFor={`${ids}-password`} className="label">
-              {t('landing.auth.password')}
+              {t('account.signin.password')}
             </label>
-            {!register && (
-              <a
-                href="/forgot-password"
-                className="mb-1.5 text-xs text-ink-2 underline-offset-2 hover:text-ink hover:underline"
-              >
-                {t('pwd.forgotLink')}
-              </a>
-            )}
+            <a
+              href="/forgot-password"
+              className="mb-1.5 text-xs text-ink-2 underline-offset-2 hover:text-ink hover:underline"
+            >
+              {t('pwd.forgotLink')}
+            </a>
           </div>
           <input
             id={`${ids}-password`}
             required
-            minLength={6}
             type="password"
-            autoComplete={register ? 'new-password' : 'current-password'}
-            aria-describedby={`${ids}-password-hint`}
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="input"
           />
-          <p id={`${ids}-password-hint`} className="mt-1.5 text-xs text-muted">
-            {t('landing.auth.passwordHint')}
-          </p>
         </div>
         {error && <Notice tone="bad">{error}</Notice>}
         <button type="submit" disabled={isLoading} className="btn btn-primary btn-lg w-full">
-          {isLoading ? t('auth.entering') : t('auth.continue')}
+          {isLoading ? t('account.signin.submitting') : t('account.signin.submit')}
           {!isLoading && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
         </button>
       </form>
 
-      <p className="mt-6 text-xs text-muted">{t('landing.auth.kycNote')}</p>
-      <p className="mt-1 text-xs text-muted">{t('landing.auth.terms')}</p>
+      <p className="mt-6 text-sm text-ink-2">
+        {t('account.signin.noAccount')}{' '}
+        <a href="/register" className="font-medium text-ink underline underline-offset-2">
+          {t('account.signin.create')}
+        </a>
+      </p>
+      <p className="mt-3 text-xs text-muted">{t('account.signin.footnote')}</p>
     </AuthShell>
   );
 }

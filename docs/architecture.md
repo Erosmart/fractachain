@@ -68,13 +68,13 @@ src/
 
 ### Principios aplicados
 
-| Principio | Dónde se ve |
-|---|---|
+| Principio                 | Dónde se ve                                                                                                                                                                                                                                                 |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **S**ingle responsibility | v1 tenía `server.ts` de 1 300 líneas y `accounts.ts` mezclando auth, KYC, wallet y ledger. Ahora: `AuthService` sólo autentica, `WalletService` sólo provisiona wallets, `AccountService` sólo mueve el ledger, `CustodialKeyService` sólo custodia claves. |
-| **O**pen/closed | Los controllers implementan `Controller.register(router)`: agregar un área nueva es sumar una clase al array del container, sin tocar `app.ts`. Los errores de dominio extienden `AppError` y el handler HTTP los mapea sin conocerlos. |
-| **L**iskov | `InMemoryDocumentStore`, `JsonFileDocumentStore` y `PostgresMirroredStore` son intercambiables detrás de `IDocumentStore` (los tests usan la versión en memoria). Igual `EnvFileSecretStore` / `InMemorySecretStore`. |
-| **I**nterface segregation | Los servicios dependen de vistas mínimas: `DeploymentRegistryLike` (solo `load`), `INetworkSettingsProvider` (solo `get`), `IWalletHydrator`, `ITreasurySecrets`. |
-| **D**ependency inversion | La capa de aplicación depende de `IAccountRepository`, `IPasswordHasher`, `ITokenService`, `IIdentityTokenVerifier`, `IWalletSignatureVerifier`, `ISelfieStorage`, `IClock`… y sólo `container.ts` elige implementaciones. |
+| **O**pen/closed           | Los controllers implementan `Controller.register(router)`: agregar un área nueva es sumar una clase al array del container, sin tocar `app.ts`. Los errores de dominio extienden `AppError` y el handler HTTP los mapea sin conocerlos.                     |
+| **L**iskov                | `InMemoryDocumentStore`, `JsonFileDocumentStore` y `PostgresMirroredStore` son intercambiables detrás de `IDocumentStore` (los tests usan la versión en memoria). Igual `EnvFileSecretStore` / `InMemorySecretStore`.                                       |
+| **I**nterface segregation | Los servicios dependen de vistas mínimas: `DeploymentRegistryLike` (solo `load`), `INetworkSettingsProvider` (solo `get`), `IWalletHydrator`, `ITreasurySecrets`.                                                                                           |
+| **D**ependency inversion  | La capa de aplicación depende de `IAccountRepository`, `IPasswordHasher`, `ITokenService`, `IIdentityTokenVerifier`, `IWalletSignatureVerifier`, `ISelfieStorage`, `IClock`… y sólo `container.ts` elige implementaciones.                                  |
 
 ### Flujo de una request
 
