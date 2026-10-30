@@ -149,7 +149,7 @@ export function DenseBars({
           </table>
         </div>
       ) : (
-        <figure className="m-0">
+        <figure className={`m-0 ${highlightLabel && highlightIndex >= 0 ? 'pt-7' : ''}`}>
           <div
             role="group"
             tabIndex={0}
@@ -207,12 +207,21 @@ export function DenseBars({
                       style={style}
                     />
                     {isHighlight && highlightLabel && (
-                      <span
-                        className="absolute z-10 -translate-y-2 whitespace-nowrap rounded-md bg-butter px-2 py-0.5 text-[11px] font-medium text-on-pastel shadow-card"
-                        style={{ bottom: empty ? '100%' : pct(d.value as number) }}
-                      >
-                        {highlightLabel}
-                      </span>
+                      <>
+                        {/* The pill floats above the plot; a dashed guide drops to the bar. */}
+                        <span
+                          className="pointer-events-none absolute w-px border-l border-dashed border-ink/40"
+                          style={{ top: 0, bottom: empty ? 0 : pct(d.value as number) }}
+                          aria-hidden="true"
+                        />
+                        <span
+                          className={`absolute bottom-full z-10 mb-1.5 whitespace-nowrap rounded-md bg-butter px-2 py-0.5 text-[11px] font-medium text-on-pastel shadow-card ${
+                            i / data.length > 0.8 ? 'right-0' : i / data.length < 0.2 ? 'left-0' : ''
+                          }`}
+                        >
+                          {highlightLabel}
+                        </span>
+                      </>
                     )}
                   </div>
                 );

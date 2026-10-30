@@ -1,5 +1,5 @@
 ---
-import DashboardPage from '@/features/portfolio/components/DashboardPage';
+import HomePage from '@/features/home/components/HomePage';
 import PageFallback from '@/components/ui/PageFallback.astro';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { translate } from '@/core/i18n/translate';
@@ -7,8 +7,8 @@ import { translate } from '@/core/i18n/translate';
 const locale = Astro.locals.locale;
 ---
 
-<BaseLayout title={translate(locale, 'nav.portfolio')}>
-  <DashboardPage client:only="react" locale={locale}>
+<BaseLayout title={translate(locale, 'dashboard.title')}>
+  <HomePage client:only="react" locale={locale}>
     <PageFallback slot="fallback" />
-  </DashboardPage>
+  </HomePage>
 </BaseLayout>
