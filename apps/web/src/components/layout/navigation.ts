@@ -43,7 +43,8 @@ export const CONSOLE_TAB: TabDef = {
 /** Visitors: product first, then the two landing anchors. */
 export const PUBLIC_TABS = [
   { key: 'offerings', href: '/market', label: 'shell.tabs.offerings' },
-  { key: 'markets', href: '/stocks', label: 'shell.tabs.markets' },
+  // Trading screens need an account: visitors get the product overview.
+  { key: 'markets', href: '/#productos', label: 'shell.tabs.markets' },
   { key: 'issuers', href: '/#emisores', label: 'shell.tabs.issuers' },
   { key: 'how', href: '/#como-funciona', label: 'shell.tabs.howItWorks' },
 ] as const;

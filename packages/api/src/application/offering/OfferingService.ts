@@ -2,6 +2,7 @@ import { alreadyClosedOnChain, type LicitacionSnapshot } from '../../domain/lici
 import { paymentUnit, type Listing } from '../../domain/listing/Listing';
 import { DomainError, NotFoundError, ValidationError, errorMessage } from '../../shared/errors';
 import { LockKeys, type ILockProvider } from '../../shared/LockProvider';
+import { TtlCache } from '../../shared/TtlCache';
 import type { Explorer } from '../../infrastructure/stellar/Explorer';
 import type { LicitacionContract } from '../../infrastructure/stellar/LicitacionContract';
 import type { AccountService } from '../account/AccountService';
@@ -20,7 +21,12 @@ import type { OnChainStatusService } from './OnChainStatusService';
  * Custodial wallets are signed server-side; self-custody wallets go through
  * prepare → Freighter → submit, and the backend never holds their keys.
  */
+/** Contract reads behind the offering page are reused this long (Soroban RPC round trips are slow). */
+const SNAPSHOT_TTL_MS = 8_000;
+
 export class OfferingService {
+  private readonly snapshots = new TtlCache<LicitacionSnapshot>(SNAPSHOT_TTL_MS);
+
   /**
    * One investor action per account+listing at a time: on-chain submissions
    * book amounts from before/after reads of the contract, which concurrent
@@ -44,7 +50,9 @@ export class OfferingService {
   async detail(listingId: string, investor?: string) {
     const listing = this.listings.get(listingId);
     if (!listing) return null;
-    const live = await this.licitacion.snapshot(listing, investor);
+    const live = await this.snapshots.get(`${listing.id}|${investor ?? ''}`, () =>
+      this.licitacion.snapshot(listing, investor),
+    );
     let current = listing;
     if (this.listings.isOnChain(listing) && alreadyClosedOnChain(live) && listing.status === 'LISTED') {
       const status = this.licitacion.closeStatusFromChain(live, listing);
@@ -105,8 +113,11 @@ export class OfferingService {
 
   /** Custodial or sandbox subscription. */
   contribute(listingId: string, accountId: string, amount: number) {
-    return this.lock.run(LockKeys.offering(accountId, listingId), () =>
-      this.contributeUnlocked(listingId, accountId, amount),
+    return this.fresh(
+      listingId,
+      this.lock.run(LockKeys.offering(accountId, listingId), () =>
+        this.contributeUnlocked(listingId, accountId, amount),
+      ),
     );
   }
 
@@ -138,8 +149,11 @@ export class OfferingService {
 
   /** Relays the Freighter-signed contribution; the booked amount is read from the contract. */
   submitContribute(listingId: string, accountId: string, signedXdr: string) {
-    return this.lock.run(LockKeys.offering(accountId, listingId), () =>
-      this.submitContributeUnlocked(listingId, accountId, signedXdr),
+    return this.fresh(
+      listingId,
+      this.lock.run(LockKeys.offering(accountId, listingId), () =>
+        this.submitContributeUnlocked(listingId, accountId, signedXdr),
+      ),
     );
   }
 
@@ -157,8 +171,9 @@ export class OfferingService {
 
   /** Custodial refund of a failed offering. */
   refund(listingId: string, accountId: string) {
-    return this.lock.run(LockKeys.offering(accountId, listingId), () =>
-      this.refundUnlocked(listingId, accountId),
+    return this.fresh(
+      listingId,
+      this.lock.run(LockKeys.offering(accountId, listingId), () => this.refundUnlocked(listingId, accountId)),
     );
   }
 
@@ -193,8 +208,11 @@ export class OfferingService {
   }
 
   submitRefund(listingId: string, accountId: string, signedXdr: string) {
-    return this.lock.run(LockKeys.offering(accountId, listingId), () =>
-      this.submitRefundUnlocked(listingId, accountId, signedXdr),
+    return this.fresh(
+      listingId,
+      this.lock.run(LockKeys.offering(accountId, listingId), () =>
+        this.submitRefundUnlocked(listingId, accountId, signedXdr),
+      ),
     );
   }
 
@@ -223,11 +241,15 @@ export class OfferingService {
     const listing = this.listings.require(listingId);
     if (!this.listings.isOnChain(listing))
       throw new DomainError('Esta licitación sandbox cierra con el endpoint admin /close');
-    return this.settlement.finalize(listing.id);
+    return this.fresh(listing.id, this.settlement.finalize(listing.id));
   }
 
   /** Admin retry of the payout to the company wallet (the happy path pays inside `finalize`). */
-  async withdrawProceeds(listingId: string) {
+  withdrawProceeds(listingId: string) {
+    return this.fresh(listingId, this.withdrawProceedsNow(listingId));
+  }
+
+  private async withdrawProceedsNow(listingId: string) {
     const listing = this.listings.require(listingId);
     if (!this.listings.isOnChain(listing)) {
       throw new DomainError(
@@ -266,7 +288,11 @@ export class OfferingService {
   }
 
   /** Claims owed units of a closed offering and, for SDEX listings, pays them on-ledger. */
-  async claim(listingId: string, accountId: string) {
+  claim(listingId: string, accountId: string) {
+    return this.fresh(listingId, this.claimNow(listingId, accountId));
+  }
+
+  private async claimNow(listingId: string, accountId: string) {
     const listing = this.listings.get(listingId);
     if (!listing) throw new NotFoundError('Listing no encontrado');
     const account = this.accounts.require(accountId);
@@ -292,6 +318,11 @@ export class OfferingService {
   }
 
   distribute(listingId: string, accountId: string) {
-    return this.sdexMarket.distributeClaimedTokens({ listingId, accountId });
+    return this.fresh(listingId, this.sdexMarket.distributeClaimedTokens({ listingId, accountId }));
+  }
+
+  /** Runs a write and drops the cached contract reads of that offering once it settles. */
+  private fresh<T>(listingId: string, write: Promise<T>): Promise<T> {
+    return write.finally(() => this.snapshots.forget(listingId));
   }
 }
