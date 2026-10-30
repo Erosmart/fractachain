@@ -11,6 +11,8 @@ import * as markets from './messages/markets';
 import * as account from './messages/account';
 import * as onboarding from './messages/onboarding';
 import * as admin from './messages/admin';
+import * as legal from './messages/legal';
+import * as support from './messages/support';
 
 export type Locale = 'es' | 'en';
 
@@ -26,6 +28,8 @@ const es = {
   account: account.es,
   onboard: onboarding.es,
   admin: admin.es,
+  legal: legal.es,
+  support: support.es,
   nav: {
     market: 'Licitaciones',
     orderbook: 'Orderbook',
@@ -446,6 +450,8 @@ const en: Messages = {
   account: account.en,
   onboard: onboarding.en,
   admin: admin.en,
+  legal: legal.en,
+  support: support.en,
   nav: {
     market: 'Offerings',
     orderbook: 'Orderbook',

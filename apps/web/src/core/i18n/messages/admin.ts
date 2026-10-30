@@ -10,6 +10,7 @@ export const es = {
     opa: 'OPA',
     testnet: 'Red',
     audit: 'Auditoría',
+    support: 'Soporte',
   },
   common: {
     refresh: 'Actualizar',
@@ -326,6 +327,7 @@ export const en: typeof es = {
     opa: 'Tender offers',
     testnet: 'Network',
     audit: 'Audit',
+    support: 'Support',
   },
   common: {
     refresh: 'Refresh',

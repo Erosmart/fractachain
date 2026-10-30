@@ -8,6 +8,7 @@ export const es = {
     wallet: 'Wallet',
     verification: 'Verificación',
     security: 'Seguridad',
+    privacy: 'Privacidad',
   },
   hub: {
     title: 'Tu cuenta',
@@ -102,6 +103,7 @@ export const en: typeof es = {
     wallet: 'Wallet',
     verification: 'Verification',
     security: 'Security',
+    privacy: 'Privacy',
   },
   hub: {
     title: 'Your account',

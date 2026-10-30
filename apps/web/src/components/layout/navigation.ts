@@ -70,6 +70,7 @@ export const SECTIONS = {
     { key: 'wallet', href: '/wallet', label: 'account.nav.wallet' },
     { key: 'verification', href: '/onboarding/kyc', label: 'account.nav.verification' },
     { key: 'security', href: '/account/security', label: 'account.nav.security' },
+    { key: 'privacy', href: '/account/privacidad', label: 'account.nav.privacy' },
   ],
   console: [
     { key: 'overview', href: '/admin', label: 'admin.nav.overview' },
@@ -78,6 +79,7 @@ export const SECTIONS = {
     { key: 'opa', href: '/admin/opa', label: 'admin.nav.opa' },
     { key: 'testnet', href: '/admin/testnet', label: 'admin.nav.testnet' },
     { key: 'audit', href: '/admin/audit', label: 'admin.nav.audit' },
+    { key: 'support', href: '/admin/soporte', label: 'admin.nav.support' },
   ],
 } as const;
 
