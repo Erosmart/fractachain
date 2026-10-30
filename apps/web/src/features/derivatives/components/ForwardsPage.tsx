@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle2, RefreshCw, Scale, Sprout, Zap } from 'lucide-react';
+import { useEffect, useId, useState } from 'react';
+import { RefreshCw, Scale, TriangleAlert } from 'lucide-react';
 import { withIsland } from '@/components/island/withIsland';
 import LiveContractLink from '@/components/ui/LiveContractLink';
 import MockDisclaimer from '@/components/ui/MockDisclaimer';
-import { clickable } from '@/core/a11y/clickable';
+import { Card, Notice } from '@/components/ui/kit';
 import { formatInt } from '@/core/format/number';
+import { money } from '@/core/market/money';
 import { useI18n } from '@/hooks/useI18n';
+import ContractBanner from './ContractBanner';
 
 interface ForwardContract {
   id: string;
@@ -16,7 +18,6 @@ interface ForwardContract {
   deliveryDate: string;
   penaltyClausePercent: number;
   rolloverBonusPercent: number;
-  status: 'ACTIVE' | 'SETTLED' | 'ROLLED_OVER' | 'CANCELLED';
 }
 
 const MOCK_FORWARDS: ForwardContract[] = [
@@ -29,7 +30,6 @@ const MOCK_FORWARDS: ForwardContract[] = [
     deliveryDate: '2027-05-15',
     penaltyClausePercent: 20,
     rolloverBonusPercent: 10,
-    status: 'ACTIVE',
   },
   {
     id: 'FWD-MAIZ-2026-04',
@@ -40,214 +40,191 @@ const MOCK_FORWARDS: ForwardContract[] = [
     deliveryDate: '2027-08-30',
     penaltyClausePercent: 20,
     rolloverBonusPercent: 10,
-    status: 'ACTIVE',
   },
 ];
+
+type Clause = 'PENALTY' | 'ROLLOVER';
 
 /** Production forwards (roadmap): demo contracts and a clause simulator. */
 function ForwardsPage() {
   const { t, locale } = useI18n();
+  const groupId = useId();
   const comLabel = (c: string) =>
     t(c === 'Soja' ? 'misc.comSoja' : c === 'Maíz' ? 'misc.comMaiz' : 'misc.comTrigo');
   const fmtDate = (iso: string) =>
-    new Date(`${iso}T12:00:00`).toLocaleDateString(locale === 'es' ? 'es-AR' : 'en-US', {
+    new Date(`${iso}T12:00:00`).toLocaleDateString(locale === 'en' ? 'en-US' : 'es-AR', {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
     });
-  const [selectedForward, setSelectedForward] = useState<ForwardContract>(MOCK_FORWARDS[0]);
-  const [resolutionAction, setResolutionAction] = useState<'NONE' | 'PENALTY' | 'ROLLOVER'>('NONE');
-  const [actionDone, setActionDone] = useState(false);
+  const [selected, setSelected] = useState<ForwardContract>(MOCK_FORWARDS[0]);
+  const [clause, setClause] = useState<Clause | null>(null);
+  const [result, setResult] = useState<string | null>(null);
 
-  const totalContractValue = selectedForward.tons * selectedForward.strikePriceUsd;
-  const penaltyAmount = totalContractValue * (selectedForward.penaltyClausePercent / 100);
-  const rolloverTons = selectedForward.tons * (1 + selectedForward.rolloverBonusPercent / 100);
+  const total = selected.tons * selected.strikePriceUsd;
+  const penalty = total * (selected.penaltyClausePercent / 100);
+  const rolloverTons = selected.tons * (1 + selected.rolloverBonusPercent / 100);
 
-  useEffect(() => {
-    if (!actionDone) return;
-    const timer = setTimeout(() => {
-      setActionDone(false);
-      setResolutionAction('NONE');
-    }, 4000);
-    return () => clearTimeout(timer);
-  }, [actionDone]);
+  useEffect(() => setResult(null), [selected, clause]);
+
+  const options: { key: Clause; Icon: typeof RefreshCw; title: string; body: string; value: string }[] = [
+    {
+      key: 'PENALTY',
+      Icon: TriangleAlert,
+      title: t('markets.forwards.penalty'),
+      body: t('markets.forwards.penaltyBody'),
+      value: `− ${money(penalty)}`,
+    },
+    {
+      key: 'ROLLOVER',
+      Icon: RefreshCw,
+      title: t('markets.forwards.rollover'),
+      body: t('markets.forwards.rolloverBody'),
+      value: t('markets.forwards.tons', { n: formatInt(rolloverTons) }),
+    },
+  ];
 
   return (
-    <div className="space-y-8 py-4">
-      {/* Header */}
+    <div className="space-y-5">
       <div className="space-y-2">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-leaf-100 border border-[#8fcb7a]/40 text-[#2f6f28] text-xs font-semibold uppercase tracking-wider">
-          <Sprout className="w-3.5 h-3.5" />
-          {t('fwd.kicker')}
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">
-          {t('pages.forwardsTitle')}
-        </h1>
-        <p className="text-neutral-600 text-xs sm:text-sm max-w-2xl">{t('fwd.lead')}</p>
         <MockDisclaimer product="Forwards" />
         <LiveContractLink kind="forward" />
       </div>
+      <ContractBanner
+        icon={<Scale className="h-5 w-5" />}
+        title={t('markets.forwards.legalTitle')}
+        body={t('markets.forwards.legalBody')}
+        wasm="forward_contract.wasm"
+      />
 
-      {/* Legal Banner */}
-      <div className="p-5 rounded-3xl crystal-card flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <span className="text-xs font-bold text-black flex items-center gap-1.5">
-            <Scale className="w-4 h-4 text-[#2f6f28]" />
-            {t('fwd.legalTitle')}
-          </span>
-          <p className="text-xs text-neutral-600 max-w-2xl">{t('fwd.legalBody')}</p>
-        </div>
-        <span className="px-3 py-1 rounded-full bg-leaf-100 text-[#2f6f28] border border-[#8fcb7a]/50 text-xs font-mono font-bold whitespace-nowrap">
-          forward_contract.wasm
-        </span>
-      </div>
-
-      {/* Active Contracts & Resolution Simulator */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left: Contracts List (7 Cols) */}
-        <div className="lg:col-span-7 space-y-4">
-          <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('fwd.active')}</h3>
-
-          <div className="space-y-3">
-            {MOCK_FORWARDS.map((fwd) => {
-              const isSelected = selectedForward.id === fwd.id;
-              const fwdTotal = fwd.tons * fwd.strikePriceUsd;
-
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
+        <Card
+          title={t('markets.forwards.list')}
+          subtitle={t('markets.forwards.listSub', { n: MOCK_FORWARDS.length })}
+          className="self-start"
+        >
+          <ul className="space-y-2">
+            {MOCK_FORWARDS.map((f) => {
+              const on = selected.id === f.id;
               return (
-                <div
-                  key={fwd.id}
-                  {...clickable(() => setSelectedForward(fwd), isSelected)}
-                  className={`p-4 sm:p-5 rounded-3xl crystal-card cursor-pointer transition-all space-y-3 ${
-                    isSelected ? 'ring-1 ring-[#7ed86a]' : 'hover:border-black/20'
-                  }`}
-                >
-                  <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-start">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-black text-sm sm:text-base font-mono break-all">
-                          {fwd.id}
+                <li key={f.id}>
+                  <button
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setSelected(f)}
+                    className={`w-full rounded-2xl border p-4 text-left transition-colors ${
+                      on ? 'border-sky bg-sky-soft' : 'border-line bg-surface hover:border-line-strong'
+                    }`}
+                  >
+                    <span className="flex flex-wrap items-start justify-between gap-2">
+                      <span className="min-w-0">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono text-[13px] font-medium text-ink">{f.id}</span>
+                          <span className="chip chip-neutral">{comLabel(f.commodity)}</span>
                         </span>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-leaf-100 text-[#2f6f28] border border-[#8fcb7a]/50">
-                          {comLabel(fwd.commodity)}
-                        </span>
-                      </div>
-                      <div className="text-xs text-neutral-600 break-words">{fwd.producer}</div>
-                    </div>
-
-                    <span className="self-start px-2.5 py-1 rounded-md bg-leaf-100 text-[#2f6f28] border border-[#8fcb7a]/50 text-xs font-mono font-bold shrink-0">
-                      ${fwd.strikePriceUsd} USD/Tn
+                        <span className="mt-1 block text-xs text-ink-2">{f.producer}</span>
+                      </span>
+                      <span className="chip-navy">
+                        {t('markets.forwards.strike', { n: formatInt(f.strikePriceUsd) })}
+                      </span>
                     </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-black/8 text-xs">
-                    <div>
-                      <span className="text-neutral-500 text-[10px] block">{t('fwd.volume')}</span>
-                      <span className="font-bold font-mono text-black">
-                        {fwd.tons} {t('fwd.tons')}
+                    <span className="mt-4 grid grid-cols-3 gap-3 border-t border-ink/10 pt-3 text-xs">
+                      <span>
+                        <span className="block text-muted">{t('markets.forwards.volume')}</span>
+                        <span className="mt-0.5 block font-medium text-ink tnum">
+                          {t('markets.forwards.tons', { n: formatInt(f.tons) })}
+                        </span>
                       </span>
-                    </div>
-                    <div>
-                      <span className="text-neutral-500 text-[10px] block">{t('fwd.notional')}</span>
-                      <span className="font-bold font-mono text-[#2f6f28]">${formatInt(fwdTotal)} USDC</span>
-                    </div>
-                    <div>
-                      <span className="text-neutral-500 text-[10px] block">{t('fwd.delivery')}</span>
-                      <span className="font-bold font-mono text-neutral-700">
-                        {fmtDate(fwd.deliveryDate)}
+                      <span>
+                        <span className="block text-muted">{t('markets.forwards.notional')}</span>
+                        <span className="mt-0.5 block font-medium text-ink tnum">
+                          {money(f.tons * f.strikePriceUsd)}
+                        </span>
                       </span>
-                    </div>
-                  </div>
-                </div>
+                      <span>
+                        <span className="block text-muted">{t('markets.forwards.delivery')}</span>
+                        <span className="mt-0.5 block font-medium text-ink tnum">
+                          {fmtDate(f.deliveryDate)}
+                        </span>
+                      </span>
+                    </span>
+                  </button>
+                </li>
               );
             })}
-          </div>
-        </div>
+          </ul>
+        </Card>
 
-        {/* Right: Clause Execution & Rollover Simulator (5 Cols) */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="p-6 sm:p-8 rounded-3xl crystal-card space-y-6">
-            <h3 className="text-base font-bold text-black">{t('fwd.simulator')}</h3>
-
-            <div className="p-4 rounded-xl bg-black/5 border border-black/8 space-y-2 text-xs">
-              <div className="text-neutral-600">
-                {t('fwd.selected')} <strong className="text-black font-mono">{selectedForward.id}</strong>
-              </div>
-              <div className="text-neutral-600">
-                {t('fwd.totalDelivery')}{' '}
-                <strong className="text-[#2f6f28] font-mono">${formatInt(totalContractValue)} USDC</strong>
-              </div>
+        <Card
+          title={t('markets.forwards.simTitle')}
+          subtitle={t('markets.forwards.simSubtitle')}
+          actions={<span className="chip chip-butter">{t('markets.simulator')}</span>}
+          className="lg:sticky lg:top-24 lg:self-start"
+          bodyClassName="space-y-4"
+        >
+          <dl className="grid grid-cols-2 gap-3 rounded-xl bg-surface-2 px-3.5 py-3 text-xs">
+            <div className="min-w-0">
+              <dt className="text-muted">{t('markets.forwards.selected')}</dt>
+              <dd className="mt-0.5 truncate font-mono font-medium text-ink">{selected.id}</dd>
             </div>
-
-            {/* Resolution Mode Selection */}
-            <div className="space-y-3">
-              <p className="text-xs font-medium text-neutral-600 block">{t('fwd.pickClause')}</p>
-
-              {/* Option A: 20% Cancellation Penalty */}
-              <div
-                {...clickable(() => setResolutionAction('PENALTY'), resolutionAction === 'PENALTY')}
-                className={`p-4 rounded-xl border cursor-pointer transition-all space-y-1.5 ${
-                  resolutionAction === 'PENALTY'
-                    ? 'bg-red-50 border-red-300 text-black'
-                    : 'bg-black/5 border-black/8 text-neutral-600 hover:border-black/20'
-                }`}
-              >
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="font-bold text-xs text-red-700 flex items-center gap-1">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> {t('fwd.penalty')}
-                  </span>
-                  <span className="font-mono text-xs font-bold text-black">
-                    -${formatInt(penaltyAmount)} USDC
-                  </span>
-                </div>
-                <p className="text-[11px] text-neutral-600">{t('fwd.penaltyBody')}</p>
-              </div>
-
-              {/* Option B: In-Kind Rollover */}
-              <div
-                {...clickable(() => setResolutionAction('ROLLOVER'), resolutionAction === 'ROLLOVER')}
-                className={`p-4 rounded-xl border cursor-pointer transition-all space-y-1.5 ${
-                  resolutionAction === 'ROLLOVER'
-                    ? 'bg-leaf-100 border-[#7ed86a] text-black'
-                    : 'bg-black/5 border-black/8 text-neutral-600 hover:border-black/20'
-                }`}
-              >
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="font-bold text-xs text-[#2f6f28] flex items-center gap-1">
-                    <RefreshCw className="w-3.5 h-3.5 shrink-0" /> {t('fwd.rollover')}
-                  </span>
-                  <span className="font-mono text-xs font-bold text-black">{rolloverTons.toFixed(0)} Tn</span>
-                </div>
-                <p className="text-[11px] text-neutral-600">{t('fwd.rolloverBody')}</p>
-              </div>
+            <div>
+              <dt className="text-muted">{t('markets.forwards.totalDelivery')}</dt>
+              <dd className="mt-0.5 font-medium text-ink tnum">{money(total)}</dd>
             </div>
+          </dl>
 
-            {/* Execution Result Feedback */}
-            {actionDone && (
-              <div
-                className="p-3 rounded-xl bg-leaf-100 border border-[#8fcb7a]/50 text-[#2f6f28] text-xs flex items-center gap-2"
-                role="status"
-              >
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>
-                  {resolutionAction === 'PENALTY'
-                    ? t('fwd.simPenalty', { n: formatInt(penaltyAmount) })
-                    : t('fwd.simRollover', { n: rolloverTons.toFixed(0) })}
-                </span>
-              </div>
-            )}
+          <fieldset>
+            <legend className="label">{t('markets.forwards.pickClause')}</legend>
+            <div className="space-y-2">
+              {options.map(({ key, Icon, title, body, value }) => (
+                <label
+                  key={key}
+                  className={`flex cursor-pointer gap-3 rounded-2xl border p-3.5 transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-sky-strong ${
+                    clause === key ? 'border-sky bg-sky-soft' : 'border-line hover:border-line-strong'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name={groupId}
+                    value={key}
+                    checked={clause === key}
+                    onChange={() => setClause(key)}
+                    className="sr-only"
+                  />
+                  <span
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface text-ink ring-1 ring-line"
+                    aria-hidden="true"
+                  >
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-baseline justify-between gap-x-3">
+                      <span className="text-sm font-medium text-ink">{title}</span>
+                      <span className="text-sm text-ink tnum">{value}</span>
+                    </span>
+                    <span className="mt-0.5 block text-xs leading-relaxed text-ink-2">{body}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
 
-            {/* Submit Action */}
-            <button
-              type="button"
-              disabled={resolutionAction === 'NONE'}
-              onClick={() => setActionDone(true)}
-              className="w-full py-3 rounded-xl bg-black text-white disabled:opacity-50 font-bold text-xs flex items-center justify-center gap-2 transition-all"
-            >
-              <Zap className="w-4 h-4" />
-              {t('fwd.simulate')}
-            </button>
-          </div>
-        </div>
+          <button
+            type="button"
+            className="btn btn-primary btn-lg w-full"
+            disabled={!clause}
+            onClick={() =>
+              setResult(
+                clause === 'PENALTY'
+                  ? t('markets.forwards.simPenalty', { n: money(penalty) })
+                  : t('markets.forwards.simRollover', { n: formatInt(rolloverTons) }),
+              )
+            }
+          >
+            {t('markets.forwards.simulate')}
+          </button>
+          <div aria-live="polite">{result && <Notice tone="good">{result}</Notice>}</div>
+        </Card>
       </div>
     </div>
   );

@@ -1,11 +1,13 @@
 ---
 import ForwardsPage from '@/features/derivatives/components/ForwardsPage';
+import MarketsHeader from '@/features/market/components/MarketsHeader.astro';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { translate } from '@/core/i18n/translate';
 
 const locale = Astro.locals.locale;
 ---
 
-<BaseLayout title={translate(locale, 'pages.forwardsTitle')}>
+<BaseLayout title={translate(locale, 'markets.forwards.title')}>
+  <MarketsHeader active="forwards" title="markets.forwards.title" subtitle="markets.forwards.subtitle" />
   <ForwardsPage client:load locale={locale} />
 </BaseLayout>

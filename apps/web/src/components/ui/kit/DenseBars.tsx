@@ -197,11 +197,11 @@ export function DenseBars({
                 return (
                   <div
                     key={d.key}
-                    className="relative flex h-full min-w-[2px] max-w-[12px] flex-1 items-end justify-center"
+                    className="relative flex h-full min-w-[2px] flex-1 items-end justify-center"
                     onPointerEnter={() => setActive(i)}
                   >
                     <div
-                      className={`w-full rounded-t-[4px] transition-opacity ${
+                      className={`w-full max-w-[12px] rounded-t-[4px] transition-opacity ${
                         active !== null && !isActive ? 'opacity-60' : ''
                       } ${empty ? 'rounded-t-none' : ''}`}
                       style={style}

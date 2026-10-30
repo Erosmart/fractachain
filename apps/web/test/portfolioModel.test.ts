@@ -3,7 +3,8 @@ import type { Pool, Portfolio, Position } from '@/core/api/types';
 import { dailyCounts, describeOperation, type HorizonOperation } from '@/features/portfolio/model/activity';
 import { byAsset, byType } from '@/features/portfolio/model/allocation';
 import { pct, signed } from '@/features/portfolio/model/format';
-import { offeringDay, poolChip, positionChip, positionsFrom } from '@/features/portfolio/model/positions';
+import { poolPhase, positionPhase } from '@/core/market/phase';
+import { offeringDay, positionsFrom } from '@/features/portfolio/model/positions';
 import { pendingCount, tasksFor } from '@/features/portfolio/model/tasks';
 
 const ME = 'GADCUHWTKGKVSXUOMGJ654BA76DHDKHJAWPBFOXOCVCJQ7IXMGGME4OD';
@@ -157,14 +158,16 @@ describe('allocation', () => {
 
 describe('positions and format', () => {
   it('never shows raw contract states as chips', () => {
-    expect(positionChip(position({ listingStatus: 'CLOSED_FAILED', canRefund: true }))?.key).toBe(
-      'refundable',
+    expect(positionPhase(position({ listingStatus: 'CLOSED_FAILED', canRefund: true }))).toBe(
+      'refundAvailable',
     );
-    expect(positionChip(position({ listingStatus: 'CLOSED_FAILED' }))?.key).toBe('failed');
-    expect(positionChip(position({ refundedAt: '2026-10-01' }))?.key).toBe('refunded');
-    const pool = { status: 'OPEN', raisedAmount: 10, hardCap: 100, daysRemaining: 2 } as Pool;
-    expect(poolChip(pool).key).toBe('closingSoon');
-    expect(poolChip({ ...pool, status: 'SUCCESSFUL', raisedAmount: 100 }).key).toBe('capFull');
+    expect(positionPhase(position({ listingStatus: 'CLOSED_FAILED' }))).toBe('failed');
+    expect(positionPhase(position({ refundedAt: '2026-10-01' }))).toBe('refunded');
+    const now = Date.now();
+    const pool = { status: 'OPEN', raisedAmount: 10, softCap: 50, hardCap: 100, daysRemaining: 2 } as Pool;
+    expect(poolPhase(pool, now)).toBe('closingSoon');
+    // Same offering, same words on every screen: a successful close reads "Cerrada".
+    expect(poolPhase({ ...pool, status: 'SUCCESSFUL', raisedAmount: 100 }, now)).toBe('closed');
   });
 
   it('falls back to session holdings priced at cost', () => {

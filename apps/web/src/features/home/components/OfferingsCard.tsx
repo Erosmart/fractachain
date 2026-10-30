@@ -1,8 +1,10 @@
-import { Card, CapProgress, EmptyState, StatusChip } from '@/components/ui/kit';
+import { Card, CapProgress, EmptyState } from '@/components/ui/kit';
 import type { Pool, Position } from '@/core/api/types';
 import { useI18n } from '@/hooks/useI18n';
 import { money } from '@/features/portfolio/model/format';
-import { poolChip, unitOf } from '@/features/portfolio/model/positions';
+import PhaseChip from '@/components/ui/PhaseChip';
+import { poolPhase } from '@/core/market/phase';
+import { unitOf } from '@/features/portfolio/model/positions';
 
 /**
  * The offerings the investor subscribed to (progress against minimum and
@@ -39,7 +41,7 @@ export function OfferingsCard({
       ) : (
         <ul className="space-y-5">
           {rows.slice(0, 2).map((pool) => {
-            const chip = poolChip(pool);
+            const phase = poolPhase(pool);
             const unit = unitOf(pool.paymentKind);
             const fmt = (n: number) => `${money(n, 0)} ${unit}`;
             return (
@@ -53,9 +55,7 @@ export function OfferingsCard({
                       {names.get(pool.id) ?? pool.producerName.replace(/\s*\(CUIT.*\)$/, '')}
                     </span>
                   </a>
-                  <StatusChip tone={chip.tone} className="shrink-0">
-                    {t(`dashboard.chip.${chip.key}`)}
-                  </StatusChip>
+                  <PhaseChip phase={phase} className="shrink-0" />
                 </div>
                 <p className="mt-2 text-xs text-ink-2 tnum">
                   {t('dashboard.offerings.raised', {

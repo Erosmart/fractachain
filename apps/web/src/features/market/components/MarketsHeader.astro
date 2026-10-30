@@ -1,0 +1,29 @@
+---
+/**
+ * Title block + section pills shared by the Mercado pages (secondary market,
+ * Merval, forwards, warrants). Server-rendered: the pills work before any
+ * island hydrates.
+ */
+import SectionNav from '@/components/layout/SectionNav';
+import { PageHeader } from '@/components/ui/kit/Identity';
+import { translate } from '@/core/i18n/translate';
+
+interface Props {
+  active: 'orderbook' | 'stocks' | 'forwards' | 'warrants';
+  /** i18n keys */
+  title: string;
+  subtitle: string;
+}
+
+const { active, title, subtitle } = Astro.props;
+const locale = Astro.locals.locale;
+---
+
+<div class="mb-6 space-y-5">
+  <PageHeader
+    eyebrow={translate(locale, 'markets.eyebrow')}
+    title={translate(locale, title)}
+    subtitle={translate(locale, subtitle)}
+  />
+  <SectionNav section="markets" active={active} client:load locale={locale} />
+</div>

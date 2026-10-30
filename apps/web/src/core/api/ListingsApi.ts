@@ -2,6 +2,22 @@ import type { IHttpClient } from '../http/HttpClient';
 import { CHAIN_TIMEOUT_MS, enc } from './timeouts';
 import type { ChainActionResult, ListingDetail, ListingEnvelope, Pool } from './types';
 
+/** Subscription activity of an offering: investors and money in per day. */
+export interface ListingActivity {
+  investors: number;
+  /** One row per day with contributions, oldest first (`date` is YYYY-MM-DD). */
+  daily: { date: string; usdc: number }[];
+  /** Raised before contributions were logged with a date. */
+  undatedUsdc: number;
+}
+
+/** Income already distributed to holders (only its presence matters to the UI). */
+export interface ListingDividend {
+  id?: string;
+  amountUsdc?: number;
+  [field: string]: unknown;
+}
+
 /** Primary offerings: public catalog, the offering page and investor actions. */
 export class ListingsApi {
   constructor(private readonly http: IHttpClient) {}
@@ -14,6 +30,27 @@ export class ListingsApi {
   /** Sends the session (when any) so the snapshot includes the investor's on-chain units. */
   get(id: string): Promise<ListingEnvelope> {
     return this.http.send<ListingEnvelope>(`/api/listings/${enc(id)}`, { timeoutMs: CHAIN_TIMEOUT_MS });
+  }
+
+  /** Public: investor count and the subscription curve. */
+  async activity(id: string): Promise<ListingActivity> {
+    const data = await this.http.get<Partial<ListingActivity>>(`/api/listings/${enc(id)}/activity`, {
+      auth: 'none',
+    });
+    return {
+      investors: Number(data?.investors) || 0,
+      daily: Array.isArray(data?.daily)
+        ? data.daily
+            .filter((d) => typeof d?.date === 'string')
+            .map((d) => ({ date: d.date, usdc: Number(d.usdc) || 0 }))
+        : [],
+      undatedUsdc: Number(data?.undatedUsdc) || 0,
+    };
+  }
+
+  async dividends(id: string): Promise<ListingDividend[]> {
+    const data = await this.http.get<unknown>(`/api/listings/${enc(id)}/dividends`, { auth: 'none' });
+    return Array.isArray(data) ? (data as ListingDividend[]) : [];
   }
 
   /** Custodial / sandbox path: the platform signs. */

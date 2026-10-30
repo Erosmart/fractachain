@@ -1,11 +1,13 @@
 ---
 import WarrantsPage from '@/features/derivatives/components/WarrantsPage';
+import MarketsHeader from '@/features/market/components/MarketsHeader.astro';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { translate } from '@/core/i18n/translate';
 
 const locale = Astro.locals.locale;
 ---
 
-<BaseLayout title={translate(locale, 'pages.warrantsTitle')}>
+<BaseLayout title={translate(locale, 'markets.warrants.title')}>
+  <MarketsHeader active="warrants" title="markets.warrants.title" subtitle="markets.warrants.subtitle" />
   <WarrantsPage client:load locale={locale} />
 </BaseLayout>

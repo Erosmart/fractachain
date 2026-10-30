@@ -82,60 +82,6 @@ export function dominantSource(positions: Position[]): string | null {
   return best;
 }
 
-export interface ChipSpec {
-  tone: Tone;
-  /** Key under `dashboard.chip`. */
-  key:
-    | 'upcoming'
-    | 'open'
-    | 'closingSoon'
-    | 'minReached'
-    | 'capFull'
-    | 'closed'
-    | 'failed'
-    | 'refundable'
-    | 'refunded'
-    | 'settled';
-}
-
-/** Plain-language state of a position's offering (no "Failed" / "finalize()" in the UI). */
-export function positionChip(p: Position): ChipSpec | null {
-  if (p.refundedAt) return { tone: 'neutral', key: 'refunded' };
-  if (p.canRefund) return { tone: 'peach', key: 'refundable' };
-  switch (p.listingStatus) {
-    case 'LISTED':
-      return { tone: 'sky', key: 'open' };
-    case 'CLOSED_SUCCESS':
-      return { tone: 'good', key: 'closed' };
-    case 'CLOSED_FAILED':
-      return { tone: 'bad', key: 'failed' };
-    case 'DRAFT':
-    case 'DEPLOYED':
-    case 'TOKENS_MINTED':
-      return { tone: 'neutral', key: 'upcoming' };
-    default:
-      return null;
-  }
-}
-
-export function poolChip(pool: Pool): ChipSpec {
-  switch (pool.status) {
-    case 'OPEN':
-      if (pool.hardCap > 0 && pool.raisedAmount >= pool.hardCap) return { tone: 'good', key: 'capFull' };
-      return pool.daysRemaining <= 3 ? { tone: 'warn', key: 'closingSoon' } : { tone: 'sky', key: 'open' };
-    case 'SUCCESSFUL':
-      return pool.hardCap > 0 && pool.raisedAmount >= pool.hardCap
-        ? { tone: 'good', key: 'capFull' }
-        : { tone: 'good', key: 'minReached' };
-    case 'SETTLED':
-      return { tone: 'neutral', key: 'settled' };
-    case 'FAILED':
-      return { tone: 'bad', key: 'failed' };
-    default:
-      return { tone: 'neutral', key: 'closed' };
-  }
-}
-
 /** Unit an offering is subscribed in. */
 export const unitOf = (kind?: string | null) => (kind === 'XLM' ? 'XLM' : 'USDC');
 

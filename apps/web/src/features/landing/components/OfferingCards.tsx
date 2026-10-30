@@ -4,11 +4,13 @@ import { CapProgress, EmptyState, Notice, StatusChip } from '@/components/ui/kit
 import type { Pool } from '@/core/api/types';
 import { formatAmount } from '@/core/format/number';
 import { useI18n } from '@/hooks/useI18n';
-import { currencyOf, featuredPools, issuerName, poolChip, useLivePools } from '../livePools';
+import PhaseChip from '@/components/ui/PhaseChip';
+import { poolPhase } from '@/core/market/phase';
+import { currencyOf, featuredPools, issuerName, useLivePools } from '../livePools';
 
 function OfferingCard({ pool }: { pool: Pool }) {
   const { t } = useI18n();
-  const chip = poolChip(pool);
+  const phase = poolPhase(pool);
   const cur = currencyOf(pool);
   const fmt = (v: number) => `${formatAmount(v)} ${cur}`;
   const href = `/market/${encodeURIComponent(pool.id)}`;
@@ -16,7 +18,7 @@ function OfferingCard({ pool }: { pool: Pool }) {
     <article className="card card-pad group relative flex min-w-0 flex-col transition-shadow hover:shadow-lift">
       <header className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-          <StatusChip tone={chip.tone}>{t(`landing.offerings.status.${chip.key}`)}</StatusChip>
+          <PhaseChip phase={phase} />
           {pool.commodityType && (
             <StatusChip tone="neutral" icon={false}>
               {pool.commodityType}

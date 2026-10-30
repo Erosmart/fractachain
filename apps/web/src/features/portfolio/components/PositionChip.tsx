@@ -1,12 +1,9 @@
-import { StatusChip } from '@/components/ui/kit';
+import PhaseChip from '@/components/ui/PhaseChip';
 import type { Position } from '@/core/api/types';
-import { useI18n } from '@/hooks/useI18n';
-import { positionChip } from '../model/positions';
+import { positionPhase } from '@/core/market/phase';
 
-/** Offering state of a position in plain language (icon + label). */
+/** Offering state of a position in plain language (the shared phase chip). */
 export function PositionChip({ position }: { position: Position }) {
-  const { t } = useI18n();
-  const chip = positionChip(position);
-  if (!chip) return null;
-  return <StatusChip tone={chip.tone}>{t(`dashboard.chip.${chip.key}`)}</StatusChip>;
+  const phase = positionPhase(position);
+  return phase ? <PhaseChip phase={phase} /> : null;
 }

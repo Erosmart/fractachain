@@ -54,14 +54,6 @@ export const es = {
     open: 'Ver licitación',
     empty: 'Todavía no hay licitaciones publicadas.',
     emptyBody: 'Cuando un emisor abra una, la vas a ver acá con su progreso en tiempo real.',
-    status: {
-      open: 'Abierta',
-      closingSoon: 'Cierra pronto',
-      minReached: 'Mínimo alcanzado',
-      capFilled: 'Tope completo',
-      closed: 'Cerrada',
-      failed: 'No alcanzó el mínimo',
-    },
   },
   how: {
     eyebrow: 'Cómo funciona',
@@ -314,14 +306,6 @@ export const en: typeof es = {
     open: 'See offering',
     empty: 'No offerings published yet.',
     emptyBody: 'When an issuer opens one, you will see it here with its live progress.',
-    status: {
-      open: 'Open',
-      closingSoon: 'Closing soon',
-      minReached: 'Minimum reached',
-      capFilled: 'Cap filled',
-      closed: 'Closed',
-      failed: 'Missed the minimum',
-    },
   },
   how: {
     eyebrow: 'How it works',

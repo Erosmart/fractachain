@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import type { Pool } from '@/core/api/types';
 import { container } from '@/core/container';
 import { isVisibleListing } from '@/core/market/listings';
-import type { Tone } from '@/components/ui/kit';
 
 /**
  * Public offerings for the landing. Several islands read them (hero panel,
@@ -57,25 +56,6 @@ export function marketStats(pools: Pool[]): MarketStats {
     raisedXlm: pools.filter((p) => p.paymentKind === 'XLM').reduce((s, p) => s + p.raisedAmount, 0),
     fillRatio: ratios.length ? ratios.reduce((s, r) => s + r, 0) / ratios.length : 0,
   };
-}
-
-export type PoolChip = 'open' | 'closingSoon' | 'minReached' | 'capFilled' | 'closed' | 'failed';
-
-/** User-facing state of an offering (replaces OPEN/SUCCESSFUL/FAILED in the UI). */
-export function poolChip(p: Pool): { key: PoolChip; tone: Tone } {
-  switch (p.status) {
-    case 'OPEN':
-      if (p.hardCap > 0 && p.raisedAmount >= p.hardCap) return { key: 'capFilled', tone: 'good' };
-      return p.daysRemaining <= 3 ? { key: 'closingSoon', tone: 'warn' } : { key: 'open', tone: 'sky' };
-    case 'SUCCESSFUL':
-      return p.hardCap > 0 && p.raisedAmount >= p.hardCap
-        ? { key: 'capFilled', tone: 'good' }
-        : { key: 'minReached', tone: 'good' };
-    case 'FAILED':
-      return { key: 'failed', tone: 'bad' };
-    default:
-      return { key: 'closed', tone: 'neutral' };
-  }
 }
 
 /** Open offerings first (closest to closing), then the most funded ones. */
