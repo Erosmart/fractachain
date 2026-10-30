@@ -1,0 +1,261 @@
+---
+/**
+ * Shell of every legal document: title, version and effective date, summary,
+ * a table of contents (sticky on desktop, collapsible on phones), readable
+ * prose, related documents and print styles. Server-rendered, no client JS
+ * except the print button.
+ */
+import { ArrowUpRight, FileText, Printer } from 'lucide-react';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { messagesFor, translatorFor } from '@/core/i18n/translate';
+import { formatLegalDate, LEGAL_DOCS, legalDoc, type LegalDocId } from '../documents';
+
+interface Props {
+  doc: LegalDocId;
+  sections: { id: string; title: string }[];
+}
+
+const { doc, sections } = Astro.props;
+const locale = Astro.locals.locale;
+const t = translatorFor(locale);
+const legal = messagesFor(locale).legal;
+const copy = legal.docs[doc];
+const meta = legalDoc(doc);
+const effective = formatLegalDate(meta.effective, locale);
+const others = LEGAL_DOCS.filter((d) => d.id !== doc);
+---
+
+<BaseLayout title={copy.title} description={copy.short}>
+  <div id="top" class="mx-auto max-w-[1180px] scroll-mt-24">
+    <header class="max-w-3xl">
+      <a href="/legal" class="eyebrow hover:text-ink">
+        {legal.ui.eyebrow}
+      </a>
+      <h1 class="mt-2 text-[30px] font-normal leading-tight tracking-[-0.025em] text-ink sm:text-[38px]">
+        {copy.title}
+      </h1>
+      <p class="mt-3 text-[15px] leading-relaxed text-ink-2 sm:text-base">{copy.lead}</p>
+      <div class="mt-5 flex flex-wrap items-center gap-2">
+        <span class="chip chip-neutral">{t('legal.ui.version', { v: meta.version })}</span>
+        <span class="chip chip-neutral">{t('legal.ui.effective', { date: effective })}</span>
+        <button type="button" data-print class="btn btn-ghost btn-sm no-print">
+          <Printer className="h-3.5 w-3.5" aria-hidden="true" />
+          {legal.ui.print}
+        </button>
+      </div>
+    </header>
+
+    {legal.ui.spanishOnly && (
+      <p class="mt-6 max-w-3xl rounded-xl bg-butter-soft px-4 py-3 text-[13px] text-ink" lang="en">
+        {legal.ui.spanishOnly}
+      </p>
+    )}
+
+    <section class="mt-6 max-w-3xl rounded-card bg-sky-soft/70 px-5 py-4" aria-labelledby="legal-summary">
+      <h2 id="legal-summary" class="text-sm font-medium text-ink">
+        {legal.ui.summaryTitle}
+      </h2>
+      <ul class="mt-2 list-disc space-y-1.5 pl-5 text-[14px] leading-relaxed text-ink-2">
+        {copy.summary.map((line) => (
+          <li>{line}</li>
+        ))}
+      </ul>
+    </section>
+
+    <div class="mt-10 grid gap-8 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-12">
+      <aside class="legal-toc no-print">
+        <nav aria-label={legal.ui.toc} class="hidden lg:sticky lg:top-24 lg:block">
+          <p class="eyebrow mb-3">{legal.ui.toc}</p>
+          <ol class="space-y-1.5 border-l border-line text-[13px]">
+            {sections.map((s) => (
+              <li>
+                <a
+                  href={`#${s.id}`}
+                  class="-ml-px block border-l border-transparent py-0.5 pl-3 text-ink-2 hover:border-ink hover:text-ink"
+                >
+                  {s.title}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </nav>
+        <details class="card px-4 py-3 lg:hidden">
+          <summary class="cursor-pointer text-sm font-medium text-ink">{legal.ui.tocOpen}</summary>
+          <ol class="mt-3 space-y-2 text-[14px]">
+            {sections.map((s) => (
+              <li>
+                <a href={`#${s.id}`} class="text-ink-2 underline-offset-2 hover:text-ink hover:underline">
+                  {s.title}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </details>
+      </aside>
+
+      <article class="legal-prose min-w-0">
+        <slot />
+
+        <div class="no-print mt-12 grid gap-3 sm:grid-cols-2">
+          <div class="card card-pad">
+            <p class="title">{legal.ui.questionsTitle}</p>
+            <p class="subtitle mt-1 text-[13px]">{legal.ui.questionsBody}</p>
+            <a href="/contacto" class="btn btn-secondary btn-sm mt-4">
+              {legal.ui.contactCta}
+            </a>
+          </div>
+          <nav class="card card-pad" aria-label={legal.ui.others}>
+            <p class="title">{legal.ui.others}</p>
+            <ul class="mt-3 space-y-2">
+              {others.map((d) => (
+                <li>
+                  <a href={d.path} class="flex items-center gap-2 text-[14px] text-ink-2 hover:text-ink">
+                    <FileText className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    {legal.docs[d.id].title}
+                    <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+      </article>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('[data-print]').forEach((button) => {
+    button.addEventListener('click', () => window.print());
+  });
+</script>
+
+<style is:global>
+  .legal-prose {
+    max-width: 72ch;
+    font-size: 15px;
+    line-height: 1.7;
+    color: rgb(var(--ink-2));
+  }
+  .legal-prose .legal-section + .legal-section {
+    margin-top: 2.5rem;
+  }
+  .legal-prose h2 {
+    position: relative;
+    scroll-margin-top: 6rem;
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    color: rgb(var(--ink));
+  }
+  .legal-prose .legal-section {
+    scroll-margin-top: 6rem;
+  }
+  .legal-prose h3 {
+    margin-top: 1.5rem;
+    font-size: 16px;
+    font-weight: 500;
+    color: rgb(var(--ink));
+  }
+  .legal-prose p,
+  .legal-prose ul,
+  .legal-prose ol,
+  .legal-prose table,
+  .legal-prose blockquote {
+    margin-top: 0.75rem;
+  }
+  .legal-prose ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+  }
+  .legal-prose ol {
+    list-style: decimal;
+    padding-left: 1.25rem;
+  }
+  .legal-prose li + li {
+    margin-top: 0.35rem;
+  }
+  .legal-prose a {
+    color: rgb(var(--ink));
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .legal-prose strong {
+    font-weight: 500;
+    color: rgb(var(--ink));
+  }
+  .legal-prose code {
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: 0.85em;
+    color: rgb(var(--ink));
+    word-break: break-all;
+  }
+  .legal-prose blockquote {
+    border-left: 2px solid rgb(var(--line-strong));
+    padding-left: 1rem;
+    font-size: 14px;
+  }
+  .legal-prose .legal-table {
+    display: block;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .legal-prose .legal-table th,
+  .legal-prose .legal-table td {
+    border-bottom: 1px solid rgb(var(--line));
+    padding: 0.6rem 0.75rem 0.6rem 0;
+    text-align: left;
+    vertical-align: top;
+  }
+  .legal-prose .legal-table th {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgb(var(--muted));
+  }
+  .legal-prose .legal-anchor {
+    position: absolute;
+    left: -1.1em;
+    color: rgb(var(--muted));
+    text-decoration: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .legal-prose h2:hover .legal-anchor,
+  .legal-prose .legal-anchor:focus-visible {
+    opacity: 1;
+  }
+  .legal-prose .legal-back {
+    margin-top: 1rem;
+    font-size: 12px;
+  }
+  .legal-prose .legal-back a {
+    color: rgb(var(--muted));
+    text-decoration: none;
+  }
+  .legal-prose .legal-back a:hover {
+    color: rgb(var(--ink));
+  }
+
+  @media print {
+    body {
+      background: #fff !important;
+      color: #000 !important;
+    }
+    header.sticky,
+    footer,
+    nav[aria-label],
+    .no-print,
+    .legal-toc {
+      display: none !important;
+    }
+    main {
+      padding: 0 !important;
+    }
+    .legal-prose {
+      max-width: none;
+      color: #000;
+    }
+  }
+</style>

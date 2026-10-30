@@ -1,0 +1,37 @@
+---
+import { ServerCrash } from 'lucide-react';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { messagesFor } from '@/core/i18n/translate';
+
+interface Props {
+  error?: unknown;
+}
+
+const locale = Astro.locals.locale ?? 'es';
+const e = messagesFor(locale).legal.error;
+Astro.response.status = 500;
+---
+
+<BaseLayout title={e.title} bare>
+  <div class="mx-auto flex max-w-md flex-col items-center py-16 text-center sm:py-24">
+    <span class="grid h-12 w-12 place-items-center rounded-2xl bg-peach-soft text-ink-2" aria-hidden="true">
+      <ServerCrash className="h-5 w-5" />
+    </span>
+    <p class="eyebrow mt-6">{e.code}</p>
+    <h1 class="mt-2 text-[28px] font-normal leading-tight tracking-[-0.025em] text-ink sm:text-[34px]">
+      {e.title}
+    </h1>
+    <p class="mt-2 text-[15px] text-ink-2">{e.body}</p>
+    <div class="mt-8 flex flex-col gap-2.5 sm:flex-row">
+      <a href={Astro.url.pathname} class="btn btn-primary btn-lg">
+        {e.retry}
+      </a>
+      <a href="/" class="btn btn-secondary btn-lg">
+        {e.home}
+      </a>
+      <a href="/contacto" class="btn btn-ghost btn-lg">
+        {e.contact}
+      </a>
+    </div>
+  </div>
+</BaseLayout>

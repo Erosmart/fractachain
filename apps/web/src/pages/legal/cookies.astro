@@ -1,0 +1,149 @@
+---
+import LegalLayout from '@/features/legal/components/LegalLayout.astro';
+import LegalSection from '@/features/legal/components/LegalSection.astro';
+
+const sections = [
+  { id: 'que-guardamos', title: '1. Qué guardamos y por qué' },
+  { id: 'detalle', title: '2. Detalle' },
+  { id: 'terceros', title: '3. Servicios de terceros' },
+  { id: 'no-usamos', title: '4. Lo que no usamos' },
+  { id: 'control', title: '5. Cómo borrarlas o bloquearlas' },
+  { id: 'cambios', title: '6. Cambios a esta política' },
+];
+---
+
+<LegalLayout doc="cookies" sections={sections}>
+  <LegalSection {...sections[0]}>
+    <p>
+      Una cookie es un pequeño archivo que el sitio guarda en tu navegador. El almacenamiento local
+      (localStorage) y el de sesión (sessionStorage) cumplen una función parecida, pero sus datos no viajan al
+      servidor. En Fractachain usamos estas tecnologías solo para dos cosas:
+    </p>
+    <ul>
+      <li>
+        <strong>Necesarias:</strong> mantener tu sesión iniciada de forma segura.
+      </li>
+      <li>
+        <strong>Preferencias:</strong> recordar el idioma y el tema que elegiste, y mostrar tu cuenta más
+        rápido.
+      </li>
+    </ul>
+    <p>
+      Como son necesarias para el servicio o las elegís vos, no usamos un aviso de consentimiento. No hay
+      cookies de análisis, de publicidad ni de seguimiento.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[1]}>
+    <table class="legal-table">
+      <thead>
+        <tr>
+          <th scope="col">Nombre</th>
+          <th scope="col">Tipo</th>
+          <th scope="col">Para qué</th>
+          <th scope="col">Duración</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <code>fc_session</code> (en producción, <code>__Host-fc_session</code>)
+          </td>
+          <td>Cookie necesaria, HttpOnly, SameSite=Strict</td>
+          <td>Mantiene tu sesión iniciada. El código del navegador no puede leerla.</td>
+          <td>Hasta que cerrás sesión o vence la sesión (12 horas por defecto).</td>
+        </tr>
+        <tr>
+          <td>
+            <code>fc_lang</code>
+          </td>
+          <td>Cookie de preferencia</td>
+          <td>Recuerda el idioma elegido para mostrarte las páginas en ese idioma.</td>
+          <td>1 año.</td>
+        </tr>
+        <tr>
+          <td>
+            <code>fc_lang</code>
+          </td>
+          <td>Almacenamiento local</td>
+          <td>Copia del idioma elegido.</td>
+          <td>Hasta que la borres.</td>
+        </tr>
+        <tr>
+          <td>
+            <code>fc_theme</code>
+          </td>
+          <td>Almacenamiento local</td>
+          <td>Recuerda si elegiste el tema claro u oscuro.</td>
+          <td>Hasta que la borres.</td>
+        </tr>
+        <tr>
+          <td>
+            <code>fc_auth_user</code>, <code>fc_auth_expires</code>
+          </td>
+          <td>Almacenamiento local</td>
+          <td>
+            Copia no secreta de tu perfil (nombre, email, wallet y estado de la cuenta) y del vencimiento de
+            la sesión, para mostrar la pantalla sin esperar al servidor. No contiene tu sesión ni tu
+            contraseña.
+          </td>
+          <td>Se borra al cerrar sesión o al vencer la sesión.</td>
+        </tr>
+        <tr>
+          <td>
+            <code>fc_email_notice_dismissed</code>
+          </td>
+          <td>Almacenamiento de sesión</td>
+          <td>Recuerda que cerraste el aviso para confirmar tu email.</td>
+          <td>Hasta que cerrás la pestaña.</td>
+        </tr>
+        <tr>
+          <td>Datos de Firebase (Google)</td>
+          <td>Almacenamiento del navegador (IndexedDB), solo si ingresás con Google</td>
+          <td>Sesión de Google necesaria para completar el ingreso.</td>
+          <td>Se borra al cerrar sesión.</td>
+        </tr>
+      </tbody>
+    </table>
+  </LegalSection>
+
+  <LegalSection {...sections[2]}>
+    <ul>
+      <li>
+        <strong>Google Fonts:</strong> la tipografía del sitio se descarga de servidores de Google, que
+        reciben tu dirección IP y tu navegador al pedir los archivos. Fractachain no le agrega cookies a esa
+        solicitud.
+      </li>
+      <li>
+        <strong>Freighter:</strong> la extensión de tu wallet se comunica con el sitio dentro de tu navegador;
+        sus datos los administra la extensión.
+      </li>
+      <li>
+        <strong>Stellar Expert y otros sitios enlazados:</strong> solo si abrís sus links; ahí aplican sus
+        propias políticas.
+      </li>
+    </ul>
+  </LegalSection>
+
+  <LegalSection {...sections[3]}>
+    <p>
+      No usamos herramientas de analítica, píxeles de publicidad, redes sociales embebidas ni cookies de
+      terceros con fines comerciales.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[4]}>
+    <p>
+      Podés borrar o bloquear cookies y almacenamiento local desde la configuración de tu navegador. Si
+      bloqueás la cookie de sesión no vas a poder ingresar; si borrás las preferencias, el sitio vuelve al
+      idioma y al tema por defecto. Cerrar sesión borra la cookie de sesión y la copia local de tu perfil.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[5]}>
+    <p>
+      Si empezamos a usar otras cookies o tecnologías parecidas, vamos a actualizar esta política antes y, si
+      no son necesarias, te vamos a pedir tu consentimiento.
+    </p>
+  </LegalSection>
+</LegalLayout>

@@ -1,9 +1,10 @@
 ---
-import { Plus } from 'lucide-react';
+import { ArrowUpRight, Plus } from 'lucide-react';
 import { messagesFor } from '@/core/i18n/translate';
 
 const { landing } = messagesFor(Astro.locals.locale);
 const f = landing.faq;
+const help = messagesFor(Astro.locals.locale).legal.help;
 ---
 
 <section aria-labelledby="faq-title" class="grid gap-8 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
@@ -15,6 +16,10 @@ const f = landing.faq;
     >
       {f.title}
     </h2>
+    <a href="/ayuda" class="btn btn-secondary mt-6">
+      {help.title}
+      <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+    </a>
   </div>
   <div class="card divide-y divide-line px-5 sm:px-6">
     {f.items.map(([q, a]) => (

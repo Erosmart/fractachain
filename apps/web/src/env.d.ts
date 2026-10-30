@@ -10,6 +10,10 @@ interface ImportMetaEnv {
   readonly PUBLIC_FIREBASE_STORAGE_BUCKET?: string;
   readonly PUBLIC_FIREBASE_MESSAGING_SENDER_ID?: string;
   readonly PUBLIC_FIREBASE_APP_ID?: string;
+  /** Legal name of whoever provides the service (legal documents). */
+  readonly PUBLIC_LEGAL_ENTITY?: string;
+  /** Public contact email for legal and privacy requests. */
+  readonly PUBLIC_CONTACT_EMAIL?: string;
 }
 
 interface ImportMeta {

@@ -1,0 +1,121 @@
+---
+import LegalLayout from '@/features/legal/components/LegalLayout.astro';
+import LegalSection from '@/features/legal/components/LegalSection.astro';
+
+const sections = [
+  { id: 'capital', title: '1. Podés perder lo que invertís' },
+  { id: 'rendimientos', title: '2. Los rendimientos no están garantizados' },
+  { id: 'liquidez', title: '3. Liquidez y mercado secundario' },
+  { id: 'emisor', title: '4. Riesgo del emisor y del activo' },
+  { id: 'contratos', title: '5. Contratos inteligentes y tecnología' },
+  { id: 'custodia', title: '6. Custodia y pérdida de claves' },
+  { id: 'stablecoin', title: '7. USDC y monedas estables' },
+  { id: 'cambio', title: '8. Tipo de cambio' },
+  { id: 'regulatorio', title: '9. Riesgo regulatorio e impositivo' },
+  { id: 'testnet', title: '10. Entorno de pruebas' },
+  { id: 'declaracion', title: '11. Lo que declarás al suscribir' },
+];
+---
+
+<LegalLayout doc="risks" sections={sections}>
+  <LegalSection {...sections[0]}>
+    <p>
+      Invertir en activos tokenizados implica riesgos.{' '}
+      <strong>Podés perder parte o todo lo invertido.</strong> Invertí solo dinero que no necesites en el
+      corto plazo y diversificá: no concentres tu patrimonio en una sola licitación ni en un solo tipo de
+      activo.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[1]}>
+    <p>
+      Los rendimientos estimados que muestra cada expediente (por ejemplo, la TNA) son proyecciones del
+      emisor, no promesas. Los rendimientos pasados no garantizan rendimientos futuros. Fractachain no
+      garantiza la renta, la devolución del capital ni el precio de los tokens.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[2]}>
+    <p>
+      La liquidez del mercado secundario no está garantizada: puede que no encuentres comprador cuando quieras
+      vender, o que solo lo encuentres a un precio menor al esperado. Hoy el mercado secundario está en
+      desarrollo y algunas funciones no están disponibles.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[3]}>
+    <p>
+      El valor de lo que comprás depende del emisor y del activo detrás de cada licitación: el resultado de
+      una cosecha, de una empresa o la capacidad de pago de un deudor. Problemas climáticos, comerciales,
+      judiciales o de gestión pueden afectar ese valor. Leé el expediente completo, incluidos sus documentos y
+      el uso de los fondos, antes de aportar.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[4]}>
+    <p>
+      Las licitaciones funcionan con contratos inteligentes en la red Stellar. Aunque tienen tests y una
+      revisión de seguridad propia, el software puede tener errores, y todavía no pasó una auditoría externa
+      independiente. Una falla del contrato, de la red, de los nodos que usamos para acceder a ella o un
+      ataque informático podría impedir operar, demorar operaciones o causar pérdidas. Las transacciones
+      confirmadas son irreversibles.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[5]}>
+    <p>
+      Si usás tu propia wallet, sos el único que controla sus claves: si perdés la clave secreta o la frase de
+      recuperación, o si alguien las obtiene, podés perder el acceso a tus activos sin posibilidad de
+      recuperarlos. Si usás la wallet custodiada por Fractachain, dependés de la seguridad de la plataforma.
+      Nunca compartas tus claves ni firmes transacciones que no entiendas.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[6]}>
+    <p>
+      Los aportes se hacen en USDC, una moneda estable emitida por Circle que busca mantener un valor de un
+      dólar estadounidense. Su valor depende de las reservas y de la solvencia de su emisor: puede perder la
+      paridad, sufrir restricciones o ser bloqueado por su emisor o por decisiones regulatorias.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[7]}>
+    <p>
+      Los activos se liquidan en USDC. Si medís tu inversión en pesos, su valor también varía con el tipo de
+      cambio, y convertir pesos a USDC o USDC a pesos puede tener costos, demoras y restricciones cambiarias.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[8]}>
+    <p>
+      La regulación de los activos tokenizados y de los proveedores de servicios de activos virtuales está
+      cambiando. Nuevas normas pueden limitar o modificar el funcionamiento del servicio, de los tokens o de
+      su negociación. Fractachain está diseñado para un régimen de pruebas de la CNV pero hoy no cuenta con
+      registro ni autorización. Las inversiones pueden tener consecuencias impositivas: consultá con un
+      profesional.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[9]}>
+    <p>
+      Hoy todo ocurre en <strong>Stellar Testnet</strong>: los tokens, el XLM y el USDC son de prueba y no
+      tienen valor. La red de pruebas puede reiniciarse y los datos pueden perderse. Nada de lo que ves es una
+      oferta pública ni una recomendación de inversión.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[10]}>
+    <p>
+      Antes de cada suscripción la aplicación te pide marcar la casilla “Leí los riesgos y los términos de
+      esta licitación”. Al marcarla declarás que:
+    </p>
+    <ul>
+      <li>Leíste este aviso y el expediente de la licitación.</li>
+      <li>Entendés que podés perder parte o todo lo invertido y que la liquidez no está garantizada.</li>
+      <li>
+        Revisaste el monto, la moneda y el contrato que vas a firmar, y que la transacción es irreversible.
+      </li>
+      <li>Tomás la decisión por tu cuenta, sin que Fractachain te haya asesorado.</li>
+    </ul>
+  </LegalSection>
+</LegalLayout>

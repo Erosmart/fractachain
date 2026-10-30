@@ -1,0 +1,79 @@
+---
+import { ArrowUpRight, Cookie, FileText, ShieldCheck, TriangleAlert } from 'lucide-react';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { formatLegalDate, LEGAL_DOCS } from '@/features/legal/documents';
+import { messagesFor, translatorFor } from '@/core/i18n/translate';
+
+const locale = Astro.locals.locale;
+const t = translatorFor(locale);
+const legal = messagesFor(locale).legal;
+const icons = { terms: FileText, privacy: ShieldCheck, cookies: Cookie, risks: TriangleAlert } as const;
+---
+
+<BaseLayout title={legal.docs.index.title} description={legal.docs.index.lead}>
+  <div class="mx-auto max-w-[1180px]">
+    <header class="max-w-3xl">
+      <p class="eyebrow">{legal.ui.eyebrow}</p>
+      <h1 class="mt-2 text-[30px] font-normal leading-tight tracking-[-0.025em] text-ink sm:text-[38px]">
+        {legal.docs.index.title}
+      </h1>
+      <p class="mt-3 text-[15px] leading-relaxed text-ink-2 sm:text-base">{legal.docs.index.lead}</p>
+      {legal.ui.spanishOnly && (
+        <p class="mt-5 rounded-xl bg-butter-soft px-4 py-3 text-[13px] text-ink" lang="en">
+          {legal.ui.spanishOnly}
+        </p>
+      )}
+    </header>
+
+    <ul class="mt-10 grid gap-4 sm:grid-cols-2">
+      {LEGAL_DOCS.map((doc) => {
+        const Icon = icons[doc.id];
+        const copy = legal.docs[doc.id];
+        return (
+          <li>
+            <a
+              href={doc.path}
+              class="card card-pad group flex h-full flex-col transition-shadow hover:shadow-lift"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <span
+                  class="grid h-10 w-10 place-items-center rounded-xl bg-sky-soft text-ink"
+                  aria-hidden="true"
+                >
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span class="arrow-btn" aria-hidden="true">
+                  <ArrowUpRight className="h-4 w-4" />
+                </span>
+              </div>
+              <h2 class="mt-5 text-[17px] font-medium text-ink">{copy.title}</h2>
+              <p class="mt-1.5 flex-1 text-sm text-ink-2">{copy.short}</p>
+              <p class="mt-4 flex flex-wrap gap-1.5">
+                <span class="chip chip-neutral">{t('legal.ui.version', { v: doc.version })}</span>
+                <span class="chip chip-neutral">
+                  {t('legal.ui.effective', { date: formatLegalDate(doc.effective, locale) })}
+                </span>
+              </p>
+              <span class="sr-only">{legal.docs.index.open}</span>
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+
+    <div class="mt-8 card card-pad flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p class="title">{legal.ui.questionsTitle}</p>
+        <p class="subtitle mt-1 text-[13px]">{legal.ui.questionsBody}</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <a href="/ayuda" class="btn btn-secondary">
+          {legal.footer.help}
+        </a>
+        <a href="/contacto" class="btn btn-primary">
+          {legal.ui.contactCta}
+        </a>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

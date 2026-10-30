@@ -1,0 +1,337 @@
+---
+import LegalLayout from '@/features/legal/components/LegalLayout.astro';
+import LegalSection from '@/features/legal/components/LegalSection.astro';
+import { AppConfig } from '@/core/config/AppConfig';
+
+const config = AppConfig.fromEnv();
+const provider = config.legalEntity ?? 'los responsables del proyecto Fractachain';
+const contact = config.contactEmail;
+
+const sections = [
+  { id: 'servicio', title: '1. Quiénes somos y qué es Fractachain' },
+  { id: 'etapa', title: '2. Etapa del servicio: red de pruebas' },
+  { id: 'definiciones', title: '3. Definiciones' },
+  { id: 'aceptacion', title: '4. Aceptación y cambios' },
+  { id: 'requisitos', title: '5. Requisitos para usar el servicio' },
+  { id: 'cuenta', title: '6. Tu cuenta y su seguridad' },
+  { id: 'custodia', title: '7. Wallets y custodia' },
+  { id: 'kyc', title: '8. Verificación de identidad y prevención del lavado de activos' },
+  { id: 'licitaciones', title: '9. Cómo funcionan las licitaciones' },
+  { id: 'otros-productos', title: '10. Mercado secundario y otros productos' },
+  { id: 'costos', title: '11. Costos y comisiones' },
+  { id: 'prohibidos', title: '12. Usos prohibidos' },
+  { id: 'propiedad', title: '13. Propiedad intelectual' },
+  { id: 'disponibilidad', title: '14. Disponibilidad y cambios del servicio' },
+  { id: 'responsabilidad', title: '15. Limitación de responsabilidad' },
+  { id: 'suspension', title: '16. Suspensión y cierre de cuentas' },
+  { id: 'comunicaciones', title: '17. Comunicaciones' },
+  { id: 'consumidor', title: '18. Derechos del consumidor' },
+  { id: 'ley', title: '19. Ley aplicable y jurisdicción' },
+  { id: 'contacto', title: '20. Contacto' },
+];
+---
+
+<LegalLayout doc="terms" sections={sections}>
+  <LegalSection {...sections[0]}>
+    <p>
+      Fractachain es una plataforma para financiar y negociar activos reales argentinos (campos, pymes,
+      acciones y deuda) representados como tokens sobre la red Stellar, mediante contratos inteligentes
+      Soroban. El servicio lo prestan <strong>{provider}</strong> (en adelante, “Fractachain”, “nosotros”).
+    </p>
+    <p>
+      Estos Términos y condiciones regulan el uso del sitio, de la aplicación y de las interfaces de
+      programación (API) de Fractachain. Junto con la <a href="/legal/privacidad">Política de privacidad</a>,
+      la <a href="/legal/cookies">Política de cookies</a> y el <a href="/legal/riesgos">Aviso de riesgos</a>{' '}
+      forman el acuerdo entre vos y Fractachain.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[1]}>
+    <p>
+      Hoy Fractachain funciona en <strong>Stellar Testnet</strong>, la red de pruebas de Stellar. En este
+      entorno:
+    </p>
+    <ul>
+      <li>
+        Los tokens, el XLM y el USDC son de prueba y <strong>no tienen valor económico</strong>. No se pueden
+        convertir en dinero.
+      </li>
+      <li>Las empresas, licitaciones y datos de emisores que ves pueden ser ficticios o de demostración.</li>
+      <li>
+        El producto está diseñado para funcionar dentro de un régimen de pruebas (sandbox) de la Comisión
+        Nacional de Valores (CNV), pero <strong>no cuenta con registro ni autorización de la CNV</strong> ni
+        de otro organismo. Nada de lo que se publica constituye una oferta pública de valores negociables ni
+        una invitación a invertir.
+      </li>
+      <li>La red de pruebas puede reiniciarse y los datos de prueba pueden perderse.</li>
+    </ul>
+    <p>
+      Si en el futuro el servicio pasa a operar con activos reales, lo vamos a anunciar y te vamos a pedir que
+      aceptes una nueva versión de estos términos.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[2]}>
+    <ul>
+      <li>
+        <strong>Usuario o inversor:</strong> la persona que crea una cuenta en Fractachain.
+      </li>
+      <li>
+        <strong>Emisor:</strong> la empresa o productor que busca financiamiento publicando un expediente y
+        una licitación.
+      </li>
+      <li>
+        <strong>Licitación:</strong> el contrato inteligente que recibe aportes en una moneda de pago (USDC)
+        durante un plazo, con un mínimo y un tope, y entrega unidades a precio fijo.
+      </li>
+      <li>
+        <strong>Unidades o tokens:</strong> las participaciones registradas en el contrato de la licitación a
+        nombre de la wallet de cada inversor.
+      </li>
+      <li>
+        <strong>Wallet:</strong> la cuenta de Stellar (dirección que empieza con G) con la que operás. Puede
+        ser propia (por ejemplo, Freighter) o custodiada por Fractachain.
+      </li>
+      <li>
+        <strong>Fiduciaria:</strong> la cuenta que recibe los fondos de una licitación exitosa, definida en su
+        expediente.
+      </li>
+    </ul>
+  </LegalSection>
+
+  <LegalSection {...sections[3]}>
+    <p>
+      Al crear una cuenta, o al aceptar estos términos cuando la aplicación te lo pide, declarás que los
+      leíste y que los aceptás. Guardamos la versión aceptada y la fecha.
+    </p>
+    <p>
+      Podemos modificar estos términos. Si el cambio es relevante, te lo vamos a avisar en la aplicación y te
+      vamos a pedir que aceptes la nueva versión antes de seguir operando. Si no estás de acuerdo, podés dejar
+      de usar el servicio y cerrar tu cuenta. Los cambios no afectan operaciones ya realizadas.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[4]}>
+    <ul>
+      <li>Ser mayor de 18 años y tener capacidad legal para contratar.</li>
+      <li>Dar información verdadera, completa y actualizada, y mantenerla al día.</li>
+      <li>
+        Completar la verificación de identidad antes de aportar a una licitación u operar en el mercado.
+      </li>
+      <li>
+        No estar alcanzado por sanciones ni residir en jurisdicciones que la normativa de prevención del
+        lavado de activos considera de alto riesgo y no cooperantes.
+      </li>
+    </ul>
+  </LegalSection>
+
+  <LegalSection {...sections[5]}>
+    <p>
+      Sos responsable de lo que se haga con tu cuenta. Elegí una contraseña segura, no la compartas y activá
+      la verificación en dos pasos (Cuenta → Seguridad). Si sospechás un acceso indebido, cerrá todas tus
+      sesiones, cambiá tu contraseña y avisanos.
+    </p>
+    <p>
+      <strong>
+        Nunca te vamos a pedir tu contraseña, tu clave secreta, tu frase de recuperación ni tus códigos de
+        verificación
+      </strong>{' '}
+      por email, chat o teléfono.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[6]}>
+    <h3>Wallet propia (por ejemplo, Freighter)</h3>
+    <p>
+      Firmás vos cada operación en tu wallet. Fractachain arma la transacción, te muestra qué vas a firmar y
+      la envía a la red solo si coincide exactamente con la que armó y está firmada por tu wallet.
+      <strong>La custodia de tus claves es tu responsabilidad:</strong> si perdés tu clave secreta o tu frase
+      de recuperación, nadie, tampoco Fractachain, puede recuperar el acceso a tus activos.
+    </p>
+    <h3>Wallet custodiada por Fractachain</h3>
+    <p>
+      Como alternativa, podés dejar que Fractachain guarde la clave de tu wallet, cifrada, y firme las
+      operaciones que pedís desde la aplicación. Podés exportar la clave para pasar a una wallet propia. En la
+      red de pruebas este modo existe para facilitar la demostración.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[7]}>
+    <p>
+      Para aportar y operar tenés que verificar tu identidad. Lo hacemos para cumplir la normativa de
+      prevención del lavado de activos y del financiamiento del terrorismo (Ley 25.246 y sus modificatorias,
+      incluida la Ley 27.739, y las normas de la Unidad de Información Financiera).
+    </p>
+    <ul>
+      <li>
+        La verificación puede hacerla un proveedor especializado (Didit), que valida tu documento y tu
+        identidad en su propio flujo; en el entorno de pruebas puede aprobarse automáticamente o revisarla
+        nuestro equipo.
+      </li>
+      <li>
+        Podemos pedirte información adicional, rechazar una verificación o revocarla si los datos no son
+        consistentes, si cambia el nivel de riesgo o si lo exige la normativa. Una verificación revocada
+        impide nuevas operaciones.
+      </li>
+      <li>
+        La aprobación habilita tu wallet en los contratos de las licitaciones: una wallet no verificada no
+        puede aportar.
+      </li>
+    </ul>
+  </LegalSection>
+
+  <LegalSection {...sections[8]}>
+    <ol>
+      <li>
+        El emisor publica su expediente y Fractachain despliega un contrato de licitación con un mínimo, un
+        tope, una fecha de cierre, un precio por unidad y una moneda de pago.
+      </li>
+      <li>
+        Aportás desde la inversión mínima, en múltiplos del precio por unidad. El aporte se transfiere al
+        contrato y las unidades quedan registradas a nombre de tu wallet.
+      </li>
+      <li>
+        Al llegar a la fecha o al tope, cualquiera puede cerrar el contrato (finalize). Si se alcanzó el
+        mínimo, los fondos se transfieren a la fiduciaria. Si no, el contrato habilita el reembolso y podés
+        recuperar el 100 % de tu aporte.
+      </li>
+    </ol>
+    <p>
+      <strong>Las operaciones en la blockchain son públicas e irreversibles.</strong> Una vez confirmada, una
+      transacción no se puede deshacer ni editar, ni por vos ni por Fractachain. Revisá el monto, la moneda y
+      el contrato antes de firmar. Lo que muestra la aplicación se lee de los contratos; ante una diferencia,
+      prevalece el estado del contrato en la red.
+    </p>
+    <p>
+      Fractachain no garantiza que una licitación alcance su mínimo, ni el rendimiento estimado del
+      expediente, ni el desempeño del emisor. Leé el expediente y el{' '}
+      <a href="/legal/riesgos">Aviso de riesgos</a> antes de aportar.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[9]}>
+    <p>
+      El mercado secundario, los forwards, los warrants y la bóveda de acciones están en desarrollo. Algunas
+      pantallas son de solo lectura y muestran contratos desplegados en la red de pruebas; las acciones que
+      dicen “Próximamente” no están disponibles. Cualquier libro de órdenes de demostración opera con saldos
+      de prueba que no son dinero ni activos reales.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[10]}>
+    <p>
+      En la red de pruebas Fractachain no cobra comisiones. Cada transacción en Stellar paga una comisión de
+      red en XLM y cada trustline reserva una pequeña cantidad de XLM; ese costo lo cobra la red, no
+      Fractachain. Si en el futuro el servicio cobra comisiones, vas a conocerlas antes de operar.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[11]}>
+    <p>No podés usar Fractachain para:</p>
+    <ul>
+      <li>Actividades ilícitas, incluido el lavado de activos o el financiamiento del terrorismo.</li>
+      <li>Suplantar a otra persona o usar identidades, documentos o cuentas de terceros.</li>
+      <li>
+        Manipular precios, crear operaciones ficticias o abusar de las herramientas de prueba (por ejemplo,
+        pedir USDC de prueba de forma masiva o automatizada).
+      </li>
+      <li>
+        Atacar, sobrecargar o intentar vulnerar la plataforma, sus contratos o las cuentas de otros usuarios.
+        Si encontrás una vulnerabilidad, reportala por el canal de contacto con el tema Seguridad.
+      </li>
+    </ul>
+  </LegalSection>
+
+  <LegalSection {...sections[12]}>
+    <p>
+      La marca, el diseño, los textos y el software de Fractachain pertenecen a sus titulares. Podés usar la
+      plataforma para tu uso personal según estos términos; no podés copiarla ni explotarla comercialmente sin
+      autorización. Los contratos desplegados en una blockchain pública pueden ser leídos por cualquiera, lo
+      que no implica una licencia sobre su código.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[13]}>
+    <p>
+      Trabajamos para que el servicio esté disponible, pero puede interrumpirse por mantenimiento, fallas
+      propias, de la red Stellar, de los proveedores de RPC o de terceros. Podemos agregar, cambiar o
+      discontinuar funciones, especialmente durante la etapa de pruebas.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[14]}>
+    <ul>
+      <li>
+        Fractachain <strong>no brinda asesoramiento financiero, legal ni impositivo</strong>. La información
+        publicada no es una recomendación de inversión.
+      </li>
+      <li>
+        En la red de pruebas los activos no tienen valor, por lo que no hay pérdidas económicas derivadas de
+        operar con ellos.
+      </li>
+      <li>
+        No respondemos por daños causados por la pérdida de tus claves, por operaciones que firmaste, por
+        fallas de la red Stellar o de servicios de terceros, ni por el incumplimiento de un emisor, salvo
+        cuando la ley no permita excluir esa responsabilidad (por ejemplo, ante dolo o culpa grave, o frente a
+        los derechos irrenunciables de los consumidores).
+      </li>
+    </ul>
+  </LegalSection>
+
+  <LegalSection {...sections[15]}>
+    <p>
+      Podemos suspender o cerrar una cuenta si incumplís estos términos, si lo exige la normativa o una
+      autoridad, o para proteger a otros usuarios. Cuando la ley lo permita, te vamos a avisar el motivo.
+    </p>
+    <p>
+      Podés cerrar tu cuenta cuando quieras desde Cuenta → Privacidad. Si tu wallet custodiada tiene fondos o
+      tenés posiciones abiertas, primero hay que retirarlos. Las transacciones ya registradas en la blockchain
+      no se borran, y algunos datos se conservan el tiempo que exige la ley (ver la{' '}
+      <a href="/legal/privacidad">Política de privacidad</a>).
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[16]}>
+    <p>
+      Te vamos a escribir al email de tu cuenta y por avisos dentro de la aplicación. Mantené tu email
+      actualizado y confirmado.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[17]}>
+    <p>
+      Si sos consumidor, te amparan la Ley 24.240 de Defensa del Consumidor y el Código Civil y Comercial de
+      la Nación (artículos 1092 a 1122), y estos términos no limitan esos derechos.
+    </p>
+    <p>
+      Cuando contrates a distancia un servicio alcanzado por el derecho de revocación, podés revocar la
+      aceptación dentro de los 10 días corridos (artículo 34 de la Ley 24.240 y artículos 1110 y siguientes
+      del Código Civil y Comercial), sin costo ni responsabilidad, escribiéndonos desde el{' '}
+      <a href="/contacto">formulario de contacto</a>. Tené en cuenta que una transacción ya confirmada en la
+      blockchain no puede revertirse técnicamente; en ese caso analizaremos cómo restituir lo que corresponda
+      según la normativa.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[18]}>
+    <p>
+      Estos términos se rigen por las leyes de la República Argentina. Si sos consumidor, serán competentes
+      los tribunales de tu domicilio, conforme la normativa de defensa del consumidor. En los demás casos,
+      serán competentes los tribunales ordinarios de la Ciudad Autónoma de Buenos Aires.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[19]}>
+    <p>
+      Para consultas, reclamos o para ejercer tus derechos, escribinos desde el{' '}
+      <a href="/contacto">formulario de contacto</a>
+      {contact && (
+        <>
+          {' '}
+          o a <a href={`mailto:${contact}`}>{contact}</a>
+        </>
+      )}
+      .
+    </p>
+  </LegalSection>
+</LegalLayout>

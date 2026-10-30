@@ -1,0 +1,298 @@
+---
+import LegalLayout from '@/features/legal/components/LegalLayout.astro';
+import LegalSection from '@/features/legal/components/LegalSection.astro';
+import { AppConfig } from '@/core/config/AppConfig';
+
+const config = AppConfig.fromEnv();
+const controller = config.legalEntity ?? 'los responsables del proyecto Fractachain';
+const contact = config.contactEmail;
+
+const sections = [
+  { id: 'responsable', title: '1. Responsable del tratamiento' },
+  { id: 'datos', title: '2. Qué datos tratamos' },
+  { id: 'finalidades', title: '3. Para qué los usamos' },
+  { id: 'blockchain', title: '4. Datos en la blockchain' },
+  { id: 'terceros', title: '5. Con quién los compartimos' },
+  { id: 'conservacion', title: '6. Cuánto tiempo los guardamos' },
+  { id: 'derechos', title: '7. Tus derechos' },
+  { id: 'seguridad', title: '8. Cómo los protegemos' },
+  { id: 'menores', title: '9. Menores de edad' },
+  { id: 'cookies', title: '10. Cookies y almacenamiento local' },
+  { id: 'cambios', title: '11. Cambios a esta política' },
+  { id: 'contacto', title: '12. Contacto' },
+];
+---
+
+<LegalLayout doc="privacy" sections={sections}>
+  <LegalSection {...sections[0]}>
+    <p>
+      El responsable de la base de datos y del tratamiento de tus datos personales es{' '}
+      <strong>{controller}</strong>. Tratamos tus datos conforme la Ley 25.326 de Protección de los Datos
+      Personales, su decreto reglamentario 1558/2001 y las normas de la Agencia de Acceso a la Información
+      Pública (AAIP).
+    </p>
+    <p>
+      Para cualquier consulta sobre tus datos, escribinos desde el{' '}
+      <a href="/contacto?tema=privacidad">formulario de contacto (tema Privacidad)</a>
+      {contact && (
+        <>
+          {' '}
+          o a <a href={`mailto:${contact}`}>{contact}</a>
+        </>
+      )}
+      .
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[1]}>
+    <table class="legal-table">
+      <thead>
+        <tr>
+          <th scope="col">Categoría</th>
+          <th scope="col">Qué incluye</th>
+          <th scope="col">De dónde sale</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Cuenta</td>
+          <td>
+            Nombre, email, contraseña (guardada solo como hash, nunca en texto), forma de ingreso, fecha de
+            alta, versión de los términos aceptada.
+          </td>
+          <td>Vos, al registrarte.</td>
+        </tr>
+        <tr>
+          <td>Wallet</td>
+          <td>
+            Dirección pública de Stellar (G…), tipo de custodia. Si elegís la wallet custodiada, su clave
+            secreta, cifrada.
+          </td>
+          <td>Vos o la plataforma al crearla.</td>
+        </tr>
+        <tr>
+          <td>Verificación de identidad</td>
+          <td>
+            Nombre, CUIT o CUIL, email. Cuando verifica Didit: un resumen del resultado (nombre del documento,
+            tipo y país emisor, últimos 4 caracteres del número y el estado de cada control). Didit procesa
+            las imágenes del documento y la biometría; nosotros no las guardamos. En el flujo de pruebas sin
+            proveedor: la foto (selfie) que subas.
+          </td>
+          <td>Vos y el proveedor de verificación.</td>
+        </tr>
+        <tr>
+          <td>Operaciones</td>
+          <td>Aportes, reembolsos, tenencias, órdenes y transacciones asociadas a tu cuenta.</td>
+          <td>La plataforma y la red Stellar.</td>
+        </tr>
+        <tr>
+          <td>Seguridad y técnicos</td>
+          <td>
+            Dirección IP, navegador (user agent), identificador de solicitud, registros de auditoría de
+            accesos y acciones sensibles, estado de la verificación en dos pasos.
+          </td>
+          <td>Tu navegador al usar el servicio.</td>
+        </tr>
+        <tr>
+          <td>Soporte</td>
+          <td>Lo que nos escribas por el formulario de contacto y tus datos de contacto.</td>
+          <td>Vos.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      No te pedimos datos sensibles en los términos del artículo 2 de la Ley 25.326. Los datos biométricos de
+      la verificación (por ejemplo, la comparación facial) los procesa el proveedor de verificación y no los
+      guardamos.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[2]}>
+    <ul>
+      <li>
+        <strong>Prestarte el servicio</strong> (ejecución del contrato): crear y administrar tu cuenta,
+        procesar aportes, reembolsos y operaciones, mostrarte tu portfolio.
+      </li>
+      <li>
+        <strong>Cumplir obligaciones legales</strong>: verificar tu identidad y conservar registros según la
+        normativa de prevención del lavado de activos (Ley 25.246 y modificatorias) y responder a
+        requerimientos de autoridades competentes.
+      </li>
+      <li>
+        <strong>Proteger la plataforma y a sus usuarios</strong> (interés legítimo): prevenir fraudes y
+        accesos indebidos, auditar acciones sensibles, limitar abusos.
+      </li>
+      <li>
+        <strong>Comunicarnos con vos</strong>: confirmar tu email, avisarte de cambios en tu cuenta o en estos
+        documentos y responder tus consultas.
+      </li>
+    </ul>
+    <p>
+      <strong>No vendemos tus datos ni los usamos para publicidad.</strong> No tomamos decisiones con efectos
+      jurídicos basadas únicamente en tratamientos automatizados, salvo los controles automáticos del
+      proveedor de verificación, que podés pedir que revise una persona.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[3]}>
+    <p>
+      Stellar es una blockchain pública. Tu dirección de wallet, tus transacciones (aportes, reembolsos,
+      transferencias) y los saldos asociados son <strong>visibles para cualquiera y permanentes</strong>: no
+      se pueden modificar ni borrar, ni por vos ni por Fractachain. No publicamos en la blockchain tu nombre,
+      tu email ni tu documento, pero si alguien asocia tu identidad con tu dirección, podrá ver tu actividad
+      en la red.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[4]}>
+    <p>
+      Compartimos los datos estrictamente necesarios con estos proveedores, que los tratan por cuenta nuestra
+      o para la función indicada:
+    </p>
+    <ul>
+      <li>
+        <strong>Didit</strong> (verificación de identidad), cuando la verificación la hace ese proveedor.
+      </li>
+      <li>
+        <strong>Google Firebase</strong>, solo si elegís ingresar con Google.
+      </li>
+      <li>
+        <strong>Google Fonts</strong>: al cargar la tipografía, tu navegador pide los archivos a servidores de
+        Google, que reciben tu dirección IP y tu navegador.
+      </li>
+      <li>
+        <strong>Proveedor de email</strong> que usamos para enviarte confirmaciones y avisos.
+      </li>
+      <li>
+        <strong>Proveedor de hosting y base de datos</strong> donde funciona la plataforma.
+      </li>
+      <li>
+        <strong>Proveedores de acceso a la red Stellar</strong> (nodos RPC y Horizon) que reciben las
+        transacciones y consultas que envía la plataforma.
+      </li>
+    </ul>
+    <p>
+      Algunos de estos proveedores pueden estar fuera de la Argentina. En esos casos procuramos que ofrezcan
+      un nivel de protección adecuado o que existan las garantías contractuales que exige la normativa.
+      También podemos entregar datos cuando lo ordene una autoridad competente.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[5]}>
+    <ul>
+      <li>Datos de la cuenta: mientras la cuenta esté activa.</li>
+      <li>
+        Datos de verificación de identidad y de operaciones: después del cierre de la cuenta, durante el plazo
+        que exija la normativa de prevención del lavado de activos aplicable.
+      </li>
+      <li>
+        Registros de auditoría y seguridad: el tiempo necesario para proteger el servicio y cumplir
+        obligaciones legales.
+      </li>
+      <li>Mensajes de soporte: el tiempo necesario para atender la consulta y sus seguimientos.</li>
+    </ul>
+    <p>
+      Al cerrar tu cuenta bloqueamos el acceso y reducimos los datos al mínimo que debemos conservar. Lo
+      registrado en la blockchain no se puede borrar.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[6]}>
+    <p>Como titular de los datos tenés derecho a:</p>
+    <ul>
+      <li>
+        <strong>Acceso:</strong> saber qué datos tuyos tratamos. Podés descargarlos desde Cuenta → Privacidad.
+      </li>
+      <li>
+        <strong>Rectificación y actualización:</strong> corregir datos inexactos o desactualizados.
+      </li>
+      <li>
+        <strong>Supresión:</strong> pedir que eliminemos tus datos, salvo los que debamos conservar por ley.
+        Podés cerrar tu cuenta desde Cuenta → Privacidad.
+      </li>
+      <li>
+        <strong>Confidencialidad:</strong> que tus datos no se usen para fines distintos de los informados.
+      </li>
+    </ul>
+    <p>
+      Para ejercerlos usá las opciones de Cuenta → Privacidad o escribinos desde el{' '}
+      <a href="/contacto?tema=privacidad">formulario de contacto</a>. Respondemos dentro de los plazos de la
+      Ley 25.326: 10 días corridos para el acceso y 5 días hábiles para la rectificación, actualización o
+      supresión.
+    </p>
+    <blockquote>
+      El titular de los datos personales tiene la facultad de ejercer el derecho de acceso a los mismos en
+      forma gratuita a intervalos no inferiores a seis meses, salvo que se acredite un interés legítimo al
+      efecto conforme lo establecido en el artículo 14, inciso 3 de la Ley N° 25.326. La AGENCIA DE ACCESO A
+      LA INFORMACIÓN PÚBLICA, en su carácter de Órgano de Control de la Ley N° 25.326, tiene la atribución de
+      atender las denuncias y reclamos que interpongan quienes resulten afectados en sus derechos por
+      incumplimiento de las normas vigentes en materia de protección de datos personales.
+    </blockquote>
+  </LegalSection>
+
+  <LegalSection {...sections[7]}>
+    <ul>
+      <li>
+        La sesión viaja en una cookie HttpOnly que el código del navegador no puede leer, con protección
+        contra solicitudes cruzadas (CSRF).
+      </li>
+      <li>Las contraseñas se guardan con un algoritmo de hash con sal (scrypt); nunca en texto.</li>
+      <li>
+        Las claves de las wallets custodiadas y los secretos de la verificación en dos pasos se guardan
+        cifrados (AES-GCM).
+      </li>
+      <li>
+        Verificación en dos pasos disponible para todas las cuentas y requerida para el panel de
+        administración en producción.
+      </li>
+      <li>
+        Registro de auditoría de accesos y acciones sensibles, límites de intentos y conexiones cifradas
+        (HTTPS).
+      </li>
+    </ul>
+    <p>
+      Ningún sistema es infalible. Si detectamos un incidente que afecte tus datos, te lo vamos a informar
+      según lo que exija la normativa.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[8]}>
+    <p>
+      El servicio es solo para mayores de 18 años. No tratamos a sabiendas datos de menores; si detectamos una
+      cuenta de un menor, la cerramos.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[9]}>
+    <p>
+      Qué guardamos en tu navegador y para qué está explicado en la{' '}
+      <a href="/legal/cookies">Política de cookies</a>.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[10]}>
+    <p>
+      Si cambiamos esta política de forma relevante, te lo vamos a avisar y, cuando corresponda, te vamos a
+      pedir que aceptes la nueva versión. La versión y la fecha de vigencia están al principio de este
+      documento.
+    </p>
+  </LegalSection>
+
+  <LegalSection {...sections[11]}>
+    <p>
+      Escribinos desde el <a href="/contacto?tema=privacidad">formulario de contacto</a>
+      {contact && (
+        <>
+          {' '}
+          o a <a href={`mailto:${contact}`}>{contact}</a>
+        </>
+      )}
+      . Si no quedás conforme con la respuesta, podés presentar un reclamo ante la Agencia de Acceso a la
+      Información Pública ({' '}
+      <a href="https://www.argentina.gob.ar/aaip" rel="noopener noreferrer" target="_blank">
+        argentina.gob.ar/aaip
+      </a>
+      ).
+    </p>
+  </LegalSection>
+</LegalLayout>

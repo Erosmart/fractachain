@@ -19,6 +19,10 @@ export interface AppConfigValues {
   stellarRpcUrl: string;
   networkPassphrase: string;
   firebase: FirebaseWebConfig;
+  /** Legal name shown in the legal documents (optional; never invented). */
+  legalEntity?: string;
+  /** Public contact email for legal/privacy requests (optional; the /contacto form otherwise). */
+  contactEmail?: string;
 }
 
 export const TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
@@ -41,6 +45,8 @@ export class AppConfig {
         messagingSenderId: env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
         appId: env.PUBLIC_FIREBASE_APP_ID || '',
       },
+      legalEntity: env.PUBLIC_LEGAL_ENTITY?.trim() || undefined,
+      contactEmail: env.PUBLIC_CONTACT_EMAIL?.trim() || undefined,
     });
   }
 
@@ -54,6 +60,17 @@ export class AppConfig {
 
   get firebase(): FirebaseWebConfig {
     return this.values.firebase;
+  }
+
+  /** Who provides the service, as configured; null when the operator has not set it. */
+  get legalEntity(): string | null {
+    return this.values.legalEntity || null;
+  }
+
+  /** Contact email for legal and privacy requests; null → the /contacto form. */
+  get contactEmail(): string | null {
+    const email = this.values.contactEmail;
+    return email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
   }
 
   get firebaseConfigured(): boolean {

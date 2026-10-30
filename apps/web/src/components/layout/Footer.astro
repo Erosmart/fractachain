@@ -7,6 +7,7 @@ import FooterAdminLinks from './FooterAdminLinks';
 const locale = Astro.locals.locale;
 const t = translatorFor(locale);
 const f = messagesFor(locale).landing.footer;
+const lf = messagesFor(locale).legal.footer;
 const year = new Date().getFullYear();
 
 const columns = [
@@ -41,6 +42,23 @@ const columns = [
       { href: '/login', label: f.signIn },
     ],
   },
+  {
+    title: lf.resources,
+    links: [
+      { href: '/ayuda', label: lf.help },
+      { href: '/contacto', label: lf.contact },
+      { href: '/transparencia', label: lf.transparency },
+    ],
+  },
+  {
+    title: lf.legal,
+    links: [
+      { href: '/legal/terminos', label: lf.terms },
+      { href: '/legal/privacidad', label: lf.privacy },
+      { href: '/legal/cookies', label: lf.cookies },
+      { href: '/legal/riesgos', label: lf.risks },
+    ],
+  },
 ];
 ---
 
@@ -52,7 +70,7 @@ const columns = [
         <p class="text-ink-2">{f.blurb}</p>
         <span class="chip chip-butter dark:text-navy-ink">{f.testnet}</span>
       </div>
-      <nav class="grid grid-cols-2 gap-8 sm:grid-cols-4" aria-label={f.navLabel}>
+      <nav class="grid grid-cols-2 gap-8 sm:grid-cols-3 xl:grid-cols-6" aria-label={f.navLabel}>
         {columns.map((col) => (
           <div>
             <h2 class="mb-3 text-xs font-medium text-muted">{col.title}</h2>
@@ -79,6 +97,11 @@ const columns = [
       <div class="rounded-2xl border border-line bg-surface px-4 py-3.5">
         <p class="text-xs font-medium text-ink">{f.legalTitle}</p>
         <p class="mt-1 text-xs leading-relaxed text-ink-2">{t('footer.legal')}</p>
+        <p class="mt-2 text-xs">
+          <a href="/legal/riesgos" class="text-ink underline underline-offset-2">
+            {lf.risks}
+          </a>
+        </p>
       </div>
     </div>
 
