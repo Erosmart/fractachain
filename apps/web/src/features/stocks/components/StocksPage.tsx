@@ -1,78 +1,82 @@
-import { useEffect, useState } from 'react';
-import { Coins } from 'lucide-react';
-import RequireOnboarding from '@/components/guards/RequireOnboarding';
+import { useEffect, useMemo, useState } from 'react';
 import { withIsland } from '@/components/island/withIsland';
-import LiveContractLink from '@/components/ui/LiveContractLink';
-import MockDisclaimer from '@/components/ui/MockDisclaimer';
-import { Card } from '@/components/ui/kit';
+import { Notice, PillTabs } from '@/components/ui/kit';
 import { container } from '@/core/container';
 import { useI18n } from '@/hooks/useI18n';
-import { DEFAULT_STOCKS, normalizeStock, type StockCustody } from '../model';
+import { useSession } from '@/hooks/useSession';
+import {
+  ChainEmpty,
+  ChainError,
+  ChainLoading,
+  ChainToolbar,
+} from '../../derivatives/components/chain/ChainStates';
+import { useChainResource } from '../../derivatives/hooks/useChainResource';
+import { stockVaultView } from '../model';
 import ReserveProof from './ReserveProof';
-import StockList from './StockList';
-import TradeSimulator from './TradeSimulator';
+import StockVaultCard from './StockVaultCard';
 
-/** Tokenized Merval stocks: list, proof of reserve and a simulated ticket. */
-function Stocks() {
+/**
+ * Tokenized Merval stocks, read from the deployed `stock-vault` instances.
+ * Public and read-only; a signed-in wallet also sees its balance and the
+ * dividends it can claim.
+ */
+function StocksPage() {
   const { t } = useI18n();
-  const [stocks, setStocks] = useState<StockCustody[]>(DEFAULT_STOCKS);
-  const [selected, setSelected] = useState<StockCustody | null>(DEFAULT_STOCKS[0]);
+  const { user, isLoading } = useSession();
+  const holder = user?.publicKey || undefined;
+  const res = useChainResource(() => container.api.chain.stocks(holder), holder ?? '');
+  const views = useMemo(() => (res.data ?? []).map(stockVaultView), [res.data]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
-    container.api.custody
-      .stocks()
-      .then((rows) => {
-        if (!rows) return;
-        const mapped = rows.map(normalizeStock).filter((s): s is StockCustody => Boolean(s));
-        // An empty list is a real answer (the admin deactivated everything);
-        // only a failed request falls back to the built-in catalog.
-        setStocks(mapped);
-        setSelected(mapped[0] ?? null);
-      })
-      .catch(() => undefined);
-  }, []);
+    if (views.length && !views.some((v) => v.source.contractId === selectedId)) {
+      setSelectedId(views[0].source.contractId);
+    }
+  }, [views, selectedId]);
+
+  const vault = views.find((v) => v.source.contractId === selectedId) ?? views[0] ?? null;
 
   return (
     <div className="space-y-5">
-      <div className="space-y-2">
-        <MockDisclaimer product="Merval" />
-        <LiveContractLink kind="stockVault" />
-      </div>
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
-        <div className="min-w-0 space-y-5">
-          <StockList stocks={stocks} selected={selected} onSelect={setSelected} />
-          <div className="grid items-start gap-5 xl:grid-cols-2">
-            <TradeSimulator stock={selected} />
-            <Card title={t('markets.stocks.dividends.title')}>
-              <p className="text-[13px] leading-relaxed text-ink-2">{t('markets.stocks.dividends.body')}</p>
-              <div className="mt-4 flex items-center gap-3 rounded-2xl bg-surface-2 p-4">
-                <span
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-butter-soft text-ink"
-                  aria-hidden="true"
-                >
-                  <Coins className="h-4 w-4" />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted">{t('markets.stocks.dividends.last')}</p>
-                  <p className="text-sm font-medium text-ink tnum">{t('markets.stocks.dividends.value')}</p>
-                </div>
-              </div>
-            </Card>
+      <ChainToolbar
+        count={res.data ? views.length : null}
+        updatedAt={res.updatedAt}
+        refreshing={res.refreshing}
+        failed={Boolean(res.error)}
+        onRefresh={res.reload}
+      />
+      {res.loading ? (
+        <ChainLoading />
+      ) : res.error && !res.data ? (
+        <ChainError message={res.error} onRetry={res.reload} />
+      ) : !vault ? (
+        <ChainEmpty kind={t('markets.stocks.kind')} />
+      ) : (
+        <>
+          {res.error && <Notice tone="warn">{t('markets.chain.stale', { msg: res.error })}</Notice>}
+          {views.length > 1 && (
+            <PillTabs
+              label={t('markets.stocks.pick')}
+              active={vault.source.contractId}
+              onChange={setSelectedId}
+              items={views.map((v) => ({ key: v.source.contractId, label: v.ticker }))}
+            />
+          )}
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
+            <div className="min-w-0">
+              <StockVaultCard
+                vault={vault}
+                signedIn={Boolean(user) || isLoading}
+                hasWallet={Boolean(holder)}
+              />
+            </div>
+            <div className="order-first min-w-0 lg:order-none lg:sticky lg:top-24 lg:self-start">
+              <ReserveProof vault={vault} />
+            </div>
           </div>
-        </div>
-        <div className="order-first min-w-0 lg:order-none lg:sticky lg:top-24 lg:self-start">
-          <ReserveProof stock={selected} />
-        </div>
-      </div>
+        </>
+      )}
     </div>
-  );
-}
-
-function StocksPage() {
-  return (
-    <RequireOnboarding>
-      <Stocks />
-    </RequireOnboarding>
   );
 }
 

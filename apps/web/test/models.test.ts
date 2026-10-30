@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { buildCandles, fromSdex } from '@/features/orderbook/model';
-import { normalizeStock } from '@/features/stocks/model';
 import type { SdexBook } from '@/core/api/types';
 
 describe('orderbook model', () => {
@@ -67,28 +66,5 @@ describe('orderbook model', () => {
     expect(candles[candles.length - 1].c).toBe(9);
     expect(Math.max(...candles.map((c) => c.h))).toBe(12);
     expect(candles.reduce((s, c) => s + c.v, 0)).toBe(3);
-  });
-});
-
-describe('normalizeStock', () => {
-  it('accepts both the legacy custody shape and MervalStock rows', () => {
-    expect(
-      normalizeStock({
-        tokenTicker: 'tYPF',
-        ticker: 'YPFD',
-        priceUsdc: 24.5,
-        change24hPct: 3.4,
-        custodiedSharesInCajaDeValores: 5,
-      }),
-    ).toMatchObject({
-      symbol: 'tYPF',
-      tickerMerval: 'YPFD',
-      priceUsd: 24.5,
-      change24h: 3.4,
-      totalSharesInCustody: 5,
-      backingRatio: 1,
-    });
-    expect(normalizeStock({ symbol: '' })).toBeNull();
-    expect(normalizeStock(null)).toBeNull();
   });
 });
