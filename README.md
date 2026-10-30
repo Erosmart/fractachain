@@ -47,7 +47,7 @@ Lo que hoy corre on-chain en el demo es la licitación: el aporte se paga en USD
 
 **Inversor.** Se registra (email; Google/Firebase y Freighter opcionales), elige custodia, pasa KYC y aporta llamando a `contribute()` on-chain. Recibe unidades RWA registradas en el storage del contrato —no un asset clásico en Freighter—. Si la oferta falla, `refund()` le devuelve los USDC. En el mercado secundario opera un orderbook sandbox, o el Stellar DEX cuando el listing tiene un emisor `G…` real.
 
-El pago en vivo del demo es USDC de plataforma (issuer `GCASKV25…`, SAC propio). Las wallets custodiales se fondean solas al registrarse o al entrar: Friendbot cubre el XLM y el issuer firma la trustline con 10.000 USDC de prueba. Las wallets self-custody (Freighter) reciben el XLM y firman su trustline una vez. En testnet el KYC se aprueba solo (foto cualquiera a modo de placeholder — no hay proveedor real).
+El pago en vivo del demo es USDC de plataforma (issuer `GCASKV25…`, SAC propio). Las wallets custodiales se fondean solas al registrarse o al entrar: Friendbot cubre el XLM y el issuer firma la trustline con 10.000 USDC de prueba. Las wallets self-custody (Freighter) reciben el XLM y firman su trustline una vez. El KYC lo decide [Didit](docs/guides/kyc-didit.md) (documento, prueba de vida, rostro y AML) cuando están `DIDIT_API_KEY` y `DIDIT_WORKFLOW_ID`; sin esas claves, en testnet se aprueba solo (foto cualquiera a modo de placeholder).
 
 La entrada de pesos a USDC se apoya en los anchors de on/off-ramping que ya operan en Stellar (Alfred Pay, MoneyGram). Hoy la home los muestra como maqueta; el aporte que corre on-chain es el USDC de plataforma.
 
@@ -95,7 +95,7 @@ Inversor / productor → servidor único (:3000: Astro SSR + API Express en `/ap
 
 Detalle de capas y principios: [`docs/architecture.md`](docs/architecture.md). Seguridad: [`SECURITY.md`](SECURITY.md).
 
-IDs públicos (sin secretos): `deployments/testnet.json`. Pipeline: `scripts/testnet/`. Deploy: [`docs/guides/deploy-railway.md`](docs/guides/deploy-railway.md).
+IDs públicos (sin secretos): `deployments/testnet.json`. Pipeline: `scripts/testnet/`. Deploy: [`docs/guides/deploy-railway.md`](docs/guides/deploy-railway.md). KYC: [`docs/guides/kyc-didit.md`](docs/guides/kyc-didit.md).
 
 ---
 
@@ -128,7 +128,7 @@ On-chain = contrato `C…` válido de ese listing (cada oferta despliega su prop
 | CLOB, dividendos | Sandbox |
 | On-ramps de la home (Alfred Pay, MoneyGram, CCTP, Near Intents, oráculos) | Mocks (`packages/api/src/application/mocks/`) |
 | Freighter para aportar | Fuera del flujo principal |
-| KYC | Auto-aprobado en testnet (no es compliance real) |
+| KYC | Didit (con claves) · sin claves: auto-aprobado en testnet |
 
 ### IDs de contrato en testnet
 

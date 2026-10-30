@@ -46,7 +46,8 @@ src/
 │   ├── security/…                 TwoFactorService (TOTP), EmailVerificationService, PasswordResetService
 │   ├── audit/AuditTrail           registro de auditoría (acciones admin + eventos de seguridad)
 │   ├── account/…                  AccountService (ledger), WalletService, CustodialKeyService, AccountBootstrapper
-│   ├── kyc/KycService             onboarding, cola de compliance, selfies
+│   ├── kyc/KycService             onboarding, cola de compliance, selfies, settle()
+│   ├── kyc/IdentityVerificationService  verificación en Didit: sesiones, sync, webhooks
 │   ├── listing/…                  ListingLedger (agregado), IssuanceWorkflowService, ListingPresenter
 │   ├── offering/…                 OfferingService (aportes, refunds, claim), OnChainStatusService
 │   ├── settlement/…               SettlementService (finalize automático + reparto)
@@ -57,6 +58,7 @@ src/
 │   ├── persistence/         IDocumentStore → JSON atómico + espejo Postgres; repositorios
 │   ├── security/            scrypt, tokens HMAC con expiración/revocación, AES-GCM, Firebase JWKS, SEP-53, TOTP, tokens de un solo uso
 │   ├── mail/                IMailer: SMTP (nodemailer) o log en desarrollo
+│   ├── kyc/                 DiditClient (IIdentityVerificationProvider) + autenticación de webhooks
 │   ├── stellar/             Horizon, Soroban RPC, SDEX, faucet USDC, contratos, keyring, política de XDR firmados
 │   └── storage/             selfies (validación por magic bytes)
 ├── http/                    Express: app, controllers (clases), middlewares, DTOs zod

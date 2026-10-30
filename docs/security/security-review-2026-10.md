@@ -143,15 +143,29 @@ implementado y con tests (`packages/api/test/http/security-features.test.ts`):
 | Lock solo en memoria | `ILockProvider`: con `DATABASE_URL`, **advisory locks de Postgres** (`pg_advisory_lock`) para pagos y aportes; varias réplicas no pueden pagar dos veces. |
 | Wallet healing en cada request | El auto-fondeo (Friendbot/Horizon) corre como mucho cada 5 min por wallet. |
 
+### Verificación de identidad con Didit
+
+| Riesgo | Control |
+|---|---|
+| Aprobar a alguien con un callback falsificado (`?status=Approved`) | El callback del navegador sólo dispara `POST /api/kyc/verification/sync`, que **vuelve a pedir la decisión a Didit** con la API key. La query string nunca se usa. |
+| Webhooks falsos o repetidos | `POST /api/kyc/didit/webhook` exige `X-Timestamp` (±5 min) y `X-Signature-V2` (HMAC-SHA256 del JSON canónico) o `X-Signature` (cuerpo crudo), con comparación en tiempo constante y soporte de rotación (`-Previous`). `X-Signature-Simple` no se acepta (no cubre la decisión). Eventos deduplicados por `event_id`. |
+| Webhooks fuera de orden | Tras validar la firma, el estado se **re-lee de Didit**; una entrega vieja no puede volver atrás una cuenta. |
+| Decisión aplicada a otra cuenta | La sesión se busca por `session_id` guardado; `vendor_data` tiene que coincidir con la cuenta; sesiones reemplazadas se ignoran. |
+| Datos personales | Se guarda un resumen mínimo (nombre del documento, tipo, país emisor, últimos 4 del número, estado de cada chequeo). Imágenes y biometría quedan en Didit. El link para retomar la sesión nunca se muestra a compliance. |
+| Costo / abuso | Crear sesiones (facturables) tiene su propio rate limit (10/h por IP); retomar una sesión abierta no crea otra. |
+| Aprobación fuera de horario | El guard de horario bancario limita una clave de admin comprometida; no aplica a decisiones del proveedor, que pasan por `KycService.settle()` con los mismos efectos on-chain (grant + whitelist; rechazo de alguien aprobado → revocación). |
+
 ## Riesgos que quedan (requieren decisiones o servicios externos)
 
 1. **Custodia de claves en el mismo host.** Las wallets custodiales (y los
    secretos 2FA) se cifran con AES-256-GCM con una clave del entorno. Para
    mainnet: envelope encryption con KMS/HSM (AWS KMS, GCP KMS) o MPC, y
    límites de retiro. Requiere cuenta cloud y política de custodia.
-2. **KYC auto-aprobado en testnet** (no hay proveedor). `KYC_AUTO_APPROVE=false`
-   lo desactiva; en producción hace falta contratar un proveedor (Onfido,
-   Veriff, Renaper vía integrador…).
+2. **KYC sin proveedor en testnet.** Con `DIDIT_API_KEY` + `DIDIT_WORKFLOW_ID`
+   el KYC lo decide **Didit** (ver abajo). Sin esas claves sigue el formulario
+   con selfie y revisión manual, auto-aprobado en testnet salvo
+   `KYC_AUTO_APPROVE=false`. Falta la cuenta de Didit en producción y
+   configurar el webhook.
 3. **Factory compartida de testnet** sin el `usdcSac` actual registrado: su
    admin tiene que llamar `set_payment_asset(1, <usdcSac>)`. Para desarrollo:
    `testnet:clone-factory` + `testnet:setup-usdc`.

@@ -51,6 +51,9 @@ Rutas y formatos de v1 (la web los consume tal cual), más:
 | `POST /api/auth/email/verify` · `resend` | Verificación de email |
 | `POST /api/auth/password/forgot` · `reset` | Reseteo de contraseña (sin enumeración; cierra sesiones) |
 | `GET /api/admin/audit?limit&action&actor` | Registro de auditoría |
+| `GET /api/kyc/provider` | `{ provider: 'didit' \| 'manual', selfieRequired }` |
+| `POST /api/kyc/verification` · `GET` · `POST …/sync` | Inicia o retoma la verificación en Didit (`{ url }`), estado, y re-lectura de la decisión al volver |
+| `POST /api/kyc/didit/webhook` | Webhook de Didit (firma HMAC, sin sesión) |
 
 Otros cambios de seguridad respecto de v1: sesiones con expiración y
 revocación, `POST /api/auth/google` → **410**, selfies de KYC sólo para
