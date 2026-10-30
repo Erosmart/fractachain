@@ -20,7 +20,7 @@ No hace falta mainnet, Firebase ni Railway para este paso.
 cd fractachain   # raíz del repo
 bash scripts/testnet/01-keys.sh    # G… + Friendbot + .env (raíz)
 bash scripts/testnet/02-build.sh   # WASM
-bash scripts/testnet/03-deploy.sh  # sube e inicializa factory/stock/CBO3
+bash scripts/testnet/03-deploy.sh  # sube los WASM y despliega factory/stock/licitación
 bash scripts/testnet/04-licitacion-xlm.sh  # nueva licitación XLM + bind Las Lilas
 ```
 
@@ -34,22 +34,26 @@ El 03 escribe `deployments/testnet.json` (solo IDs públicos). Las claves `S…`
 
 `stellar` en la máquina de Eros es un wrapper Docker: monta el directorio actual como `/workspace`. Los scripts 01–03 hacen `cd` a la raíz del repo y pasan rutas relativas (`deployments/wasm/*.wasm`).
 
-## Verificación de `initialize` (SC-06)
+## Constructores y factory (SC-06 / SC-02)
 
-`deploy` e `initialize` son dos transacciones: cualquiera que mire la red puede
-inicializar una instancia recién desplegada antes que nosotros y quedarse con
-el admin. Por eso `03-deploy.sh`:
+Los contratos corren su `__constructor` en la misma transacción del deploy:
+no queda un `initialize` suelto que alguien pueda adelantar.
 
-- guarda cada ID en `deployments/testnet.json` **recién después** de un
-  `initialize` exitoso (si el init falla, el script corta y no queda nada a
-  medio guardar);
-- lee `get_admin` de factory, stock vault y licitación y corta si no es el
-  `fc-deployer` (también al reutilizar IDs ya guardados);
-- comprueba que el stock vault apunte a nuestra factory (`get_registry`).
+- **Factory y licitación**: `stellar contract deploy --wasm … -- --admin …`
+  (los argumentos del constructor van después de `--`).
+- **Stock vault, forward y warrant**: los despliega **la factory**
+  (`deploy_stock_vault`, `deploy_forward`, `deploy_warrant`). La factory valida
+  los términos (activo de pago habilitado, warrantera acreditada) y firma el
+  constructor; el vault exige esa firma (`registry.require_auth()`), así que
+  ninguna instancia puede declarar a nuestra factory como registry sin que la
+  factory la haya desplegado. La factory además la registra como producto
+  (`product_id_of`).
+- `03-deploy.sh` sigue leyendo `get_admin` / `get_registry` de las instancias
+  que reutiliza del JSON (pueden ser del WASM viejo). Si la factory guardada es
+  del WASM viejo, el script corta: borrá `factory` del JSON y corré de nuevo.
 
-Si aparece `Posible initialize adelantado`, borrá ese ID del JSON y corré de
-nuevo. Pendiente a futuro: pasar los contratos a `__constructor` (deploy +
-init atómicos), lo que implica cambiar también el flujo de deploy del API.
+El API detecta en cada deploy si el WASM tiene `__constructor` (lee el spec
+on-chain): con WASMs viejos sigue haciendo deploy + `initialize` + verificación.
 
 ## Después del deploy
 

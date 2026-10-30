@@ -100,7 +100,7 @@ fn bump_all(env: &Env) {
 
 /// Whether the attesting warrantera is still accredited in the registry.
 ///
-/// Accreditation is checked at `initialize`, but the registry can revoke it
+/// Accreditation is checked at construction, but the registry can revoke it
 /// later. A revoked attestor's word must not unlock new money (`fund_loan`)
 /// nor let it seize collateral (`execute_liquidation`).
 fn warrantera_accredited(env: &Env) -> bool {
@@ -115,8 +115,17 @@ fn warrantera_accredited(env: &Env) -> bool {
 
 #[contractimpl]
 impl WarrantVaultContract {
+    /// Runs once, atomically with the deploy (SC-06: no separate `initialize`
+    /// to front-run).
+    ///
+    /// SC-02: the registry has to authorize being named, so the vault is
+    /// deployed *by* its registry (`issuance-factory::deploy_warrant`), which
+    /// first checks that the warrantera is accredited and the payment token
+    /// allowlisted (a call back into the registry here would be re-entry).
+    /// Nobody can create a vault that claims the platform factory, and a vault
+    /// with a look-alike registry is visible in `get_registry`.
     #[allow(clippy::too_many_arguments)]
-    pub fn initialize(
+    pub fn __constructor(
         env: Env,
         registry: Address,
         producer: Address,
@@ -128,22 +137,14 @@ impl WarrantVaultContract {
         interest_rate_bps: u32,
         duration_days: u64,
     ) {
-        if env.storage().persistent().has(&WarrantKey::Producer) {
-            panic!("Already initialized");
-        }
+        registry.require_auth();
         // The whole loan is priced off `inventory_value` and `pogr_cert_hash`,
         // both supplied by the caller. Authenticating a self-chosen oracle
         // proves nothing, so the attestor must be accredited in the registry
-        // and must not be the producer.
+        // (checked by the registry before it authorizes this deploy) and must
+        // not be the producer.
         if producer == oracle_warrantera {
             panic!("Producer cannot attest its own collateral");
-        }
-        let registry_client = RegistryClient::new(&env, &registry);
-        if !registry_client.is_warrantera(&oracle_warrantera) {
-            panic!("Warrantera not accredited");
-        }
-        if !registry_client.is_payment_asset(&payment_token) {
-            panic!("Payment token not allowlisted");
         }
         if ltv_bps < 4000 || ltv_bps > 6000 {
             panic!("LTV must be between 40% and 60%");
@@ -201,7 +202,7 @@ impl WarrantVaultContract {
         }
 
         // The term is measured from disbursement. Deriving `DueDate` at
-        // `initialize` let a lender wait out the clock and then fund and
+        // construction let a lender wait out the clock and then fund and
         // liquidate in the same ledger, taking the collateral for free.
         let duration_days: u64 = env.storage().persistent().get(&WarrantKey::DurationDays).unwrap();
         let due = now
@@ -321,9 +322,9 @@ impl WarrantVaultContract {
             .publish((Symbol::new(&env, "liquidate"), lender), (debt, surplus));
     }
 
-    /// Registry this vault trusts for accreditation and payment assets. It is
-    /// chosen by whoever initializes the instance: a lender should check it is
-    /// the canonical issuance factory before funding.
+    /// Registry this vault trusts for accreditation and payment assets. The
+    /// registry itself deployed the vault (it authorized the constructor), so a
+    /// lender only has to check this is the canonical issuance factory.
     pub fn get_registry(env: Env) -> Address {
         env.storage().persistent().get(&WarrantKey::Registry).unwrap()
     }

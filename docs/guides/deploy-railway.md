@@ -118,16 +118,24 @@ mkdir -p packages/api/.local-data
 cp deployments/testnet.json packages/api/.local-data/testnet-deployment.json
 echo "STELLAR_DEPLOYMENT_FILE=$PWD/packages/api/.local-data/testnet-deployment.json" >> .env
 
-npm run testnet:clone-factory                     # factory propia (XLM + USDC registrados)
-npm run testnet:setup-usdc -w @fractachain/api    # emisor USDC + SAC propios, faucet funcionando
 # contratos corregidos: con stellar CLI → bash scripts/testnet/02-build.sh
 # sin stellar CLI (solo cargo + target wasm32v1-none):
 npm run contracts:build
 W=contracts/target/wasm32v1-none/release
 npm run testnet:upload-wasm -w @fractachain/api -- \
+  factory=$PWD/$W/issuance_factory.wasm \
   licitacion=$PWD/$W/fractachain_licitacion.wasm stockVault=$PWD/$W/stock_vault.wasm \
   forward=$PWD/$W/forward_contract.wasm warrant=$PWD/$W/warrant_vault.wasm
+npm run testnet:clone-factory                     # factory propia con constructor (XLM + USDC registrados)
+npm run testnet:setup-usdc -w @fractachain/api    # emisor USDC + SAC propios, registrados en esa factory
 ```
+
+Los contratos nuevos corren su `__constructor` en la transacción del deploy, y
+los vaults (stock, forward, warrant) los despliega **la factory**, que es la
+única que puede declararse su registry. Por eso, con los WASM nuevos, hace
+falta una factory nueva: `testnet:clone-factory` usa `factoryWasmHash` (lo
+graba `testnet:upload-wasm factory=…`). Con los WASM viejos todo sigue como
+antes (deploy + `initialize`): el API lo detecta leyendo el spec on-chain.
 
 ## Qué no va en Docker
 

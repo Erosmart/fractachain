@@ -172,8 +172,14 @@ fn accrue(env: &Env, holder: &Address) {
 
 #[contractimpl]
 impl StockVaultContract {
+    /// Runs once, atomically with the deploy (SC-06). The registry must
+    /// authorize being named (SC-02): only the issuance factory deploying the
+    /// vault (`deploy_stock_vault`) can bind it to itself, and it does so after
+    /// checking that `payment_token` is one of its allowlisted assets. (A
+    /// call back into the registry here would be re-entry, which Soroban
+    /// forbids while the factory is deploying.)
     #[allow(clippy::too_many_arguments)]
-    pub fn initialize_stock(
+    pub fn __constructor(
         env: Env,
         admin: Address,
         por_oracle: Address,
@@ -184,16 +190,11 @@ impl StockVaultContract {
         isin: String,
         custodian_cuit: String,
     ) {
-        if env.storage().persistent().has(&StockKey::Admin) {
-            panic!("Already initialized");
-        }
+        registry.require_auth();
         if admin == por_oracle {
             panic!("Custodian cannot audit its own reserve");
         }
         admin.require_auth();
-        if !RegistryClient::new(&env, &registry).is_payment_asset(&payment_token) {
-            panic!("Payment token not allowlisted");
-        }
         bump_instance(&env);
 
         let metadata = StockMetadata {
@@ -520,15 +521,15 @@ impl StockVaultContract {
         payment_token(&env)
     }
 
-    /// Registry (issuance factory) this vault trusts for payment assets.
-    /// Integrators should check it is the canonical factory: it is chosen by
-    /// whoever initializes the instance.
+    /// Registry (issuance factory) this vault trusts for payment assets. It
+    /// deployed the vault (it authorized the constructor), so integrators only
+    /// have to check this is the canonical factory.
     pub fn get_registry(env: Env) -> Address {
         env.storage().persistent().get(&StockKey::Registry).unwrap()
     }
 
-    /// Stored custodian/admin, readable right after `initialize_stock` so a
-    /// deployer can detect a front-run initialization.
+    /// Stored custodian/admin (legacy instances were initialized in a separate
+    /// transaction; deployers read this back to rule out a front-run).
     pub fn get_admin(env: Env) -> Address {
         env.storage().persistent().get(&StockKey::Admin).unwrap()
     }

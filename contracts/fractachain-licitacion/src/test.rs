@@ -4,7 +4,7 @@ extern crate std;
 use soroban_sdk::{
     testutils::{Address as _, Ledger},
     token::{StellarAssetClient, TokenClient},
-    Address, BytesN, Env, String,
+    Address, BytesN, Env, IntoVal, String,
 };
 
 use crate::kyc::{is_argentina_business_hours, InvestorType};
@@ -35,25 +35,26 @@ fn setup() -> Fixture {
     let sac_admin = Address::generate(&env);
     let token_id = env.register_stellar_asset_contract_v2(sac_admin).address();
 
-    let contract_id = env.register(FractachainLicitacionContract, ());
-    let client = FractachainLicitacionContractClient::new(&env, &contract_id);
-
     let legal = LegalInfo {
         fideicomiso_hash: BytesN::from_array(&env, &[7u8; 32]),
         cnv_record_id: String::from_str(&env, "CNV-1"),
         legal_terms_uri: String::from_str(&env, "https://fractachain.example/legal"),
     };
 
-    client.initialize(
-        &admin,
-        &fiduciary,
-        &token_id,
-        &SOFT_CAP,
-        &500_000,
-        &(BIZ_TS + 30 * DAY),
-        &PRICE,
-        &legal,
+    let contract_id = env.register(
+        FractachainLicitacionContract,
+        (
+            &admin,
+            &fiduciary,
+            &token_id,
+            SOFT_CAP,
+            500_000i128,
+            BIZ_TS + 30 * DAY,
+            PRICE,
+            legal,
+        ),
     );
+    let client = FractachainLicitacionContractClient::new(&env, &contract_id);
 
     Fixture {
         env,
@@ -116,7 +117,7 @@ fn contribute_mints_rwa_and_secondary_market_settles() {
 ///
 /// No function moved the raise anywhere: a licitación that met its soft cap
 /// left every peso locked in the contract permanently, so the issuer was never
-/// paid. Closing now pays the company wallet configured at `initialize`.
+/// paid. Closing now pays the company wallet configured at construction.
 #[test]
 fn a_successful_issuance_pays_the_fiduciary() {
     let f = setup();
@@ -445,25 +446,36 @@ fn price_is_frozen_once_money_is_in() {
     assert!(f.client.try_set_payment_token(&f.admin, &f.token_id).is_err());
 }
 
+/// SC-06: the licitación is constructed with the deploy, so there is no
+/// `initialize` to front-run, and the host refuses to run the constructor
+/// again (admin, fiduciary and caps can't be rewritten).
 #[test]
-#[should_panic(expected = "Already initialized")]
-fn double_initialization_is_rejected() {
+fn the_constructor_cannot_be_run_again() {
     let f = setup();
+    let attacker = Address::generate(&f.env);
     let legal = LegalInfo {
         fideicomiso_hash: BytesN::from_array(&f.env, &[7u8; 32]),
         cnv_record_id: String::from_str(&f.env, "CNV-1"),
         legal_terms_uri: String::from_str(&f.env, "https://fractachain.example/legal"),
     };
-    f.client.initialize(
-        &f.admin,
-        &f.fiduciary,
-        &f.token_id,
-        &SOFT_CAP,
-        &500_000,
-        &(BIZ_TS + 30 * DAY),
-        &PRICE,
-        &legal,
+    let again = f.env.try_invoke_contract::<(), soroban_sdk::Error>(
+        &f.client.address,
+        &soroban_sdk::Symbol::new(&f.env, "__constructor"),
+        (
+            &attacker,
+            &attacker,
+            &f.token_id,
+            SOFT_CAP,
+            500_000i128,
+            BIZ_TS + 30 * DAY,
+            PRICE,
+            legal,
+        )
+            .into_val(&f.env),
     );
+    assert!(again.is_err());
+    assert_eq!(f.client.get_admin(), f.admin);
+    assert_eq!(f.client.get_fiduciary(), f.fiduciary);
 }
 
 #[test]
@@ -794,10 +806,10 @@ fn repricing_before_funding_resets_the_equitable_floor() {
     assert_eq!(f.client.get_equitable_price_floor(), PRICE / 2);
 }
 
-/// SC-06: the stored admin is readable so deploy scripts can detect a
-/// front-run `initialize`.
+/// The stored admin stays readable (deploy scripts verify it on legacy
+/// instances, which were initialized in a separate transaction).
 #[test]
-fn the_stored_admin_is_readable_after_initialize() {
+fn the_stored_admin_is_readable() {
     let f = setup();
     assert_eq!(f.client.get_admin(), f.admin);
 }

@@ -284,7 +284,7 @@ fn equitable_price_floor(env: &Env) -> i128 {
     primary.max(highest).max(opa_price)
 }
 
-/// Pays the raise to the company wallet configured at initialize.
+/// Pays the raise to the company wallet configured at construction.
 ///
 /// Called from `finalize` on success so the issuer does not depend on a
 /// second admin transaction to actually receive the money. `withdraw_proceeds`
@@ -317,8 +317,10 @@ fn payout_proceeds(env: &Env) -> i128 {
 
 #[contractimpl]
 impl FractachainLicitacionContract {
+    /// Runs once, atomically with the deploy (SC-06: a separate `initialize`
+    /// could be front-run between the two transactions).
     #[allow(clippy::too_many_arguments)]
-    pub fn initialize(
+    pub fn __constructor(
         env: Env,
         admin: Address,
         fiduciary: Address,
@@ -329,9 +331,6 @@ impl FractachainLicitacionContract {
         price_per_unit: i128,
         legal_info: LegalInfo,
     ) {
-        if env.storage().persistent().has(&DataKey::Admin) {
-            panic!("Already initialized");
-        }
         require_positive(soft_cap);
         require_positive(hard_cap);
         require_positive(price_per_unit);
@@ -385,9 +384,9 @@ impl FractachainLicitacionContract {
         amount
     }
 
-    /// Stored admin. Deploy scripts read it back right after `initialize`:
-    /// deploy and init are separate transactions, so a front-run init would
-    /// otherwise go unnoticed.
+    /// Stored admin. Instances of the legacy WASM were initialized in a
+    /// separate transaction; deploy scripts read this back to rule out a
+    /// front-run init.
     pub fn get_admin(env: Env) -> Address {
         env.storage().persistent().get(&DataKey::Admin).unwrap()
     }
@@ -603,7 +602,7 @@ impl FractachainLicitacionContract {
         if total_raised >= hard_cap || now >= deadline {
             if total_raised >= soft_cap {
                 env.storage().persistent().set(&DataKey::State, &State::Successful);
-                // The company wallet configured in `initialize` / `set_fiduciary`
+                // The company wallet configured at construction / `set_fiduciary`
                 // receives the raise here. Waiting for a later admin call is
                 // how the money used to get stuck in the contract forever.
                 let paid = payout_proceeds(&env);

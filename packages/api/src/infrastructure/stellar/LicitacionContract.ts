@@ -13,6 +13,7 @@ import { fromStroops, toStroops } from '../../domain/stellar/Amounts';
 import { isContractId, isStellarPublicKey, normalizeAddress } from '../../domain/stellar/StellarAddress';
 import { DomainError, NotConfiguredError, errorMessage } from '../../shared/errors';
 import type { ILogger } from '../../shared/logger';
+import { planDeploy } from './ContractDeployPlan';
 import type { HorizonAccounts } from './HorizonAccounts';
 import type { PlatformKeyring } from './PlatformKeyring';
 import { SignedTransactionPolicy } from './SignedTransactionPolicy';
@@ -151,10 +152,8 @@ export class LicitacionContract {
       throw new NotConfiguredError('Falta usdcSac en deployments/testnet.json');
 
     const admin = await this.keyring.licitacionAdmin();
-    const deployed = await this.soroban.deployFromWasmHash(wasmHash, admin);
-    const client = await this.soroban.client(deployed.contractId, admin);
     const price = toStroops(d.pricePerShareUsdc);
-    const { hash } = await this.soroban.invoke(client, 'initialize', {
+    const terms = {
       admin: admin.publicKey(),
       fiduciary,
       payment_token: paymentToken,
@@ -169,14 +168,25 @@ export class LicitacionContract {
         cnv_record_id: d.cnvRecordId || '',
         legal_terms_uri: d.legalTermsUri || '',
       },
-    });
-
-    // SC-06: initialize is a separate tx from the deploy — verify nobody beat us to it.
-    const storedAdmin = await this.soroban.readOptional<string>(client, 'get_admin');
-    if (storedAdmin !== undefined && String(storedAdmin) !== admin.publicKey()) {
-      throw new DomainError(
-        'La licitación quedó inicializada con otro admin (posible front-running): descartada',
-      );
+    };
+    const plan = planDeploy('licitacion', await this.soroban.wasmFunctions(wasmHash));
+    let deployed: { contractId: string; hash: string | null };
+    let hash: string | null;
+    if (plan.kind === 'constructor') {
+      // SC-06: deploy and construction are one transaction — nothing to front-run.
+      deployed = await this.soroban.deployWithConstructor(wasmHash, admin, terms);
+      hash = deployed.hash;
+    } else {
+      deployed = await this.soroban.deployFromWasmHash(wasmHash, admin);
+      const client = await this.soroban.client(deployed.contractId, admin);
+      ({ hash } = await this.soroban.invoke(client, 'initialize', terms));
+      // Legacy WASM: initialize is a separate tx from the deploy — verify nobody beat us to it.
+      const storedAdmin = await this.soroban.readOptional<string>(client, 'get_admin');
+      if (storedAdmin !== undefined && String(storedAdmin) !== admin.publicKey()) {
+        throw new DomainError(
+          'La licitación quedó inicializada con otro admin (posible front-running): descartada',
+        );
+      }
     }
 
     let factoryProductId: number | null = null;

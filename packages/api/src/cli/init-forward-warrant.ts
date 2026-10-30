@@ -1,6 +1,7 @@
 /**
- * Initializes already-deployed forward/warrant instances (dual auth), using
- * deployments/testnet.json + testnet-actors.local.json.
+ * Initializes already-deployed forward/warrant instances of the legacy WASM
+ * (dual auth), using deployments/testnet.json + testnet-actors.local.json.
+ * Constructor-based instances are born initialized: nothing to do for them.
  *
  *   npm run init:forward-warrant -w @fractachain/api
  */
@@ -16,6 +17,14 @@ runCli(async () => {
   }
   const registry = deployment.warrantFactory || deployment.factory;
   if (!isContractId(registry)) throw new Error('Falta factory para initialize');
+  const fns = await Promise.all([
+    soroban.contractFunctions(deployment.forward),
+    soroban.contractFunctions(deployment.warrant),
+  ]);
+  if (!fns[0].has('initialize') && !fns[1].has('initialize')) {
+    logger.info('forward y warrant usan constructor: ya están inicializados');
+    return;
+  }
   const file = actorsFile(config.stellar.deploymentFile);
   const admin = await keyring.licitacionAdmin();
   const producer = readActor(file, 'producer');

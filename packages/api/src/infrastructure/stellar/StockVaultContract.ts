@@ -1,10 +1,14 @@
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import type { Listing } from '../../domain/listing/Listing';
 import { isContractId, isStellarPublicKey } from '../../domain/stellar/StellarAddress';
 import { DomainError, NotConfiguredError } from '../../shared/errors';
+import { planDeploy } from './ContractDeployPlan';
 import type { PlatformKeyring } from './PlatformKeyring';
 import type { AnyClient, SorobanGateway } from './SorobanGateway';
 import type { DeploymentRegistryLike } from './types';
+
+/** `issuance-factory::PaymentKind::Usdc`. */
+const PAYMENT_KIND_USDC = 1;
 
 /**
  * Adapter for the per-listing `stock-vault` contract. Each listing gets its
@@ -45,9 +49,14 @@ export class StockVaultContract {
   }
 
   /**
-   * Deploys + initializes the vault (registry = factory, payment token = USDC
-   * SAC, PoR oracle = provisioned oracle) and attests `sharesToTokenize` in
-   * custody so `mint_backed_stock` can run.
+   * Deploys the vault (registry = factory, payment token = USDC SAC, PoR
+   * oracle = provisioned oracle) and attests `sharesToTokenize` in custody so
+   * `mint_backed_stock` can run.
+   *
+   * New WASMs are deployed *by the factory* (`deploy_stock_vault`): it vets
+   * the terms and signs off the constructor, which is what binds the vault to
+   * it (SC-02), in the same transaction (SC-06). Legacy WASMs: deploy, then
+   * `initialize_stock`, then read admin and registry back.
    */
   async deployForListing(listing: Listing): Promise<{ contractId: string; hash: string | null }> {
     const d = this.deployments.load();
@@ -65,18 +74,51 @@ export class StockVaultContract {
       throw new DomainError('El oráculo PoR no puede ser la misma cuenta que el custodio');
     }
     const meta = listing.dossier;
-    const deployed = await this.soroban.deployFromWasmHash(wasmHash, admin);
-    const client = await this.soroban.client(deployed.contractId, admin);
-    await this.soroban.invoke(client, 'initialize_stock', {
-      admin: admin.publicKey(),
-      por_oracle: oracle.publicKey(),
-      registry: this.soroban.factoryId(),
-      payment_token: paymentToken,
+    const factoryId = this.soroban.factoryId();
+    const terms = {
       ticker: StockVaultContract.symbol(meta.tokenTicker || meta.ticker),
       company_name: meta.legalName || meta.tradeName || meta.tokenTicker,
       isin: meta.isin || '',
       custodian_cuit: meta.custodianCuit || '',
-    });
+    };
+    const plan = planDeploy(
+      'stockVault',
+      await this.soroban.wasmFunctions(wasmHash),
+      await this.soroban.contractFunctions(factoryId),
+    );
+    let deployed: { contractId: string; hash: string | null };
+    if (plan.kind === 'factory') {
+      // The factory admin is the platform's licitación admin (same key that
+      // registers products); it is also the vault's custodian here.
+      const { hash, result } = await this.soroban.invokeWithCosigners(
+        factoryId,
+        plan.method,
+        {
+          admin: admin.publicKey(),
+          wasm_hash: Buffer.from(wasmHash, 'hex'),
+          salt: randomBytes(32),
+          custodian: admin.publicKey(),
+          por_oracle: oracle.publicKey(),
+          payment_kind: PAYMENT_KIND_USDC,
+          terms,
+          name: `${meta.tokenTicker || meta.ticker} · ${meta.legalName || meta.tradeName || ''}`.slice(0, 64),
+        },
+        admin,
+      );
+      if (!isContractId(String(result))) throw new DomainError('La factory no devolvió el vault desplegado');
+      deployed = { contractId: String(result), hash };
+    } else {
+      deployed = await this.soroban.deployFromWasmHash(wasmHash, admin);
+      // `planDeploy` only answers `legacy` here when the WASM has `initialize_stock`.
+      await this.soroban.invoke(await this.soroban.client(deployed.contractId, admin), 'initialize_stock', {
+        admin: admin.publicKey(),
+        por_oracle: oracle.publicKey(),
+        registry: factoryId,
+        payment_token: paymentToken,
+        ...terms,
+      });
+    }
+    const client = await this.soroban.client(deployed.contractId, admin);
     await this.assertInitializedByUs(client, admin.publicKey());
     // The CdV deposit precedes minting: this attestation unblocks the
     // `minted <= custodied` check for this listing.
@@ -94,9 +136,10 @@ export class StockVaultContract {
   }
 
   /**
-   * SC-02 / SC-06: deploy and `initialize` are separate transactions, so a
-   * front-runner could initialize our instance with their own admin or a fake
-   * registry. Read both back before trusting the instance.
+   * SC-02 / SC-06: with a legacy WASM, deploy and `initialize_stock` are
+   * separate transactions, so a front-runner could initialize our instance
+   * with their own admin or a fake registry. Read both back before trusting
+   * the instance (cheap, so it is also checked for factory deploys).
    */
   private async assertInitializedByUs(client: AnyClient, expectedAdmin: string): Promise<void> {
     const [admin, registry] = await Promise.all([

@@ -5,7 +5,7 @@ use soroban_sdk::{
     contract, contractimpl,
     testutils::{Address as _, Ledger},
     token::{StellarAssetClient, TokenClient},
-    Address, Env, String,
+    Address, Env, IntoVal, String,
 };
 
 use crate::{ForwardContract, ForwardContractClient, ForwardState};
@@ -57,7 +57,8 @@ fn setup() -> Fixture {
     let registry = env.register(MockRegistry, ());
     MockRegistryClient::new(&env, &registry).seed(&token_id);
 
-    let id = env.register(ForwardContract, ());
+    // Deployed (constructor) by `init`, at this address.
+    let id = Address::generate(&env);
     let client = ForwardContractClient::new(&env, &id);
 
     Fixture {
@@ -71,19 +72,38 @@ fn setup() -> Fixture {
     }
 }
 
+/// Deploys the forward at the fixture's address (the constructor runs here).
+#[allow(clippy::too_many_arguments)]
+fn init(
+    f: &Fixture,
+    producer: &Address,
+    buyer: &Address,
+    arbiter: &Address,
+    token: &Address,
+    total_kilos: i128,
+    price_per_kilo: i128,
+    harvest_deadline: u64,
+) {
+    f.env.register_at(
+        &f.client.address,
+        ForwardContract,
+        (
+            &f.registry,
+            producer,
+            buyer,
+            arbiter,
+            token,
+            String::from_str(&f.env, "soja"),
+            total_kilos,
+            price_per_kilo,
+            harvest_deadline,
+        ),
+    );
+}
+
 /// 1_000 kilos at 100 per kilo = 100_000 escrowed.
 fn init_default(f: &Fixture) {
-    f.client.initialize(
-        &f.registry,
-        &f.producer,
-        &f.buyer,
-        &f.arbiter,
-        &f.token_id,
-        &String::from_str(&f.env, "soja"),
-        &1_000,
-        &100,
-        &DEADLINE,
-    );
+    init(f, &f.producer, &f.buyer, &f.arbiter, &f.token_id, 1_000, 100, DEADLINE);
 }
 
 fn balance(f: &Fixture, who: &Address) -> i128 {
@@ -276,17 +296,7 @@ fn pre_cancel_splits_the_escrow_twenty_eighty() {
 #[test]
 fn a_tiny_escrow_still_owes_a_penalty() {
     let f = setup();
-    f.client.initialize(
-        &f.registry,
-        &f.producer,
-        &f.buyer,
-        &f.arbiter,
-        &f.token_id,
-        &String::from_str(&f.env, "soja"),
-        &1,
-        &4,
-        &DEADLINE,
-    );
+    init(&f, &f.producer, &f.buyer, &f.arbiter, &f.token_id, 1, 4, DEADLINE);
     f.env.ledger().set_timestamp(T0 + DAY);
     f.client.pre_cancel(&f.buyer);
     // 20% of 4 rounds up to 1 rather than down to 0.
@@ -329,34 +339,14 @@ fn a_position_pending_acceptance_cannot_be_sold() {
 #[should_panic(expected = "Producer and buyer must differ")]
 fn one_account_cannot_be_both_sides() {
     let f = setup();
-    f.client.initialize(
-        &f.registry,
-        &f.producer,
-        &f.producer,
-        &f.arbiter,
-        &f.token_id,
-        &String::from_str(&f.env, "soja"),
-        &1_000,
-        &100,
-        &DEADLINE,
-    );
+    init(&f, &f.producer, &f.producer, &f.arbiter, &f.token_id, 1_000, 100, DEADLINE);
 }
 
 #[test]
 #[should_panic(expected = "Arbiter must be independent")]
 fn the_arbiter_cannot_be_a_counterparty() {
     let f = setup();
-    f.client.initialize(
-        &f.registry,
-        &f.producer,
-        &f.buyer,
-        &f.buyer,
-        &f.token_id,
-        &String::from_str(&f.env, "soja"),
-        &1_000,
-        &100,
-        &DEADLINE,
-    );
+    init(&f, &f.producer, &f.buyer, &f.buyer, &f.token_id, 1_000, 100, DEADLINE);
 }
 
 /// M-02 regression: a deadline in the past enabled an immediate rollover, and
@@ -365,42 +355,40 @@ fn the_arbiter_cannot_be_a_counterparty() {
 #[should_panic(expected = "Harvest deadline must be in the future")]
 fn a_deadline_in_the_past_is_rejected() {
     let f = setup();
-    f.client.initialize(
-        &f.registry,
-        &f.producer,
-        &f.buyer,
-        &f.arbiter,
-        &f.token_id,
-        &String::from_str(&f.env, "soja"),
-        &1_000,
-        &100,
-        &(T0 - 1),
-    );
+    init(&f, &f.producer, &f.buyer, &f.arbiter, &f.token_id, 1_000, 100, T0 - 1);
 }
 
 #[test]
 #[should_panic(expected = "Harvest deadline too far in the future")]
 fn an_overflowing_deadline_is_rejected() {
     let f = setup();
-    f.client.initialize(
-        &f.registry,
-        &f.producer,
-        &f.buyer,
-        &f.arbiter,
-        &f.token_id,
-        &String::from_str(&f.env, "soja"),
-        &1_000,
-        &100,
-        &u64::MAX,
-    );
+    init(&f, &f.producer, &f.buyer, &f.arbiter, &f.token_id, 1_000, 100, u64::MAX);
 }
 
+/// SC-06: the forward is constructed with the deploy (escrow included); the
+/// host refuses to run the constructor again.
 #[test]
-#[should_panic(expected = "Already initialized")]
-fn double_initialization_is_rejected() {
+fn the_constructor_cannot_be_run_again() {
     let f = setup();
     init_default(&f);
-    init_default(&f);
+    let again = f.env.try_invoke_contract::<(), soroban_sdk::Error>(
+        &f.client.address,
+        &soroban_sdk::Symbol::new(&f.env, "__constructor"),
+        (
+            &f.registry,
+            &f.producer,
+            &f.buyer,
+            &f.arbiter,
+            &f.token_id,
+            String::from_str(&f.env, "soja"),
+            1_000i128,
+            100i128,
+            DEADLINE,
+        )
+            .into_val(&f.env),
+    );
+    assert!(again.is_err());
+    assert_eq!(balance(&f, &f.client.address), 100_000);
 }
 
 /// SC-07 (security review 2026-10): the arbiter could buy the buyer position

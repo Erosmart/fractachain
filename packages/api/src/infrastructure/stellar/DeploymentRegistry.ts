@@ -30,6 +30,8 @@ export interface TestnetDeployment {
   sharedFactory?: string;
   forwardWasmHash?: string;
   warrantWasmHash?: string;
+  /** Factory WASM for `testnet:clone-factory` (set by `testnet:upload-wasm factory=…`). */
+  factoryWasmHash?: string;
   usdcClassic?: { code: string; issuer: string };
 }
 

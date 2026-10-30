@@ -27,7 +27,7 @@ handleShutdownSignals(await startPlatform({ web: { handler, clientDir } }));
 | `npm run testnet:deploy-forward-warrant` | despliega forward + warrant (falla si el init falla) |
 | `npm run testnet:clone-factory` | factory propia para desarrollo sin la clave del deployer |
 | `npm run testnet:setup-usdc -w @fractachain/api` | emisor USDC + SAC propios (faucet local) |
-| `npm run testnet:upload-wasm -w @fractachain/api -- licitacion=… stockVault=…` | sube WASM nuevos y actualiza los hashes |
+| `npm run testnet:upload-wasm -w @fractachain/api -- factory=… licitacion=… stockVault=… forward=… warrant=…` | sube WASM nuevos y actualiza los hashes (con `factory=`, después `testnet:clone-factory`) |
 
 Los `testnet:*` que reescriben el deployment exigen `STELLAR_DEPLOYMENT_FILE`
 apuntando a una copia local: nunca modifican `deployments/testnet.json`.
@@ -54,6 +54,13 @@ Rutas y formatos de v1 (la web los consume tal cual), más:
 | `GET /api/kyc/provider` | `{ provider: 'didit' \| 'manual', selfieRequired }` |
 | `POST /api/kyc/verification` · `GET` · `POST …/sync` | Inicia o retoma la verificación en Didit (`{ url }`), estado, y re-lectura de la decisión al volver |
 | `POST /api/kyc/didit/webhook` | Webhook de Didit (firma HMAC, sin sesión) |
+
+**Deploy de contratos.** Los WASM nuevos se configuran en su `__constructor`
+(deploy e init en la misma transacción) y vault/forward/warrant sólo se crean
+desde la factory (`deploy_stock_vault`, `deploy_forward`, `deploy_warrant`), que
+queda fijada como su registry. El API lee el spec de cada WASM on-chain y, para
+los WASM viejos del deployment compartido, sigue usando deploy + `initialize` +
+verificación (`ContractDeployPlan`).
 
 Otros cambios de seguridad respecto de v1: sesiones con expiración y
 revocación, `POST /api/auth/google` → **410**, selfies de KYC sólo para

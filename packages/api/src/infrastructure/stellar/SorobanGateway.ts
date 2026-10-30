@@ -1,5 +1,16 @@
 import { createHash } from 'crypto';
-import { Keypair, Transaction, TransactionBuilder, contract, type xdr } from '@stellar/stellar-sdk';
+import {
+  Keypair,
+  Operation,
+  Transaction,
+  TransactionBuilder,
+  authorizeEntry,
+  contract,
+  inspectAuthEntry,
+  rpc,
+  scValToNative,
+  type xdr,
+} from '@stellar/stellar-sdk';
 import { isContractId } from '../../domain/stellar/StellarAddress';
 import {
   AppError,
@@ -75,6 +86,9 @@ export function mapSorobanError(err: unknown): AppError {
  * deploys, and relaying invocations signed by an investor's wallet.
  */
 export class SorobanGateway {
+  /** WASM hash → exported function names (WASMs are immutable, so this never goes stale). */
+  private readonly specCache = new Map<string, Promise<ReadonlySet<string>>>();
+
   constructor(
     private readonly clients: StellarClients,
     private readonly deployments: IDeploymentRegistry,
@@ -241,12 +255,121 @@ export class SorobanGateway {
     }
   }
 
+  /** Legacy deploy: no constructor (the instance is initialized in a later transaction). */
   async deployFromWasmHash(
     wasmHash: Buffer | string,
     deployer: Keypair,
   ): Promise<{ contractId: string; hash: string | null }> {
     try {
-      return await this.deploy(wasmHash, deployer);
+      return await this.deploy(wasmHash, deployer, null);
+    } catch (err) {
+      throw mapSorobanError(err);
+    }
+  }
+
+  /**
+   * Deploys and runs `__constructor(args)` in one transaction (SC-06). Other
+   * accounts the constructor authenticates sign their auth entries.
+   */
+  async deployWithConstructor(
+    wasmHash: Buffer | string,
+    deployer: Keypair,
+    args: Record<string, unknown>,
+    extraSigners: Keypair[] = [],
+  ): Promise<{ contractId: string; hash: string | null }> {
+    try {
+      return await this.deploy(wasmHash, deployer, args, extraSigners);
+    } catch (err) {
+      throw mapSorobanError(err);
+    }
+  }
+
+  /** Exported function names of an uploaded WASM, read from its contract spec. */
+  async wasmFunctions(wasmHash: string): Promise<ReadonlySet<string>> {
+    const key = wasmHash.toLowerCase();
+    let names = this.specCache.get(key);
+    if (!names) {
+      names = (async () => {
+        const wasm = await this.clients.rpc().getContractWasmByHash(Buffer.from(key, 'hex'));
+        return new Set(
+          contract.Spec.fromWasm(wasm)
+            .funcs()
+            .map((f) => String(f.name)),
+        );
+      })();
+      this.specCache.set(key, names);
+      names.catch(() => this.specCache.delete(key));
+    }
+    try {
+      return await names;
+    } catch (err) {
+      throw mapSorobanError(err);
+    }
+  }
+
+  /** Exported function names of a deployed contract's WASM. */
+  async contractFunctions(contractId: string): Promise<ReadonlySet<string>> {
+    return this.wasmFunctions(await this.wasmHashOf(contractId));
+  }
+
+  /**
+   * Invokes `method` with `source` as transaction source, letting other
+   * accounts authorize calls *below* the root (e.g. a constructor run by the
+   * factory: producer and buyer sign it while the admin signs the factory
+   * call). Simulates in `record_allow_nonroot` mode, signs each address
+   * entry with its keypair, then re-simulates with the signatures in place
+   * so resources include their verification.
+   */
+  async invokeWithCosigners(
+    contractId: string,
+    method: string,
+    args: Record<string, unknown>,
+    source: Keypair,
+    cosigners: Keypair[] = [],
+  ): Promise<InvokeResult> {
+    const srv = this.clients.rpc();
+    const passphrase = this.clients.networkPassphrase();
+    try {
+      const client = await this.client(contractId, source);
+      const scArgs = client.spec.funcArgsToScVals(method, args);
+      const build = async (auth?: xdr.SorobanAuthorizationEntry[]) =>
+        new TransactionBuilder(await srv.getAccount(source.publicKey()), {
+          fee: SOROBAN_FEE,
+          networkPassphrase: passphrase,
+        })
+          .addOperation(
+            Operation.invokeContractFunction({ contract: contractId, function: method, args: scArgs, auth }),
+          )
+          .setTimeout(SOROBAN_TIMEOUT)
+          .build();
+
+      const recorded = await srv.simulateTransaction(await build(), undefined, 'record_allow_nonroot');
+      if (!rpc.Api.isSimulationSuccess(recorded)) {
+        throw new Error((recorded as { error?: string }).error || 'La simulación falló');
+      }
+      const validUntil = (await srv.getLatestLedger()).sequence + 100;
+      const auth = await Promise.all(
+        (recorded.result?.auth ?? []).map(async (entry) => {
+          const info = inspectAuthEntry(entry) as { credentialType?: string; address?: string | null };
+          // The source account authorizes through the envelope signature; every
+          // other credential (`address`, protocol 26's `addressV2`…) names its signer.
+          if (info.credentialType === 'sourceAccount' || !info.address) return entry;
+          const signer = cosigners.find((kp) => kp.publicKey() === info.address);
+          if (!signer) throw new DomainError(`La transacción necesita la firma de ${info.address}`);
+          return authorizeEntry(entry, signer, validUntil, passphrase);
+        }),
+      );
+
+      const prepared = await srv.prepareTransaction(await build(auth));
+      prepared.sign(source);
+      const sent = await srv.sendTransaction(prepared);
+      if (sent.status === 'ERROR') {
+        throw new Error(`La red rechazó la transacción: ${JSON.stringify(sent.errorResult)}`);
+      }
+      const settled = await srv.pollTransaction(sent.hash, { attempts: 30, sleepStrategy: () => 1000 });
+      if (settled.status !== 'SUCCESS') throw new Error(`La transacción terminó en ${settled.status}`);
+      const returnValue = (settled as { returnValue?: xdr.ScVal }).returnValue;
+      return { hash: sent.hash, result: returnValue ? scValToNative(returnValue) : null };
     } catch (err) {
       throw mapSorobanError(err);
     }
@@ -255,8 +378,10 @@ export class SorobanGateway {
   private async deploy(
     wasmHash: Buffer | string,
     deployer: Keypair,
+    args: Record<string, unknown> | null,
+    extraSigners: Keypair[] = [],
   ): Promise<{ contractId: string; hash: string | null }> {
-    const assembled = await contract.Client.deploy(null, {
+    const assembled = await contract.Client.deploy(args, {
       ...this.options(deployer),
       wasmHash,
       format: 'hex',
@@ -265,6 +390,14 @@ export class SorobanGateway {
       timeoutInSeconds: SOROBAN_TIMEOUT,
       restore: true,
     } as Parameters<typeof contract.Client.deploy>[1]);
+    for (const signer of extraSigners) {
+      if (assembled.needsNonInvokerSigningBy().includes(signer.publicKey())) {
+        await assembled.signAuthEntries({
+          address: signer.publicKey(),
+          signAuthEntry: this.signers(signer).signAuthEntry,
+        });
+      }
+    }
     const sent = await assembled.signAndSend();
     const created = sent.result as contract.Client;
     const contractId = created.options.contractId;

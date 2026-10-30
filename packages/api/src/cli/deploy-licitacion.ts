@@ -6,6 +6,7 @@
  *   npm run deploy:licitacion -w @fractachain/api
  */
 import { isContractId, isStellarPublicKey } from '../domain/stellar/StellarAddress';
+import { planDeploy } from '../infrastructure/stellar/ContractDeployPlan';
 import { cliToolkit, runCli } from './toolkit';
 
 const LISTING_ID = 'IPO-SOJA-PERGAMINO-2026';
@@ -22,17 +23,14 @@ runCli(async () => {
     throw new Error('deployments/testnet.json no tiene licitacion de la que copiar el WASM');
 
   const admin = await keyring.licitacionAdmin();
-  const wasmHash = await soroban.wasmHashOf(deployment.licitacion);
-  const deployed = await soroban.deployFromWasmHash(wasmHash, admin);
-  logger.info('instancia desplegada', { contractId: deployed.contractId, hash: deployed.hash });
+  const wasmHash = deployment.licitacionWasmHash || (await soroban.wasmHashOf(deployment.licitacion));
 
   // finalize() pays this address: the company's wallet, frozen after the first contribution.
   const listing = listings.findById(LISTING_ID);
   const fiduciary = isStellarPublicKey(listing?.dossier.proceedsWallet)
     ? listing!.dossier.proceedsWallet
     : deployment.deployer || admin.publicKey();
-  const client = await soroban.client(deployed.contractId, admin);
-  await soroban.invoke(client, 'initialize', {
+  const terms = {
     admin: admin.publicKey(),
     fiduciary,
     payment_token: soroban.xlmSac(),
@@ -45,7 +43,21 @@ runCli(async () => {
       cnv_record_id: 'CNV-SANDBOX-1150',
       legal_terms_uri: 'https://example.com/las-lilas/terms',
     },
-  });
+  };
+  // Constructor WASM: deploy + construction in one transaction (SC-06).
+  const plan = planDeploy('licitacion', await soroban.wasmFunctions(wasmHash));
+  const deployed =
+    plan.kind === 'constructor'
+      ? await soroban.deployWithConstructor(wasmHash, admin, terms)
+      : await soroban.deployFromWasmHash(wasmHash, admin);
+  if (plan.kind === 'legacy') {
+    const client = await soroban.client(deployed.contractId, admin);
+    await soroban.invoke(client, 'initialize', terms);
+    if (String(await soroban.readOptional<string>(client, 'get_admin')) !== admin.publicKey()) {
+      throw new Error('La licitación quedó con otro admin (posible front-running): descartada');
+    }
+  }
+  logger.info('instancia desplegada', { contractId: deployed.contractId, hash: deployed.hash });
 
   let productId: number | null = null;
   if (keyring.hasDeployer()) {

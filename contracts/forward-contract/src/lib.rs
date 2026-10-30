@@ -26,7 +26,7 @@ pub enum ForwardKey {
     Registry,
     Producer,
     Buyer,
-    /// Resolves a disputed delivery. Set once, at initialize.
+    /// Resolves a disputed delivery. Set once, at construction.
     Arbiter,
     PaymentToken,
     CropName,
@@ -139,8 +139,13 @@ fn bump_all(env: &Env) {
 
 #[contractimpl]
 impl ForwardContract {
+    /// Runs once, atomically with the deploy (SC-06). The registry must
+    /// authorize being named (SC-02): only the issuance factory deploying the
+    /// forward (`deploy_forward`) can bind it to itself, after checking that
+    /// `payment_token` is allowlisted (calling back into the registry here
+    /// would be re-entry).
     #[allow(clippy::too_many_arguments)]
-    pub fn initialize(
+    pub fn __constructor(
         env: Env,
         registry: Address,
         producer: Address,
@@ -152,9 +157,7 @@ impl ForwardContract {
         price_per_kilo: i128,
         harvest_deadline: u64,
     ) {
-        if env.storage().persistent().has(&ForwardKey::Producer) {
-            panic!("Already initialized");
-        }
+        registry.require_auth();
         // Without this a single account could sit on both sides, escrowing and
         // recovering its own funds to inflate platform volume.
         if producer == buyer {
@@ -179,9 +182,6 @@ impl ForwardContract {
 
         producer.require_auth();
         buyer.require_auth();
-        if !RegistryClient::new(&env, &registry).is_payment_asset(&payment_token) {
-            panic!("Payment token not allowlisted");
-        }
 
         let total = total_kilos.checked_mul(price_per_kilo).expect("overflow");
 
@@ -559,8 +559,8 @@ impl ForwardContract {
         addr(&env, ForwardKey::Arbiter)
     }
 
-    /// `(producer, buyer, arbiter)` — what a deployer checks right after
-    /// `initialize` (deploy and init are separate transactions).
+    /// `(producer, buyer, arbiter)` — what a counterparty checks before
+    /// trusting an instance.
     pub fn get_parties(env: Env) -> (Address, Address, Address) {
         (
             addr(&env, ForwardKey::Producer),
@@ -569,9 +569,9 @@ impl ForwardContract {
         )
     }
 
-    /// Registry this forward trusts for its payment asset. Caller-chosen at
-    /// `initialize`, so counterparties should check it is the canonical
-    /// issuance factory.
+    /// Registry this forward trusts for its payment asset. It deployed the
+    /// forward (it authorized the constructor), so counterparties only have to
+    /// check this is the canonical issuance factory.
     pub fn get_registry(env: Env) -> Address {
         addr(&env, ForwardKey::Registry)
     }

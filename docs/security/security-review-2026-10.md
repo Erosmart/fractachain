@@ -171,23 +171,30 @@ implementado y con tests (`packages/api/test/http/security-features.test.ts`):
    `testnet:clone-factory` + `testnet:setup-usdc`.
 4. **Contratos ya desplegados:** las correcciones aplican a instancias nuevas
    tras subir el WASM. Build reproducible de esta rama (`npm run contracts:build`,
-   sin el *spec shaking* de `stellar contract build`): licitación
-   `2d9124e5…3aa2` (66 079 B), stock-vault `b97af48b…b7da`, forward
-   `5cd1c78a…a222`, warrant `1a654be5…f77c`. Ya están subidos a testnet y
-   probados end-to-end (emisión USDC → aporte → `finalize` → reparto) contra
-   una factory propia. Para el entorno compartido: `scripts/testnet/02-build.sh`
-   (stellar CLI) + `03-deploy.sh`, o `testnet:upload-wasm` y actualizar
-   `deployments/testnet.json`.
+   sin el *spec shaking* de `stellar contract build`), con constructores:
+   factory `687841a7…f689` (33 019 B), licitación `e31143d7…363e` (66 102 B),
+   stock-vault `d28043f3…d9d5` (41 877 B), forward `7effd78f…ce6d`
+   (37 672 B), warrant `6a879c0e…a5e0` (33 074 B). Subidos a testnet y
+   probados end-to-end contra una factory propia con constructor: vault
+   desplegado por la factory → mint → licitación con constructor → aportes USDC
+   → `finalize` → reparto, más forward y warrant desplegados por la factory con
+   la firma de productor/comprador/warrantera. La factory compartida de
+   `deployments/testnet.json` es del WASM viejo: para el entorno compartido hay
+   que desplegar una factory nueva (`03-deploy.sh` sin `factory` en el JSON, o
+   `testnet:upload-wasm factory=…` + `testnet:clone-factory`) y subir los WASM.
+   Mientras tanto el API sigue desplegando los WASM viejos con deploy +
+   `initialize` + verificación.
 
 ## Contratos Soroban
 
 Revisión de lectura de los seis crates (`fractachain-licitacion`, `issuance-factory`,
 `stock-vault`, `warrant-vault`, `forward-contract`, `fractachain-core`). Todos
 los hallazgos están corregidos con su test de regresión (`cargo test`:
-**135 tests OK**), además de los ítems informativos (`set_price_per_unit`
-reinicia el precio equitativo; el polvo de redondeo de dividendos se puede
-barrer). Quedan como mejora de diseño: fijar la factory on-chain y migrar a
-`__constructor`.
+**138 tests OK**; los de despliegue por la factory usan los WASM reales, así que
+CI compila los WASM antes de testear), además de los ítems informativos
+(`set_price_per_unit` reinicia el precio equitativo; el polvo de redondeo de
+dividendos se puede barrer). Las dos mejoras de diseño que quedaban (factory
+fijada on-chain y `__constructor`) están implementadas.
 
 > Los contratos ya desplegados en testnet **no cambian** hasta subir el WASM
 > nuevo (`scripts/testnet/02-build.sh` + `03-deploy.sh`) y actualizar los hashes
@@ -196,11 +203,11 @@ barrer). Quedan como mejora de diseño: fijar la factory on-chain y migrar a
 | # | Sev. | Contrato · función | Hallazgo | Estado |
 |---|---|---|---|---|
 | SC-01 | Alta | licitación · `fill_order` | Auto-fill (`buyer == seller`) sin costo (fee truncado a 0 bajo 400) subía `HighestPrice`, el piso que paga toda OPA/squeeze-out | ✅ Auto-fill bloqueado + fee redondeado hacia arriba (tests `an_order_cannot_be_filled_by_its_own_seller`, `small_fills_still_pay_the_platform_fee`) |
-| SC-02 | Alta | warrant-vault · `initialize` (también forward, stock-vault) | `registry` lo elige quien inicializa: un registry falso responde `is_warrantera = true` y se financia colateral inexistente | ✅ `get_registry` (+ `get_parties`/`get_producer`) en los tres contratos; el API y los scripts verifican el registry de cada instancia; warrant re-chequea `is_warrantera` al fondear y un warrantera revocado no liquida. ⚠️ Fijar la factory on-chain queda como cambio de diseño |
+| SC-02 | Alta | warrant-vault · `initialize` (también forward, stock-vault) | `registry` lo elige quien inicializa: un registry falso responde `is_warrantera = true` y se financia colateral inexistente | ✅ **Registry fijado on-chain:** el constructor de stock-vault, forward y warrant exige `registry.require_auth()`. Un contrato sólo autoriza lo que firma mientras ejecuta, y la factory firma el constructor únicamente desde `deploy_stock_vault` / `deploy_forward` / `deploy_warrant` (con la firma de su admin), después de validar los términos (activo de pago habilitado, warrantera acreditada): ninguna instancia puede declarar a la factory como registry sin que la factory la haya desplegado, y queda registrada (`product_id_of`). Tests `nobody_else_can_deploy_a_vault_that_claims_the_factory` (con control), `the_factory_deploys_and_registers_a_vault_bound_to_itself` (sin auth simulada del contrato). Se mantienen `get_registry`, la verificación del API y el re-chequeo de `is_warrantera` al fondear |
 | SC-03 | Alta | licitación · control 50 % (Art. 87/88) | Registro de OPA único que nunca se resetea; `contribute`/`fill_order` miran saldo libre (no `OrderEscrow`); suspensión de votos perezosa | ✅ El registro pasa a quien controla hoy; tenencia total (libre + escrow) en `contribute`, `fill_order`, `cancel_sale_order` y `accept_opa`; `has_votes` aplica la sanción vencida y `enforce_opa_deadline` la persiste |
 | SC-04 | Media | licitación · `execute_squeeze_out` | Sobrescribe `rec.acquirer`: un nuevo adquirente podía cobrar el escrow de la OPA anterior con `reclaim_opa_escrow` | ✅ `OpaEscrowOwner`: el escrow sólo vuelve a su dueño y se devuelve antes de cualquier relevo |
 | SC-05 | Media | licitación · `launch_opa` / `accept_opa` | Funcionaban en estado `Open`: un aceptante cobraba la OPA y además el `refund` si la emisión fallaba | ✅ Exigen `Successful` (test `a_tender_offer_waits_for_a_successful_issuance`) |
-| SC-06 | Media | todos · `initialize` | Deploy e init en transacciones separadas: front-running del init (p. ej. vault con admin/oráculo del atacante). `03-deploy.sh` guarda el ID antes de inicializar | ✅ `get_admin` en licitación y stock-vault; el API, los CLIs y `03-deploy.sh` verifican admin/registry después del init y descartan la instancia si no coinciden. ⚠️ Migrar a `__constructor` queda como mejora |
+| SC-06 | Media | todos · `initialize` | Deploy e init en transacciones separadas: front-running del init (p. ej. vault con admin/oráculo del atacante). `03-deploy.sh` guarda el ID antes de inicializar | ✅ **`__constructor` en los seis contratos** (deploy + init en una transacción; `initialize` eliminado; el host rechaza volver a correr el constructor: tests `the_constructor_cannot_be_run_again`). El API decide por WASM leyendo el spec on-chain: constructor, deploy por la factory, o — para WASM viejos — deploy + `initialize` + verificación de admin/registry como antes |
 | SC-07 | Media | forward · `transfer_position` | El árbitro podía comprar la posición del comprador y fallar su propia disputa | ✅ Rechazado (test `the_arbiter_cannot_buy_the_position`) |
 | SC-08 | Baja | licitación · `cancel_sale_order` | Tras un squeeze-out, cancelar una orden vuelve a acreditar RWA (saldo fantasma; no cobrable hoy) | ✅ Sólo con el mercado en `Successful` |
 | SC-09 | Baja | licitación · `verify_investor` (kyc.rs) | Renovar el KYC restauraba votos suspendidos por Art. 88 | ✅ Conserva `voting_rights` (test `kyc_renewal_keeps_a_suspended_vote_suspended`) |

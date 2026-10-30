@@ -48,7 +48,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: contracts
+      # The factory tests deploy the real product WASMs (SC-02 / SC-06).
+      - name: Build WASM
+        working-directory: contracts
+        run: cargo build --locked --release --target wasm32v1-none
+        env:
+          SOROBAN_SDK_BUILD_SYSTEM_SUPPORTS_SPEC_SHAKING_V2: '1'
       - run: cargo test --manifest-path contracts/Cargo.toml --locked

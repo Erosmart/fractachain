@@ -1,9 +1,13 @@
 /**
- * Uploads contract WASMs built by `stellar contract build` and records their
- * hashes in the local deployment file, so new listings instantiate the new
- * code. Upload is content-addressed: the hash is the sha256 of the file.
+ * Uploads contract WASMs built by `stellar contract build` (or
+ * `npm run contracts:build`) and records their hashes in the local deployment
+ * file, so new listings instantiate the new code. Upload is
+ * content-addressed: the hash is the sha256 of the file.
  *
  *   npm run testnet:upload-wasm -w @fractachain/api -- licitacion=path.wasm stockVault=path.wasm …
+ *
+ * `factory=` only records the hash: `testnet:clone-factory` instantiates it.
+ * Constructor-based WASMs are detected from their spec at deploy time.
  */
 import crypto from 'crypto';
 import fs from 'fs';
@@ -17,6 +21,7 @@ const FIELDS: Record<string, keyof TestnetDeployment> = {
   stockVault: 'stockVaultWasmHash',
   forward: 'forwardWasmHash',
   warrant: 'warrantWasmHash',
+  factory: 'factoryWasmHash',
 };
 
 runCli(async () => {

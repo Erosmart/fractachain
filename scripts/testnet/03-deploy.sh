@@ -46,35 +46,43 @@ view() {
     "$@" | tr -d '\r"' | tail -n 1
 }
 
-# Deploy and initialize are separate transactions, so anyone watching the
-# network can initialize a fresh instance first and own it. Every instance is
-# checked right after init (and when reused): its stored admin must be ours.
+# Contracts run their constructor in the deploy transaction (SC-06), so a
+# fresh instance can't be initialized by someone else first. Instances reused
+# from the state file may predate that (deploy + initialize): their stored
+# admin must still be ours.
 require_admin() {
   local id="$1" label="$2"
   local stored
   stored="$(view "$id" get_admin || true)"
   if [[ "$stored" != "$DEPLOYER_PK" ]]; then
     echo "ERROR: $label $id tiene admin '$stored', esperado $DEPLOYER_PK." >&2
-    echo "       Posible initialize adelantado por un tercero: NO se guarda el ID. Redeployá." >&2
+    echo "       Instancia ajena o initialize adelantado (WASM viejo): NO se usa. Redeployá." >&2
     exit 1
   fi
   echo "    admin verificado ($label)"
 }
 
+# deploy_wasm <file.wasm> [constructor args…]
 deploy_wasm() {
   local wasm="$1"
+  shift
   stellar contract deploy \
     --wasm "$wasm" \
     --source-account "$DEPLOYER_ID" \
     --network "$NETWORK" \
+    -- "$@" \
     | tr -d '\r' | grep -E '^C[A-Z0-9]{55}$' | tail -n 1
+}
+
+upload_wasm() {
+  stellar contract upload --wasm "$1" --source-account "$DEPLOYER_ID" --network "$NETWORK" | tr -d '\r' | tail -n 1
 }
 
 # stellar-cli 28 still panics on named C-style enums; pass the discriminant.
 KIND_XLM=0
 KIND_USDC=1
 KIND_LICITACION=0
-KIND_STOCK=3
+
 
 read_state() {
   python3 - "$STATE" "$1" <<'PY'
@@ -115,10 +123,15 @@ FACTORY_ID="$(read_state factory)"
 if [[ "$FACTORY_ID" == C* ]]; then
   echo "    reusing factory $FACTORY_ID"
   require_admin "$FACTORY_ID" factory
+  # Vaults are deployed by the factory now (deploy_stock_vault, SC-02).
+  if ! view "$FACTORY_ID" product_id_of --contract_address "$FACTORY_ID" >/dev/null 2>&1; then
+    echo "ERROR: la factory $FACTORY_ID es del WASM viejo (no despliega vaults)." >&2
+    echo "       Borrá \"factory\" de $STATE para desplegar una nueva." >&2
+    exit 1
+  fi
 else
-  FACTORY_ID="$(deploy_wasm "$FACTORY_WASM")"
+  FACTORY_ID="$(deploy_wasm "$FACTORY_WASM" --admin "$DEPLOYER_PK")"
   echo "    factory  $FACTORY_ID"
-  invoke "$FACTORY_ID" initialize --admin "$DEPLOYER_PK"
   require_admin "$FACTORY_ID" factory
   save_state factory "$FACTORY_ID"
 fi
@@ -126,24 +139,32 @@ invoke "$FACTORY_ID" set_payment_asset --admin "$DEPLOYER_PK" --kind "$KIND_USDC
 invoke "$FACTORY_ID" set_payment_asset --admin "$DEPLOYER_PK" --kind "$KIND_XLM" --token "$XLM_SAC"
 
 echo "== 3. Stock vault + licitación demo"
+FACTORY_HASH="$(upload_wasm "$FACTORY_WASM")"
+STOCK_HASH="$(upload_wasm "$STOCK_WASM")"
+LIC_HASH="$(upload_wasm "$LIC_WASM")"
+save_state factoryWasmHash "$FACTORY_HASH"
+save_state stockVaultWasmHash "$STOCK_HASH"
+save_state licitacionWasmHash "$LIC_HASH"
+
 STOCK_ID="$(read_state stockVault)"
 if [[ "$STOCK_ID" == C* ]]; then
   echo "    reusing stock $STOCK_ID"
   require_admin "$STOCK_ID" "stock vault"
 else
-  STOCK_ID="$(deploy_wasm "$STOCK_WASM")"
-  echo "    stock    $STOCK_ID"
-  invoke "$STOCK_ID" initialize_stock \
+  # SC-02: the factory deploys the vault and signs off its constructor; that
+  # is the only way a vault can name this factory as its registry. It also
+  # registers the product.
+  STOCK_ID="$(invoke "$FACTORY_ID" deploy_stock_vault \
     --admin "$DEPLOYER_PK" \
+    --wasm_hash "$STOCK_HASH" \
+    --salt "$(python3 -c 'import secrets; print(secrets.token_hex(32))')" \
+    --custodian "$DEPLOYER_PK" \
     --por_oracle "$POR_PK" \
-    --registry "$FACTORY_ID" \
-    --payment_token "$USDC_SAC" \
-    --ticker TFC \
-    --company_name "Fractachain Demo SA" \
-    --isin ARDEMOTEST01 \
-    --custodian_cuit "30712345678"
+    --payment_kind "$KIND_USDC" \
+    --terms '{"ticker":"TFC","company_name":"Fractachain Demo SA","isin":"ARDEMOTEST01","custodian_cuit":"30712345678"}' \
+    --name "Fractachain Demo stock" | tr -d '\r"' | tail -n 1)"
+  echo "    stock    $STOCK_ID"
   require_admin "$STOCK_ID" "stock vault"
-  # The vault must trust *our* factory, not one the initializer picked.
   if [[ "$(view "$STOCK_ID" get_registry)" != "$FACTORY_ID" ]]; then
     echo "ERROR: el stock vault no apunta a la factory $FACTORY_ID" >&2
     exit 1
@@ -156,11 +177,10 @@ if [[ "$LIC_ID" == C* ]]; then
   echo "    reusing licitacion $LIC_ID"
   require_admin "$LIC_ID" licitacion
 else
-  LIC_ID="$(deploy_wasm "$LIC_WASM")"
-  echo "    licitacion $LIC_ID"
   DEADLINE=$(( $(date +%s) + 30*86400 ))
   LEGAL_INFO='{"fideicomiso_hash":"0101010101010101010101010101010101010101010101010101010101010101","cnv_record_id":"CNV-TESTNET-1","legal_terms_uri":"https://fractachain.example/legal"}'
-  invoke "$LIC_ID" initialize \
+  # Constructor args after `--`: deploy and construction are one transaction.
+  LIC_ID="$(deploy_wasm "$LIC_WASM" \
     --admin "$DEPLOYER_PK" \
     --fiduciary "$DEPLOYER_PK" \
     --payment_token "$USDC_SAC" \
@@ -168,30 +188,27 @@ else
     --hard_cap 100000 \
     --deadline "$DEADLINE" \
     --price_per_unit 10 \
-    --legal_info "$LEGAL_INFO"
+    --legal_info "$LEGAL_INFO")"
+  echo "    licitacion $LIC_ID"
   require_admin "$LIC_ID" licitacion
   save_state licitacion "$LIC_ID"
 fi
 
-invoke "$FACTORY_ID" register_product \
-  --admin "$DEPLOYER_PK" \
-  --kind "$KIND_STOCK" \
-  --contract_address "$STOCK_ID" \
-  --payment_kind "$KIND_USDC" \
-  --price_per_unit 10 \
-  --name "Fractachain Demo stock"
+# The stock vault was registered by deploy_stock_vault. The licitación is
+# deployed by its admin, so it is registered here (once).
+if ! [[ "$(view "$FACTORY_ID" product_id_of --contract_address "$LIC_ID")" =~ ^[0-9]+$ ]]; then
+  invoke "$FACTORY_ID" register_product \
+    --admin "$DEPLOYER_PK" \
+    --kind "$KIND_LICITACION" \
+    --contract_address "$LIC_ID" \
+    --payment_kind "$KIND_USDC" \
+    --price_per_unit 10 \
+    --name "Fractachain Demo IPO"
+fi
 
-invoke "$FACTORY_ID" register_product \
-  --admin "$DEPLOYER_PK" \
-  --kind "$KIND_LICITACION" \
-  --contract_address "$LIC_ID" \
-  --payment_kind "$KIND_USDC" \
-  --price_per_unit 10 \
-  --name "Fractachain Demo IPO"
-
-echo "== 4. WASM de forward/warrant subidos (sin instanciar: necesitan productor/comprador reales)"
-FORWARD_HASH="$(stellar contract upload --wasm "$FORWARD_WASM" --source-account "$DEPLOYER_ID" --network "$NETWORK")"
-WARRANT_HASH="$(stellar contract upload --wasm "$WARRANT_WASM" --source-account "$DEPLOYER_ID" --network "$NETWORK")"
+echo "== 4. WASM de forward/warrant subidos (los instancia la factory: 05-forward-warrant.sh)"
+FORWARD_HASH="$(upload_wasm "$FORWARD_WASM")"
+WARRANT_HASH="$(upload_wasm "$WARRANT_WASM")"
 echo "    forward wasm  $FORWARD_HASH"
 echo "    warrant wasm  $WARRANT_HASH"
 

@@ -56,8 +56,8 @@ struct Fixture {
     registry: Address,
 }
 
-/// Registers the registry, a SAC, and the vault. Does **not** initialize the
-/// vault, so individual tests can vary the arguments.
+/// Registers the registry and a SAC, and reserves the vault's address. The
+/// vault itself is constructed by `init`, so tests can vary the arguments.
 fn setup() -> Fixture {
     let env = Env::default();
     env.mock_all_auths();
@@ -76,7 +76,8 @@ fn setup() -> Fixture {
     let registry = env.register(MockRegistry, ());
     MockRegistryClient::new(&env, &registry).seed(&oracle, &token_id);
 
-    let id = env.register(WarrantVaultContract, ());
+    // Deployed (constructor) by `init`, at this address.
+    let id = Address::generate(&env);
     let client = WarrantVaultContractClient::new(&env, &id);
 
     Fixture {
@@ -90,18 +91,37 @@ fn setup() -> Fixture {
     }
 }
 
-fn init_default(f: &Fixture, duration_days: u64) {
-    f.client.initialize(
-        &f.registry,
-        &f.producer,
-        &f.oracle,
-        &f.token_id,
-        &BytesN::from_array(&f.env, &[1u8; 32]),
-        &100_000,
-        &5000,
-        &800,
-        &duration_days,
+/// Deploys the vault at the fixture's address (the constructor runs here).
+#[allow(clippy::too_many_arguments)]
+fn init(
+    f: &Fixture,
+    producer: &Address,
+    oracle: &Address,
+    token: &Address,
+    inventory_value: i128,
+    ltv_bps: u32,
+    interest_rate_bps: u32,
+    duration_days: u64,
+) {
+    f.env.register_at(
+        &f.client.address,
+        WarrantVaultContract,
+        (
+            &f.registry,
+            producer,
+            oracle,
+            token,
+            BytesN::from_array(&f.env, &[1u8; 32]),
+            inventory_value,
+            ltv_bps,
+            interest_rate_bps,
+            duration_days,
+        ),
     );
+}
+
+fn init_default(f: &Fixture, duration_days: u64) {
+    init(f, &f.producer, &f.oracle, &f.token_id, 100_000, 5000, 800, duration_days);
 }
 
 #[test]
@@ -128,7 +148,7 @@ fn fund_repay_happy_path_charges_the_exact_prorated_interest() {
     assert_eq!(f.client.get_collateral_holder(), f.producer);
 }
 
-/// C-03 regression. `DueDate` used to be pinned at `initialize`, so a lender
+/// C-03 regression. `DueDate` used to be pinned at construction, so a lender
 /// could wait out the original term plus grace, then fund and liquidate in the
 /// same ledger and keep collateral worth twice the principal.
 #[test]
@@ -141,7 +161,7 @@ fn funding_late_in_the_window_still_grants_the_producer_a_full_term() {
     f.env.ledger().set_timestamp(funded_at);
     f.client.fund_loan(&f.lender);
 
-    // The term runs from disbursement, not from initialize.
+    // The term runs from disbursement, not from construction.
     let (_, _, _, start_ts, due_date, _) = f.client.get_terms();
     assert_eq!(start_ts, funded_at);
     assert_eq!(due_date, funded_at + 30 * DAY);
@@ -241,84 +261,43 @@ fn repaying_after_grace_is_rejected_so_the_state_is_unambiguous() {
 #[should_panic(expected = "Producer cannot attest its own collateral")]
 fn producer_cannot_be_its_own_warrantera() {
     let f = setup();
-    f.client.initialize(
-        &f.registry,
-        &f.producer,
-        &f.producer,
-        &f.token_id,
-        &BytesN::from_array(&f.env, &[1u8; 32]),
-        &100_000,
-        &5000,
-        &800,
-        &30,
-    );
+    init(&f, &f.producer, &f.producer, &f.token_id, 100_000, 5000, 800, 30);
 }
 
-#[test]
-#[should_panic(expected = "Warrantera not accredited")]
-fn an_unaccredited_warrantera_is_rejected() {
-    let f = setup();
-    let impostor = Address::generate(&f.env);
-    f.client.initialize(
-        &f.registry,
-        &f.producer,
-        &impostor,
-        &f.token_id,
-        &BytesN::from_array(&f.env, &[1u8; 32]),
-        &100_000,
-        &5000,
-        &800,
-        &30,
-    );
-}
 
-/// M-04: a look-alike token whose `transfer` is a no-op would let a loan
-/// "fund" without moving value.
-#[test]
-#[should_panic(expected = "Payment token not allowlisted")]
-fn a_non_allowlisted_payment_token_is_rejected() {
-    let f = setup();
-    let fake_admin = Address::generate(&f.env);
-    let fake_token = f
-        .env
-        .register_stellar_asset_contract_v2(fake_admin)
-        .address();
-    f.client.initialize(
-        &f.registry,
-        &f.producer,
-        &f.oracle,
-        &fake_token,
-        &BytesN::from_array(&f.env, &[1u8; 32]),
-        &100_000,
-        &5000,
-        &800,
-        &30,
-    );
-}
 
 #[test]
 #[should_panic(expected = "Interest rate out of range")]
 fn an_unbounded_interest_rate_is_rejected() {
     let f = setup();
-    f.client.initialize(
-        &f.registry,
-        &f.producer,
-        &f.oracle,
-        &f.token_id,
-        &BytesN::from_array(&f.env, &[1u8; 32]),
-        &100_000,
-        &5000,
-        &u32::MAX,
-        &30,
-    );
+    init(&f, &f.producer, &f.oracle, &f.token_id, 100_000, 5000, u32::MAX, 30);
 }
 
+/// SC-06: the vault is constructed with the deploy; the host refuses to run
+/// the constructor again, so terms and registry can't be rewritten.
 #[test]
-#[should_panic(expected = "Already initialized")]
-fn double_initialization_is_rejected() {
+fn the_constructor_cannot_be_run_again() {
     let f = setup();
     init_default(&f, 30);
-    init_default(&f, 30);
+    let impostor = Address::generate(&f.env);
+    let again = f.env.try_invoke_contract::<(), soroban_sdk::Error>(
+        &f.client.address,
+        &soroban_sdk::Symbol::new(&f.env, "__constructor"),
+        (
+            &impostor,
+            &f.producer,
+            &f.oracle,
+            &f.token_id,
+            BytesN::from_array(&f.env, &[1u8; 32]),
+            1i128,
+            5000u32,
+            800u32,
+            30u64,
+        )
+            .into_val(&f.env),
+    );
+    assert!(again.is_err());
+    assert_eq!(f.client.get_registry(), f.registry);
 }
 
 #[test]
@@ -353,8 +332,8 @@ fn repayment_and_liquidation_do_not_overlap_at_the_grace_boundary() {
     assert_eq!(f.client.get_status(), WarrantStatus::Liquidated);
 }
 
-/// SC-02 (security review 2026-10): the registry is caller-chosen at
-/// initialize, so it must be inspectable before funding.
+/// SC-02 (security review 2026-10): the registry that vetted and deployed the
+/// vault must be inspectable before funding.
 #[test]
 fn the_trusted_registry_and_producer_are_readable() {
     let f = setup();
