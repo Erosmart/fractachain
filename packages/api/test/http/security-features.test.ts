@@ -3,6 +3,7 @@ import os from 'os';
 import path from 'path';
 import { Keypair } from '@stellar/stellar-sdk';
 import request from 'supertest';
+import { DEFAULT_LEGAL_VERSION as LEGAL } from '../../src/domain/account/Account';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadConfig } from '../../src/config/env';
 import { buildContainer, type Container } from '../../src/container';
@@ -83,10 +84,14 @@ const sessionCookie = (res: request.Response) =>
 
 describe('cookie session + CSRF', () => {
   it('sets an HttpOnly SameSite=Strict cookie and accepts it for reads', async () => {
-    const res = await api()
-      .post('/api/auth/email')
-      .send({ email: 'cookie@example.com', password: 'cookie-pass-1' });
-    expect(res.status).toBe(200);
+    const res = await api().post('/api/auth/register').send({
+      name: 'Test',
+      email: 'cookie@example.com',
+      password: 'cookie-pass-1',
+      acceptTerms: true,
+      termsVersion: LEGAL,
+    });
+    expect(res.status).toBe(201);
     const raw = (res.headers['set-cookie'] as unknown as string[]).join(';');
     expect(raw).toMatch(/HttpOnly/i);
     expect(raw).toMatch(/SameSite=Strict/i);
@@ -96,9 +101,13 @@ describe('cookie session + CSRF', () => {
   });
 
   it('refuses cookie-authenticated writes without the CSRF header or from another origin', async () => {
-    const login = await api()
-      .post('/api/auth/email')
-      .send({ email: 'csrf@example.com', password: 'csrf-pass-12' });
+    const login = await api().post('/api/auth/register').send({
+      name: 'Test',
+      email: 'csrf@example.com',
+      password: 'csrf-pass-12',
+      acceptTerms: true,
+      termsVersion: LEGAL,
+    });
     const cookie = sessionCookie(login)!;
     const bare = await api().post('/api/auth/logout').set('Cookie', cookie);
     expect(bare.status).toBe(403);
@@ -121,9 +130,13 @@ describe('cookie session + CSRF', () => {
 
 describe('email verification and password reset', () => {
   it('sends a verification link and gates KYC until it is used', async () => {
-    const login = await api()
-      .post('/api/auth/email')
-      .send({ email: 'vera@example.com', password: 'vera-pass-12' });
+    const login = await api().post('/api/auth/register').send({
+      name: 'Test',
+      email: 'vera@example.com',
+      password: 'vera-pass-12',
+      acceptTerms: true,
+      termsVersion: LEGAL,
+    });
     const bearer = `Bearer ${login.body.token}`;
     await api().post('/api/auth/wallet').set('Authorization', bearer).send({ mode: 'SELF' });
     const blocked = await api()
@@ -147,6 +160,13 @@ describe('email verification and password reset', () => {
       .post('/api/auth/freighter')
       .send({ publicKey: kp.publicKey(), message, signature });
     expect(login.status).toBe(200);
+    // Wallet sign-ups accept the Terms after their first login, before anything else.
+    expect(login.body.user.termsAccepted).toBe(false);
+    const accepted = await api()
+      .post('/api/auth/terms/accept')
+      .set('Authorization', `Bearer ${login.body.token}`)
+      .send({ version: LEGAL });
+    expect(accepted.body.user.termsAccepted).toBe(true);
     const kyc = await api()
       .post('/api/kyc/onboard')
       .set('Authorization', `Bearer ${login.body.token}`)
@@ -161,9 +181,13 @@ describe('email verification and password reset', () => {
   });
 
   it('resets the password through the emailed link and kills old sessions', async () => {
-    const login = await api()
-      .post('/api/auth/email')
-      .send({ email: 'rita@example.com', password: 'rita-old-pass' });
+    const login = await api().post('/api/auth/register').send({
+      name: 'Test',
+      email: 'rita@example.com',
+      password: 'rita-old-pass',
+      acceptTerms: true,
+      termsVersion: LEGAL,
+    });
     const oldToken = login.body.token as string;
     expect((await api().post('/api/auth/password/forgot').send({ email: 'nobody@example.com' })).status).toBe(
       200,

@@ -2,11 +2,12 @@ import { Keypair } from '@stellar/stellar-sdk';
 import { isStellarPublicKey } from '../../domain/stellar/StellarAddress';
 import type { IClock } from '../../shared/clock';
 
-export type WalletChallengePurpose = 'login' | 'link';
+export type WalletChallengePurpose = 'login' | 'link' | 'close';
 
 const PREFIX: Record<WalletChallengePurpose, string> = {
   login: 'fractachain-login:',
   link: 'fractachain-link:',
+  close: 'fractachain-close:',
 };
 
 export interface IWalletSignatureVerifier {

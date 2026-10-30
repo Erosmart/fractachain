@@ -19,6 +19,8 @@ export type ErrorCode =
   | 'CSRF'
   | 'TWO_FACTOR_REQUIRED'
   | 'EMAIL_NOT_VERIFIED'
+  | 'TERMS_REQUIRED'
+  | 'WRONG_PASSWORD'
   /** A built transaction outlived its time bounds (build again). */
   | 'TX_EXPIRED'
   /** The signed transaction is not the one the API built. */

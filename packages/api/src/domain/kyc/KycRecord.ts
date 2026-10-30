@@ -33,6 +33,8 @@ export interface KycRecord {
   expiresAt?: string;
   /** Hosted identity verification (Didit), when a provider is configured. */
   verification?: KycVerification;
+  /** The owner closed the account: only the legally required minimum is kept. */
+  closedAt?: string;
 }
 
 export interface KycVerification {

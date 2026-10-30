@@ -1,5 +1,5 @@
 import type { PublicAccount } from '@fractachain/shared';
-import { isEmailVerified, isWalletEmail, type Account } from '../../domain/account/Account';
+import { TermsPolicy, isEmailVerified, isWalletEmail, type Account } from '../../domain/account/Account';
 import type { IAccountRepository } from '../../domain/account/AccountRepository';
 import {
   GafiPolicy,
@@ -106,6 +106,7 @@ export class KycService {
 
   async submitOnboarding(accountId: string, input: OnboardingKycInput): Promise<PublicAccount> {
     const account = this.accounts.require(accountId);
+    TermsPolicy.assertAccepted(account);
     if (!account.custodyMode) throw new DomainError('Elegí primero el tipo de custodia');
     if (
       this.options.requireEmailVerification &&

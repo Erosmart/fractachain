@@ -19,6 +19,17 @@ import { ComplianceService } from './application/compliance/ComplianceService';
 import { StockCatalogService } from './application/custody/StockCatalogService';
 import { DemoDossierService } from './application/demo/DemoDossierService';
 import { IssuanceProductService } from './application/issuance/IssuanceProductService';
+import { AccountPrivacyService, type ICustodialFunds } from './application/account/AccountPrivacyService';
+import { MailSecurityNotices } from './application/security/SecurityNotices';
+import { SupportService } from './application/support/SupportService';
+import { TermsPolicy } from './domain/account/Account';
+import { AccountController } from './http/controllers/AccountController';
+import { SupportController } from './http/controllers/SupportController';
+import {
+  JsonSupportRepository,
+  SUPPORT_KEY,
+} from './infrastructure/persistence/repositories/JsonSupportRepository';
+import { HorizonCustodialFunds } from './infrastructure/stellar/CustodialFunds';
 import { createChainModule } from './modules/chain';
 import { createTxModule } from './modules/tx';
 import { TX_BUILDS_KEY } from './application/tx/TxBuildStore';
@@ -137,6 +148,7 @@ export const PERSISTED_DOCUMENTS: ReadonlySet<string> = new Set([
   AUDIT_KEY,
   CONTRIBUTIONS_KEY,
   TX_BUILDS_KEY,
+  SUPPORT_KEY,
   'revoked-sessions.json',
 ]);
 
@@ -145,6 +157,8 @@ export interface ContainerOverrides {
   secrets?: ISecretStore;
   clock?: IClock;
   mailer?: IMailer;
+  /** Replaces the Horizon balance read used before closing a custodial account (tests). */
+  custodialFunds?: ICustodialFunds;
   /** Replaces the Didit client (tests). Needs DIDIT_* in the config to take effect end to end. */
   identityProvider?: IIdentityVerificationProvider;
 }
@@ -188,6 +202,8 @@ export async function buildContainer(
   logger: ILogger,
   overrides: ContainerOverrides = {},
 ): Promise<Container> {
+  // One legal version for the whole process (TraderPolicy and friends check it).
+  TermsPolicy.configure(config.legal.version);
   const store = overrides.store ?? (await createStore(config, logger));
   const clock = overrides.clock ?? new SystemClock();
 
@@ -395,6 +411,28 @@ export async function buildContainer(
     emailVerification,
     clock,
     { autoApproveNewAccounts: config.demo.hackathon },
+    new MailSecurityNotices(mailer, config.mail.appUrl, logger.child({ component: 'security' })),
+  );
+  const support = new SupportService(
+    new JsonSupportRepository(store),
+    mailer,
+    () => admins.adminEmails(),
+    clock,
+    logger.child({ component: 'support' }),
+  );
+  const privacy = new AccountPrivacyService(
+    accountRepo,
+    kycRepo,
+    selfies,
+    audit,
+    support,
+    store,
+    overrides.custodialFunds ?? new HorizonCustodialFunds(clients),
+    walletSignatures,
+    hasher,
+    mailer,
+    clock,
+    logger.child({ component: 'privacy' }),
   );
   const kyc = new KycService(
     accountRepo,
@@ -499,6 +537,16 @@ export async function buildContainer(
       ),
       new WalletController(wallets, guard, limits),
       new KycController(kyc, verification, guard, limits, auditRoutes),
+      new AccountController(
+        privacy,
+        auth,
+        cookie,
+        guard,
+        limits,
+        auditRoutes,
+        /^\d{4}-\d{2}-\d{2}$/.test(config.legal.version) ? config.legal.version : '',
+      ),
+      new SupportController(support, guard, limits, auditRoutes),
       new CatalogController(stocks, products, mocks, guard, auditRoutes),
       new ListingController(
         listings,

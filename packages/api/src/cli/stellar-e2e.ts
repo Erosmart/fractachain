@@ -265,6 +265,16 @@ runCli(async () => {
     investor.publicKey(),
   );
 
+  // Wallet sign-ups accept the Terms of Service and Privacy Policy before KYC.
+  const legal = await api.data<{ termsVersion: string }>('GET', '/api/legal');
+  const accepted = await api.call<{ user: { termsAccepted: boolean } }>(
+    'POST',
+    '/api/auth/terms/accept',
+    { version: legal.termsVersion },
+    token,
+  );
+  check('términos y privacidad aceptados', accepted.user.termsAccepted, legal.termsVersion);
+
   await api.call(
     'POST',
     '/api/kyc/onboard',

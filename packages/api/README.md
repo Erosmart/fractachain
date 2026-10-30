@@ -17,16 +17,16 @@ handleShutdownSignals(await startPlatform({ web: { handler, clientDir } }));
 
 ## Scripts
 
-| Comando (desde la raíz) | Qué hace |
-|---|---|
-| `npm test -w @fractachain/api` | vitest: unitarios + HTTP con supertest (sin red) |
-| `npm run typecheck -w @fractachain/api` | `tsc --noEmit` (src + tests) |
-| `npm run build -w @fractachain/api` | compila a `dist/` (con `.d.ts`) |
-| `npm run dev:api-only` | API sola en `PORT` con `tsx watch` |
-| `npm run testnet:deploy-licitacion` | nueva licitación XLM de Las Lilas |
-| `npm run testnet:deploy-forward-warrant` | despliega forward + warrant (falla si el init falla) |
-| `npm run testnet:clone-factory` | factory propia para desarrollo sin la clave del deployer |
-| `npm run testnet:setup-usdc -w @fractachain/api` | emisor USDC + SAC propios (faucet local) |
+| Comando (desde la raíz)                                                                                      | Qué hace                                                                                  |
+| ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `npm test -w @fractachain/api`                                                                               | vitest: unitarios + HTTP con supertest (sin red)                                          |
+| `npm run typecheck -w @fractachain/api`                                                                      | `tsc --noEmit` (src + tests)                                                              |
+| `npm run build -w @fractachain/api`                                                                          | compila a `dist/` (con `.d.ts`)                                                           |
+| `npm run dev:api-only`                                                                                       | API sola en `PORT` con `tsx watch`                                                        |
+| `npm run testnet:deploy-licitacion`                                                                          | nueva licitación XLM de Las Lilas                                                         |
+| `npm run testnet:deploy-forward-warrant`                                                                     | despliega forward + warrant (falla si el init falla)                                      |
+| `npm run testnet:clone-factory`                                                                              | factory propia para desarrollo sin la clave del deployer                                  |
+| `npm run testnet:setup-usdc -w @fractachain/api`                                                             | emisor USDC + SAC propios (faucet local)                                                  |
 | `npm run testnet:upload-wasm -w @fractachain/api -- factory=… licitacion=… stockVault=… forward=… warrant=…` | sube WASM nuevos y actualiza los hashes (con `factory=`, después `testnet:clone-factory`) |
 
 Los `testnet:*` que reescriben el deployment exigen `STELLAR_DEPLOYMENT_FILE`
@@ -42,18 +42,27 @@ Un solo `.env` en la raíz del repo (`.env.example`). Se valida al arrancar
 
 Rutas y formatos de v1 (la web los consume tal cual), más:
 
-| Endpoint | Qué hace |
-|---|---|
-| Cookie `fc_session` (`__Host-fc_session` en prod) | Sesión `HttpOnly; SameSite=Strict` en cada login; Bearer sigue funcionando para clientes no-browser |
-| `X-Requested-With: fractachain` | Requerido en escrituras autenticadas por cookie (CSRF) → si falta, 403 `CSRF` |
-| `POST /api/auth/2fa/setup` · `enable` · `disable` · `verify` | TOTP; con 2FA el login responde `{ twoFactorRequired, challenge }` |
-| `POST /api/auth/sessions/revoke-all` | Cierra todas las sesiones |
-| `POST /api/auth/email/verify` · `resend` | Verificación de email |
-| `POST /api/auth/password/forgot` · `reset` | Reseteo de contraseña (sin enumeración; cierra sesiones) |
-| `GET /api/admin/audit?limit&action&actor` | Registro de auditoría |
-| `GET /api/kyc/provider` | `{ provider: 'didit' \| 'manual', selfieRequired }` |
-| `POST /api/kyc/verification` · `GET` · `POST …/sync` | Inicia o retoma la verificación en Didit (`{ url }`), estado, y re-lectura de la decisión al volver |
-| `POST /api/kyc/didit/webhook` | Webhook de Didit (firma HMAC, sin sesión) |
+| Endpoint                                                         | Qué hace                                                                                                                                                           |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Cookie `fc_session` (`__Host-fc_session` en prod)                | Sesión `HttpOnly; SameSite=Strict` en cada login; Bearer sigue funcionando para clientes no-browser                                                                |
+| `X-Requested-With: fractachain`                                  | Requerido en escrituras autenticadas por cookie (CSRF) → si falta, 403 `CSRF`                                                                                      |
+| `POST /api/auth/2fa/setup` · `enable` · `disable` · `verify`     | TOTP; con 2FA el login responde `{ twoFactorRequired, challenge }`                                                                                                 |
+| `POST /api/auth/sessions/revoke-all`                             | Cierra todas las sesiones                                                                                                                                          |
+| `POST /api/auth/email/verify` · `resend`                         | Verificación de email                                                                                                                                              |
+| `POST /api/auth/password/forgot` · `reset`                       | Reseteo de contraseña (sin enumeración; cierra sesiones)                                                                                                           |
+| `GET /api/admin/audit?limit&action&actor`                        | Registro de auditoría                                                                                                                                              |
+| `GET /api/kyc/provider`                                          | `{ provider: 'didit' \| 'manual', selfieRequired }`                                                                                                                |
+| `POST /api/kyc/verification` · `GET` · `POST …/sync`             | Inicia o retoma la verificación en Didit (`{ url }`), estado, y re-lectura de la decisión al volver                                                                |
+| `POST /api/kyc/didit/webhook`                                    | Webhook de Didit (firma HMAC, sin sesión)                                                                                                                          |
+| `POST /api/auth/register`                                        | Alta con email `{ name, email, password, acceptTerms: true, termsVersion }` → 201 + sesión; 409 si el email existe; 400 `TERMS_REQUIRED` sin los Términos vigentes |
+| `POST /api/auth/email`                                           | **Sólo ingreso**: un email desconocido responde igual que una contraseña incorrecta (401)                                                                          |
+| `GET /api/legal`                                                 | Versión vigente de Términos y Privacidad (`LEGAL_VERSION`)                                                                                                         |
+| `POST /api/auth/terms/accept`                                    | Acepta la versión vigente (cuentas creadas con wallet o Google, o tras un cambio de versión). KYC, aportes y órdenes sin aceptarla → 403 `TERMS_REQUIRED`          |
+| `POST /api/auth/password/change`                                 | Cambia la contraseña (actual incorrecta → 403 `WRONG_PASSWORD`), cierra las demás sesiones y emite una nueva                                                       |
+| `GET /api/account/export`                                        | Descarga JSON con los datos de la cuenta (Ley 25.326), sin secretos                                                                                                |
+| `POST /api/account/close`                                        | Cierra la cuenta `{ confirm: 'CERRAR', password? \| signature? }`; 409 si hay fondos custodiales o posiciones                                                      |
+| `POST /api/support/messages`                                     | Formulario de contacto (público, 5/h por IP, honeypot `website`)                                                                                                   |
+| `GET /api/admin/support?status=` · `POST …/:id/close` · `reopen` | Bandeja de soporte de la consola                                                                                                                                   |
 
 **Deploy de contratos.** Los WASM nuevos se configuran en su `__constructor`
 (deploy e init en la misma transacción) y vault/forward/warrant sólo se crean

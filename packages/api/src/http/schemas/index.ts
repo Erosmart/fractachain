@@ -61,6 +61,37 @@ export const ResetPasswordBody = z.object({
   password: z.string().max(256),
 });
 
+/** Terms acceptance is checked by the service (answers `TERMS_REQUIRED`, not a generic validation error). */
+export const RegisterBody = z.object({
+  name: str(120).min(1, 'Falta tu nombre'),
+  email: str(254).min(3),
+  password: z.string().max(256),
+  acceptTerms: z.boolean().optional(),
+  termsVersion: optStr(32),
+});
+export const TermsAcceptBody = z.object({ version: str(32).min(1) });
+export const ChangePasswordBody = z.object({
+  currentPassword: z.string().max(256),
+  newPassword: z.string().max(256),
+});
+export const AccountCloseBody = z.object({
+  confirm: z.literal('CERRAR', { message: 'Escribí CERRAR para confirmar' }),
+  password: z.string().max(256).optional(),
+  signature: z.object({ publicKey: str(56), message: str(80), signature: str(200) }).optional(),
+});
+
+export const SupportMessageBody = z.object({
+  topic: z.enum(['general', 'kyc', 'issuer', 'privacy', 'security', 'bug']),
+  name: str(120).min(1, 'Falta tu nombre'),
+  email: z.string().trim().max(254).email('Email inválido'),
+  message: str(4_000).min(10, 'Contanos un poco más (al menos 10 caracteres)'),
+  company: optStr(200),
+  cuit: optStr(20),
+  amountUsd: z.coerce.number().nonnegative().max(1e12).optional(),
+  website: optStr(200),
+});
+export const SupportListQuery = z.object({ status: z.enum(['open', 'closed', 'all']).optional() });
+
 export const AuditQuery = z.object({
   limit: z.coerce.number().int().min(1).max(1_000).optional(),
   action: optStr(80),

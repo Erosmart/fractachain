@@ -81,6 +81,11 @@ export interface PublicAccount {
   uid?: string;
   authProvider?: string;
   createdAt?: string;
+  /** Accepted the CURRENT Terms of Service + Privacy Policy version. */
+  termsAccepted: boolean;
+  /** Version the account accepted last (may be older than the current one). */
+  termsVersion?: string;
+  termsAcceptedAt?: string;
 }
 
 /** Who verifies identity: Didit's hosted flow, or the in-app form reviewed by compliance. */
@@ -425,4 +430,64 @@ export interface ChainStockVault extends ChainRef {
   lastProof: ChainMintProof | null;
   paymentToken: ChainAsset;
   holder?: { address: string; balance: number; claimable: number };
+}
+
+/* ------------------------------------------------------------------ *
+ * Accounts, legal and support (essential views)
+ * ------------------------------------------------------------------ */
+
+/** `POST /api/auth/register` */
+export interface RegisterRequest {
+  name: string;
+  email: string;
+  password: string;
+  acceptTerms: true;
+  termsVersion: string;
+}
+
+/** `GET /api/legal` */
+export interface LegalVersions {
+  termsVersion: string;
+  privacyVersion: string;
+  updatedAt: string;
+}
+
+/** `POST /api/account/close` */
+export interface AccountCloseRequest {
+  confirm: 'CERRAR';
+  /** Email/password accounts. */
+  password?: string;
+  /** Wallet accounts: SEP-53 signature of `fractachain-close:<epoch ms>`. */
+  signature?: WalletSignaturePayload;
+}
+
+export type SupportTopic = 'general' | 'kyc' | 'issuer' | 'privacy' | 'security' | 'bug';
+
+/** `POST /api/support/messages` */
+export interface SupportMessageRequest {
+  topic: SupportTopic;
+  name: string;
+  email: string;
+  message: string;
+  company?: string;
+  cuit?: string;
+  amountUsd?: number;
+  /** Honeypot: humans leave it empty. */
+  website?: string;
+}
+
+export interface SupportMessage {
+  id: string;
+  topic: SupportTopic;
+  name: string;
+  email: string;
+  message: string;
+  company?: string;
+  cuit?: string;
+  amountUsd?: number;
+  accountId?: string;
+  status: 'open' | 'closed';
+  createdAt: string;
+  closedAt?: string;
+  closedBy?: string;
 }

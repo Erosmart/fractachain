@@ -38,8 +38,22 @@ async function call(method, url, body, token) {
   return data;
 }
 
+/** Signs in; agents that don't exist yet register first (accepting the current Terms). */
 async function login(email, name, password = 'agente-demo-1') {
-  const r = await call('POST', '/api/auth/email', { email, password, name });
+  let r;
+  try {
+    r = await call('POST', '/api/auth/email', { email, password });
+  } catch (err) {
+    if (!/→ 401/.test(String(err?.message))) throw err;
+    const { data: legal } = await call('GET', '/api/legal');
+    r = await call('POST', '/api/auth/register', {
+      name,
+      email,
+      password,
+      acceptTerms: true,
+      termsVersion: legal.termsVersion,
+    });
+  }
   if (r.twoFactorRequired) throw new Error(`${email} tiene 2FA: usá un admin sin 2FA en desarrollo`);
   return { token: r.token, user: r.user };
 }
@@ -48,7 +62,8 @@ async function main() {
   // Admin reservado por ADMIN_EMAILS; entra con ADMIN_BOOTSTRAP_PASSWORD (sin 2FA en desarrollo).
   const adminEmail = process.env.ADMIN_EMAIL;
   const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminEmail || !adminPassword) throw new Error('Definí ADMIN_EMAIL y ADMIN_PASSWORD (el admin de ADMIN_EMAILS)');
+  if (!adminEmail || !adminPassword)
+    throw new Error('Definí ADMIN_EMAIL y ADMIN_PASSWORD (el admin de ADMIN_EMAILS)');
   const admin = await login(adminEmail, 'Admin', adminPassword);
   console.log('admin ok:', admin.user.id, 'isAdmin:', admin.user.isAdmin);
 
@@ -56,39 +71,49 @@ async function main() {
   let listingId = process.env.LISTING_ID || '';
   if (!listingId) {
     const tick = `LL${String(Date.now()).slice(-4)}`;
-    const created = await call('POST', '/api/listings', {
-      legalName: 'Agropecuaria Las Lilas S.A.',
-      tradeName: `Las Lilas ${tick}`,
-      cuit: '30681920149',
-      jurisdiction: 'Pergamino, Buenos Aires',
-      sector: 'Soja',
-      ticker: tick,
-      tokenTicker: tick,
-      isin: `AR${tick}DEMO1`,
-      authorizedShares: 50000,
-      sharesToTokenize: 4000,
-      pricePerShareUsdc: 5,
-      cajaSubaccount: 'CV-84920-LL2',
-      custodianCuit: '30700000000',
-      cnvRecordId: 'CNV-SANDBOX-1151',
-      bymaRequestId: 'BYMA-DEMO-2',
-      legalTermsUri: 'https://example.com/las-lilas-2/terms',
-      estatutoHash: 'agentsdemo',
-      auditor: 'Pistrelli',
-      issuerPublicKey: 'GAGPWEIFYS54Y5WY3WJ6IWXK4YAPSNRVOEWEGBL7W3BKR6YL4VUYE653',
-      proceedsWallet: 'GDUA6DQZJXBPTAQANQXEKXV3VXCPUIP5XQEHDAKJLRAVTXK35ZX2YORW',
-      paymentKind: 'USDC',
-      offeringSoftCapUsdc: 1000,
-      offeringHardCapUsdc: 20000,
-      offeringDays: 21,
-      tnaUsd: 14.5,
-      useOfProceeds: 'Campaña soja — segunda ventana (demo de agentes)',
-      minInvestmentUsdc: 10,
-    }, admin.token);
+    const created = await call(
+      'POST',
+      '/api/listings',
+      {
+        legalName: 'Agropecuaria Las Lilas S.A.',
+        tradeName: `Las Lilas ${tick}`,
+        cuit: '30681920149',
+        jurisdiction: 'Pergamino, Buenos Aires',
+        sector: 'Soja',
+        ticker: tick,
+        tokenTicker: tick,
+        isin: `AR${tick}DEMO1`,
+        authorizedShares: 50000,
+        sharesToTokenize: 4000,
+        pricePerShareUsdc: 5,
+        cajaSubaccount: 'CV-84920-LL2',
+        custodianCuit: '30700000000',
+        cnvRecordId: 'CNV-SANDBOX-1151',
+        bymaRequestId: 'BYMA-DEMO-2',
+        legalTermsUri: 'https://example.com/las-lilas-2/terms',
+        estatutoHash: 'agentsdemo',
+        auditor: 'Pistrelli',
+        issuerPublicKey: 'GAGPWEIFYS54Y5WY3WJ6IWXK4YAPSNRVOEWEGBL7W3BKR6YL4VUYE653',
+        proceedsWallet: 'GDUA6DQZJXBPTAQANQXEKXV3VXCPUIP5XQEHDAKJLRAVTXK35ZX2YORW',
+        paymentKind: 'USDC',
+        offeringSoftCapUsdc: 1000,
+        offeringHardCapUsdc: 20000,
+        offeringDays: 21,
+        tnaUsd: 14.5,
+        useOfProceeds: 'Campaña soja — segunda ventana (demo de agentes)',
+        minInvestmentUsdc: 10,
+      },
+      admin.token,
+    );
     listingId = created.data?.id || created.id;
     await call('POST', `/api/listings/${listingId}/deploy`, {}, admin.token);
     await call('POST', `/api/listings/${listingId}/mint`, { amount: 4000 }, admin.token);
-    await call('POST', `/api/listings/${listingId}/licitacion`, { settlePolicy: 'ON_DATE', settleAt: new Date(Date.now() + 86400e3).toISOString() }, admin.token);
+    await call(
+      'POST',
+      `/api/listings/${listingId}/licitacion`,
+      { settlePolicy: 'ON_DATE', settleAt: new Date(Date.now() + 86400e3).toISOString() },
+      admin.token,
+    );
     console.log('listing creado+listed:', listingId);
   }
 
@@ -139,9 +164,16 @@ async function main() {
         const mine = r.order?.status;
         if (mine === 'FILLED' || mine === 'PARTIAL') trades++;
         if (Math.random() < 0.2) {
-          await call('POST', `/api/orderbook/IPO-SOJA-PERGAMINO-2026/orders`, { side: 'BUY', price: 10, amount: 1 }, a.token).catch(() => {});
+          await call(
+            'POST',
+            `/api/orderbook/IPO-SOJA-PERGAMINO-2026/orders`,
+            { side: 'BUY', price: 10, amount: 1 },
+            a.token,
+          ).catch(() => {});
         }
-      } catch { /* saldo/tokens insuficientes — el loop sigue */ }
+      } catch {
+        /* saldo/tokens insuficientes — el loop sigue */
+      }
       await sleep(60);
     }
     console.log(`ronda ${round + 1}/${TRADE_ROUNDS}`);
@@ -158,4 +190,7 @@ async function main() {
   console.log(`\nClaves guardadas en ${OUT_REPO} — ${trades} órdenes matcheadas (aprox).`);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

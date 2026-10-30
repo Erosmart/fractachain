@@ -8,6 +8,7 @@ import {
   type Holding,
   type KycStatus,
   type PublicAccount,
+  TermsPolicy,
 } from '../../domain/account/Account';
 import type { IAccountRepository } from '../../domain/account/AccountRepository';
 import { DomainError, NotFoundError } from '../../shared/errors';
@@ -72,6 +73,9 @@ export class AccountService {
       uid: a.id,
       authProvider: a.authProvider,
       createdAt: a.createdAt,
+      termsAccepted: TermsPolicy.accepted(a),
+      termsVersion: a.termsVersion,
+      termsAcceptedAt: a.termsAcceptedAt,
     };
   }
 

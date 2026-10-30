@@ -1,5 +1,5 @@
 import type { CustodyMode, Holding, KycStatus, PublicAccount } from '@fractachain/shared';
-import { DomainError } from '../../shared/errors';
+import { DomainError, ForbiddenError } from '../../shared/errors';
 
 export type { CustodyMode, Holding, KycStatus, PublicAccount };
 
@@ -38,6 +38,11 @@ export interface Account {
   twoFactor?: TwoFactorState;
   /** Epoch ms: sessions issued before this are rejected ("cerrar todas las sesiones", password reset). */
   sessionsRevokedAt?: number;
+  /** Terms of Service + Privacy Policy acceptance (version = `LEGAL_VERSION` at the time). */
+  termsAcceptedAt?: string;
+  termsVersion?: string;
+  /** Account closed by its owner: no login by any method, personal data minimized. */
+  closedAt?: string;
 }
 
 export interface TwoFactorState {
@@ -81,6 +86,38 @@ export function findHolding(account: Account, listingId: string): Holding | unde
   return (account.holdings || []).find((h) => h.listingId === listingId);
 }
 
+export const DEFAULT_LEGAL_VERSION = '2026-10-30';
+export const TERMS_REQUIRED_MESSAGE = 'Aceptá los Términos y la Política de privacidad para continuar.';
+
+/**
+ * Terms of Service / Privacy Policy acceptance. The current version is set
+ * once at startup from `LEGAL_VERSION`; accepting an older version does not
+ * count (a new version asks every user again).
+ */
+export class TermsPolicy {
+  private static version = DEFAULT_LEGAL_VERSION;
+
+  static configure(version: string): void {
+    TermsPolicy.version = version || DEFAULT_LEGAL_VERSION;
+  }
+
+  static get current(): string {
+    return TermsPolicy.version;
+  }
+
+  static accepted(account: Pick<Account, 'termsAcceptedAt' | 'termsVersion'>): boolean {
+    return Boolean(account.termsAcceptedAt) && account.termsVersion === TermsPolicy.version;
+  }
+
+  static assertAccepted(account: Pick<Account, 'termsAcceptedAt' | 'termsVersion'>): void {
+    if (!TermsPolicy.accepted(account)) throw new ForbiddenError(TERMS_REQUIRED_MESSAGE, 'TERMS_REQUIRED');
+  }
+}
+
+export function isClosed(account: Pick<Account, 'closedAt'>): boolean {
+  return Boolean(account.closedAt);
+}
+
 /**
  * Trading policy. Only KYC-approved investors with a wallet may subscribe,
  * trade, claim or collect dividends — the same gate the issuer enforces
@@ -88,6 +125,7 @@ export function findHolding(account: Account, listingId: string): Holding | unde
  */
 export class TraderPolicy {
   static assertCanTrade(account: Account): void {
+    TermsPolicy.assertAccepted(account);
     if (account.kycStatus !== 'APPROVED') {
       throw new DomainError('Solo inversores con KYC aprobado pueden operar');
     }

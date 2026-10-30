@@ -11,6 +11,8 @@ export interface ISelfieStorage {
   /** Validates and stores a `data:image/...;base64,` URL for an account; returns the stored path. */
   save(accountId: string, dataUrl: string): string;
   read(storedPath: string | undefined): StoredImage | null;
+  /** Deletes a stored image (account closure). Missing files are fine. */
+  remove(storedPath: string | undefined): void;
 }
 
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -63,6 +65,16 @@ export class LocalSelfieStorage implements ISelfieStorage {
     const file = path.join(this.dir, `${accountId}.${kind.ext}`);
     fs.writeFileSync(file, bytes, { mode: 0o600 });
     return file;
+  }
+
+  remove(storedPath: string | undefined): void {
+    if (!storedPath) return;
+    const file = path.join(this.dir, path.basename(storedPath));
+    try {
+      fs.rmSync(file, { force: true });
+    } catch {
+      // nothing to delete
+    }
   }
 
   read(storedPath: string | undefined): StoredImage | null {

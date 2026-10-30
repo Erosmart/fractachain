@@ -4,6 +4,7 @@
  * The sandbox book stays as the fallback for listings without a real issuer;
  * once a listing has one, the book the UI renders is the ledger's.
  */
+import { TermsPolicy } from '../../domain/account/Account';
 import { Asset, Operation, type Transaction, type xdr } from '@stellar/stellar-sdk';
 import type { Listing } from '../../domain/listing/Listing';
 import type { OrderSide } from '../../domain/market/SandboxBook';
@@ -244,6 +245,7 @@ export class SdexMarketService {
   async prepareOrder(params: OrderParams): Promise<{ xdr: string; summary: Record<string, unknown> }> {
     const listing = this.requireListing(params.listingId);
     const account = this.requireWallet(params.accountId);
+    TermsPolicy.assertAccepted(account);
     if (account.kycStatus !== 'APPROVED')
       throw new DomainError('Solo inversores con KYC aprobado pueden operar');
     if (!(params.price > 0) || !(params.quantity > 0))
@@ -340,6 +342,7 @@ export class SdexMarketService {
   async openCustodialTrustline(params: { listingId: string; accountId: string; limit?: number }) {
     const listing = this.requireListing(params.listingId);
     const account = this.requireWallet(params.accountId);
+    TermsPolicy.assertAccepted(account);
     if (account.kycStatus !== 'APPROVED')
       throw new DomainError('Solo inversores con KYC aprobado pueden aprobar el token');
     const line = await this.sdex.trustlineState(account.publicKey, this.listingAsset(listing));

@@ -1,3 +1,4 @@
+import { TermsPolicy } from '../../domain/account/Account';
 import crypto from 'crypto';
 import {
   Address,
@@ -104,6 +105,8 @@ export class TxService {
     let asset: ChainAsset | undefined;
     switch (request.action) {
       case 'contribute':
+        // Refunds and closes never wait on new terms: only putting money in does.
+        TermsPolicy.assertAccepted(account);
         listing = this.deps.listings.require(request.listingId);
         ({ xdr: xdrB64 } = await this.deps.offerings.prepareContribute(
           listing.id,

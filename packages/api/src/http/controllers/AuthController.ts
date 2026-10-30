@@ -14,9 +14,12 @@ import type { RateLimiters } from '../middleware/rateLimiters';
 import { body, bodyOf } from '../middleware/validate';
 import { noStore, ok } from '../respond';
 import {
+  ChangePasswordBody,
   CodeBody,
   CustodyBody,
   EmailLoginBody,
+  RegisterBody,
+  TermsAcceptBody,
   FirebaseLoginBody,
   ForgotPasswordBody,
   ResetPasswordBody,
@@ -55,13 +58,46 @@ export class AuthController implements Controller {
   register(r: Router): void {
     const auth = this.guard.requireAuth;
 
+    /** Creates an email/password account; the Terms and Privacy Policy are accepted here. */
+    r.post(
+      '/api/auth/register',
+      this.limits.auth,
+      this.audit.route('auth.register', bodyField('email')),
+      body(RegisterBody),
+      async (req, res) => {
+        const b = bodyOf(req, RegisterBody);
+        const payload = await this.auth.register({
+          name: b.name,
+          email: b.email,
+          password: b.password,
+          acceptTerms: b.acceptTerms === true,
+          termsVersion: b.termsVersion ?? '',
+        });
+        res.status(201);
+        this.respondLogin(req, res, payload);
+      },
+    );
+
+    /** Sign-in only: an unknown email answers like a wrong password. */
     r.post(
       '/api/auth/email',
       this.limits.auth,
       this.audit.route('auth.login.email', bodyField('email')),
       body(EmailLoginBody),
       async (req, res) => {
-        this.respondLogin(req, res, await this.auth.loginWithEmail(bodyOf(req, EmailLoginBody)));
+        const { email, password } = bodyOf(req, EmailLoginBody);
+        this.respondLogin(req, res, await this.auth.loginWithEmail({ email, password }));
+      },
+    );
+
+    r.post(
+      '/api/auth/terms/accept',
+      auth,
+      this.audit.route('auth.terms.accept'),
+      body(TermsAcceptBody),
+      (req, res) => {
+        const user = this.auth.acceptTerms(currentAccount(req).id, bodyOf(req, TermsAcceptBody).version);
+        noStore(res).json({ success: true, user });
       },
     );
 
@@ -195,6 +231,23 @@ export class AuthController implements Controller {
         const b = bodyOf(req, ResetPasswordBody);
         const accountId = await this.passwords.reset(b.token, b.password);
         this.respondLogin(req, res, this.auth.sessionFor(accountId));
+      },
+    );
+
+    r.post(
+      '/api/auth/password/change',
+      auth,
+      this.limits.auth,
+      this.audit.route('auth.password.change'),
+      body(ChangePasswordBody),
+      async (req, res) => {
+        const b = bodyOf(req, ChangePasswordBody);
+        const session = await this.auth.changePassword(
+          currentAccount(req).id,
+          b.currentPassword,
+          b.newPassword,
+        );
+        this.respondLogin(req, res, session);
       },
     );
 

@@ -1,3 +1,4 @@
+import { TermsPolicy } from '../../domain/account/Account';
 import { alreadyClosedOnChain, type LicitacionSnapshot } from '../../domain/licitacion/LicitacionSnapshot';
 import { paymentUnit, type Listing } from '../../domain/listing/Listing';
 import { DomainError, NotFoundError, ValidationError, errorMessage } from '../../shared/errors';
@@ -126,6 +127,7 @@ export class OfferingService {
     // Tenders settle on-chain only (Instaward 1): there is no sandbox ledger to book into.
     const listing = this.requireOnChain(listingId);
     const account = this.accounts.require(accountId);
+    TermsPolicy.assertAccepted(account);
     if (account.custodyMode !== 'CUSTODIAL' || !account.publicKey) {
       throw new DomainError('Wallet propia: firmá el aporte con Freighter desde la ficha de la licitación');
     }
@@ -140,6 +142,7 @@ export class OfferingService {
 
   prepareContribute(listingId: string, accountId: string, amount: number, timeoutInSeconds?: number) {
     if (!(amount > 0)) throw new ValidationError('Monto inválido');
+    TermsPolicy.assertAccepted(this.accounts.require(accountId));
     const listing = this.requireOnChain(listingId);
     return this.licitacion.prepareContributeXdr(
       listing,

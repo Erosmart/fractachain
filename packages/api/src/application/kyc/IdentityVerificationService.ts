@@ -1,3 +1,4 @@
+import { TermsPolicy } from '../../domain/account/Account';
 import type { Account } from '../../domain/account/Account';
 import {
   canRestart,
@@ -108,6 +109,7 @@ export class IdentityVerificationService {
   async start(accountId: string, language: 'es' | 'en' = 'es'): Promise<{ url: string; sessionId: string }> {
     const provider = this.requireProvider();
     const account = this.accounts.require(accountId);
+    TermsPolicy.assertAccepted(account);
     const record = this.recordOf(account);
     if (!record) throw new DomainError('Completá primero tus datos de inversor');
     if (account.kycStatus === 'APPROVED') throw new ConflictError('Tu identidad ya está verificada');

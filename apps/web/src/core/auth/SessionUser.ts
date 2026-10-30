@@ -59,5 +59,10 @@ export function normalizeUser(input: unknown): SessionUser {
     emailVerified: raw.emailVerified !== false,
     uid: str(raw.uid) || undefined,
     createdAt: str(raw.createdAt) || undefined,
+    // A cached user from an older build has no flag: the API's own gate still
+    // applies (TERMS_REQUIRED), so don't send everyone to the Terms page.
+    termsAccepted: raw.termsAccepted !== false,
+    termsVersion: str(raw.termsVersion) || undefined,
+    termsAcceptedAt: str(raw.termsAcceptedAt) || undefined,
   };
 }

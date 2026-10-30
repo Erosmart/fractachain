@@ -6,10 +6,23 @@ import type {
   TwoFactorChallengePayload,
   WalletSignaturePayload,
 } from '@fractachain/shared';
-import { hasTwoFactor, isWalletEmail, walletEmailFor, type Account } from '../../domain/account/Account';
+import {
+  TermsPolicy,
+  hasTwoFactor,
+  isClosed,
+  isWalletEmail,
+  walletEmailFor,
+  type Account,
+} from '../../domain/account/Account';
 import type { IAccountRepository } from '../../domain/account/AccountRepository';
 import { isStellarPublicKey } from '../../domain/stellar/StellarAddress';
-import { ConflictError, UnauthenticatedError, ValidationError } from '../../shared/errors';
+import {
+  AppError,
+  ConflictError,
+  ForbiddenError,
+  UnauthenticatedError,
+  ValidationError,
+} from '../../shared/errors';
 import type { IClock } from '../../shared/clock';
 import type { IIdentityTokenVerifier } from '../../infrastructure/security/FirebaseTokenVerifier';
 import { PasswordPolicy, type IPasswordHasher } from '../../infrastructure/security/PasswordHasher';
@@ -35,11 +48,26 @@ export interface IRegistrationListener {
   onEmailRegistered(account: Account): Promise<void>;
 }
 
+/** Tells the owner their password changed (security notice). */
+export interface IPasswordChangeNotifier {
+  onPasswordChanged(account: Account): Promise<void>;
+}
+
+export interface RegisterInput {
+  name: string;
+  email: string;
+  password: string;
+  acceptTerms: boolean;
+  termsVersion: string;
+}
+
 /** The 2FA login step is valid for 5 minutes. */
 const TWO_FACTOR_CHALLENGE_TTL_MS = 5 * 60_000;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const INVALID_CREDENTIALS = 'Email o contraseña incorrectos';
+const EMAIL_TAKEN = 'Ya existe una cuenta con ese email. Ingresá o recuperá tu contraseña.';
+const CLOSED_ACCOUNT = 'Esta cuenta fue cerrada.';
 
 /**
  * Authentication use cases: email/password, Google (Firebase ID token),
@@ -53,6 +81,13 @@ const INVALID_CREDENTIALS = 'Email o contraseña incorrectos';
  * - Sessions expire and logout revokes them server-side.
  */
 export class AuthService {
+  /**
+   * A real hash of a random string (same parameters as user hashes): unknown
+   * emails are checked against it so a failed login takes the same time
+   * whether the account exists or not.
+   */
+  private dummyHash?: Promise<string>;
+
   constructor(
     private readonly repo: IAccountRepository,
     private readonly accounts: AccountService,
@@ -67,6 +102,7 @@ export class AuthService {
     private readonly registration: IRegistrationListener,
     private readonly clock: IClock,
     private readonly options: AuthPolicyOptions,
+    private readonly passwordNotices?: IPasswordChangeNotifier,
   ) {}
 
   /** Resolves a session token to its account, or `undefined` if invalid, expired or revoked. */
@@ -75,9 +111,16 @@ export class AuthService {
     const claims = this.tokens.verify(token);
     if (!claims) return undefined;
     const account = this.repo.findById(claims.sub);
+    if (!account || isClosed(account)) return undefined;
     // "Cerrar todas las sesiones" / password reset: older tokens are dead.
-    if (!account || (account.sessionsRevokedAt && claims.iat < account.sessionsRevokedAt)) return undefined;
+    if (account.sessionsRevokedAt && claims.iat < account.sessionsRevokedAt) return undefined;
     return account;
+  }
+
+  /** When the session behind `token` was issued (epoch ms), if it is valid. */
+  sessionIssuedAt(token?: string | null): number | undefined {
+    if (!token) return undefined;
+    return this.tokens.verify(token)?.iat;
   }
 
   logout(token?: string | null): boolean {
@@ -96,6 +139,7 @@ export class AuthService {
     const claims = this.challenges.verify('two-factor', challenge);
     if (!claims) throw new UnauthenticatedError('El paso de verificación venció. Ingresá de nuevo.');
     const account = this.accounts.require(claims.sub);
+    if (isClosed(account)) throw new UnauthenticatedError(CLOSED_ACCOUNT);
     if (!this.twoFactor.verify(account, code)) throw new UnauthenticatedError('Código incorrecto');
     return this.issue(account);
   }
@@ -105,8 +149,51 @@ export class AuthService {
     return this.complete(this.accounts.require(accountId));
   }
 
-  /** Sign in, or register when the email is new. */
-  async loginWithEmail(input: { email: string; password: string; name?: string }): Promise<LoginPayload> {
+  /**
+   * Creates an email/password account. The Terms of Service and the Privacy
+   * Policy are accepted here, in their current version, before anything else.
+   */
+  async register(input: RegisterInput): Promise<LoginPayload> {
+    if (input.acceptTerms !== true || input.termsVersion !== TermsPolicy.current) {
+      throw new AppError(
+        'Para crear la cuenta tenés que aceptar los Términos y la Política de privacidad vigentes.',
+        400,
+        'TERMS_REQUIRED',
+        { termsVersion: TermsPolicy.current },
+      );
+    }
+    const email = String(input.email || '')
+      .trim()
+      .toLowerCase();
+    const name = String(input.name || '').trim();
+    if (!EMAIL_RE.test(email) || isWalletEmail(email)) throw new ValidationError('Email inválido');
+    if (!name) throw new ValidationError('Falta tu nombre');
+    const problem = PasswordPolicy.assertAcceptable(String(input.password || ''));
+    if (problem) throw new ValidationError(problem);
+    if (this.repo.findByEmail(email)) throw new ConflictError(EMAIL_TAKEN);
+
+    const now = this.clock.isoNow();
+    const account = this.newAccount({
+      email,
+      name,
+      authProvider: 'email',
+      passwordHash: await this.hasher.hash(input.password),
+      termsAcceptedAt: now,
+      termsVersion: TermsPolicy.current,
+    });
+    this.repo.insert(account);
+    void this.registration.onEmailRegistered(account).catch(() => undefined);
+    this.bootstrapper.ensureAdminPrivileges(account);
+    this.repo.save(account);
+    void this.hydrator.hydrate(account.id).catch(() => undefined);
+    return this.complete(account);
+  }
+
+  /**
+   * Email/password sign-in only. An unknown email gets the same answer as a
+   * wrong password, so the endpoint does not reveal who has an account.
+   */
+  async loginWithEmail(input: { email: string; password: string }): Promise<LoginPayload> {
     const email = String(input.email || '')
       .trim()
       .toLowerCase();
@@ -115,33 +202,70 @@ export class AuthService {
     if (!password) throw new ValidationError('Email y contraseña requeridos');
     if (password.length > PasswordPolicy.MAX_LENGTH) throw new UnauthenticatedError(INVALID_CREDENTIALS);
 
-    let account = this.repo.findByEmail(email);
-    if (!account) {
-      const problem = PasswordPolicy.assertAcceptable(password);
-      if (problem) throw new ValidationError(problem);
-      account = this.newAccount({
-        email,
-        name: input.name?.trim() || email.split('@')[0],
-        authProvider: 'email',
-        passwordHash: await this.hasher.hash(password),
-      });
-      this.repo.insert(account);
-      void this.registration.onEmailRegistered(account).catch(() => undefined);
-    } else {
-      if (!account.passwordHash) {
-        // v1 let anyone set a password here and take the account over.
-        throw new UnauthenticatedError('Esta cuenta ingresa con Google o con su wallet. Usá ese método.');
-      }
-      const check = await this.hasher.verify(password, account.passwordHash);
-      if (!check.valid) throw new UnauthenticatedError(INVALID_CREDENTIALS);
-      if (check.needsRehash) account.passwordHash = await this.hasher.hash(password);
-      account.lastLoginAt = this.clock.isoNow();
-      if (input.name?.trim()) account.name = input.name.trim();
+    const account = this.repo.findByEmail(email);
+    if (!account || isClosed(account)) {
+      // Same work as a real check, so timing does not tell either.
+      this.dummyHash ??= this.hasher.hash(crypto.randomBytes(16).toString('hex'));
+      await this.hasher.verify(password, await this.dummyHash).catch(() => undefined);
+      throw new UnauthenticatedError(INVALID_CREDENTIALS);
     }
+    if (!account.passwordHash) {
+      // v1 let anyone set a password here and take the account over.
+      throw new UnauthenticatedError('Esta cuenta ingresa con Google o con su wallet. Usá ese método.');
+    }
+    const check = await this.hasher.verify(password, account.passwordHash);
+    if (!check.valid) throw new UnauthenticatedError(INVALID_CREDENTIALS);
+    if (check.needsRehash) account.passwordHash = await this.hasher.hash(password);
+    account.lastLoginAt = this.clock.isoNow();
     this.bootstrapper.ensureAdminPrivileges(account);
     this.repo.save(account);
     void this.hydrator.hydrate(account.id).catch(() => undefined);
     return this.complete(account);
+  }
+
+  /** Records the acceptance of the current Terms of Service and Privacy Policy. */
+  acceptTerms(accountId: string, version: string): PublicAccount {
+    if (version !== TermsPolicy.current) {
+      throw new AppError(
+        'Esa versión de los Términos ya no está vigente. Recargá la página y aceptá la actual.',
+        400,
+        'TERMS_REQUIRED',
+        { termsVersion: TermsPolicy.current },
+      );
+    }
+    const account = this.accounts.require(accountId);
+    account.termsAcceptedAt = this.clock.isoNow();
+    account.termsVersion = TermsPolicy.current;
+    this.repo.save(account);
+    return this.accounts.toPublic(account);
+  }
+
+  /**
+   * Changes the password of a signed-in email account. Every other session
+   * dies; the caller gets a fresh one (no second-factor prompt: they are
+   * already signed in).
+   */
+  async changePassword(
+    accountId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<SessionPayload> {
+    const account = this.accounts.require(accountId);
+    if (!account.passwordHash) {
+      throw new ValidationError('Tu cuenta ingresa con Google o con tu wallet: no tiene contraseña.');
+    }
+    const check = await this.hasher.verify(String(currentPassword || ''), account.passwordHash);
+    // 403, not 401: the caller is signed in, and a 401 would sign them out.
+    if (!check.valid) throw new ForbiddenError('La contraseña actual no es correcta', 'WRONG_PASSWORD');
+    const problem = PasswordPolicy.assertAcceptable(String(newPassword || ''));
+    if (problem) throw new ValidationError(problem);
+    if (currentPassword === newPassword)
+      throw new ValidationError('La nueva contraseña tiene que ser distinta');
+    account.passwordHash = await this.hasher.hash(newPassword);
+    account.sessionsRevokedAt = this.clock.now();
+    this.repo.save(account);
+    void this.passwordNotices?.onPasswordChanged(account).catch(() => undefined);
+    return this.issue(account, 'Contraseña actualizada');
   }
 
   /** Google sign-in: identity is taken from the verified Firebase ID token only. */
@@ -151,9 +275,14 @@ export class AuthService {
       throw new UnauthenticatedError('El email de la cuenta de Google no está verificado');
     }
     let account = this.repo.findByEmail(identity.email);
+    if (account && isClosed(account)) throw new UnauthenticatedError(CLOSED_ACCOUNT);
     if (!account) {
       account = this.newAccount({
-        id: /^[A-Za-z0-9_-]{6,128}$/.test(identity.uid) ? identity.uid : undefined,
+        // A closed account keeps its id: a new Google sign-up gets a fresh one.
+        id:
+          /^[A-Za-z0-9_-]{6,128}$/.test(identity.uid) && !this.repo.findById(identity.uid)
+            ? identity.uid
+            : undefined,
         email: identity.email,
         name: identity.name || identity.email.split('@')[0],
         avatar: identity.picture,
@@ -185,6 +314,7 @@ export class AuthService {
 
     const email = walletEmailFor(publicKey);
     let account = this.repo.findByEmail(email) ?? this.repo.findByPublicKey(publicKey);
+    if (account && isClosed(account)) throw new UnauthenticatedError(CLOSED_ACCOUNT);
     if (!account) {
       account = this.newAccount({
         email,

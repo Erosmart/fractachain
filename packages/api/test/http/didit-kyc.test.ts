@@ -3,6 +3,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import request from 'supertest';
+import { DEFAULT_LEGAL_VERSION as LEGAL } from '../../src/domain/account/Account';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadConfig } from '../../src/config/env';
 import { buildContainer, type Container } from '../../src/container';
@@ -95,7 +96,9 @@ afterAll(() => fs.rmSync(dataDir, { recursive: true, force: true }));
 const api = () => request(container.app);
 
 async function investor(email: string) {
-  const login = await api().post('/api/auth/email').send({ email, password: 'investor-pass-1' });
+  const login = await api()
+    .post('/api/auth/register')
+    .send({ name: 'Investor', email, password: 'investor-pass-1', acceptTerms: true, termsVersion: LEGAL });
   const auth = `Bearer ${login.body.token}`;
   await api().post('/api/auth/wallet').set('Authorization', auth).send({ mode: 'SELF' });
   const onboard = await api()

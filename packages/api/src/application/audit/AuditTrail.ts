@@ -58,6 +58,14 @@ export class AuditTrail {
       .slice(0, limit);
   }
 
+  /** Events performed by one account (newest first), for the owner's data export. */
+  byActor(actorId: string, limit = 500): AuditEntry[] {
+    return this.repo
+      .list()
+      .filter((e) => e.actorId === actorId)
+      .slice(0, limit);
+  }
+
   private static redact(details: Record<string, unknown>): Record<string, unknown> {
     return Object.fromEntries(Object.entries(details).filter(([k]) => !SENSITIVE.test(k)));
   }

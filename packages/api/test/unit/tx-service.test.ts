@@ -11,7 +11,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { TxBuildStore } from '../../src/application/tx/TxBuildStore';
 import { TxService, type TxDeps } from '../../src/application/tx/TxService';
-import type { Account } from '../../src/domain/account/Account';
+import { DEFAULT_LEGAL_VERSION, type Account } from '../../src/domain/account/Account';
 import type { Listing } from '../../src/domain/listing/Listing';
 import { InMemoryDocumentStore } from '../../src/infrastructure/persistence/DocumentStore';
 import { Explorer } from '../../src/infrastructure/stellar/Explorer';
@@ -54,6 +54,8 @@ function harness(opts: { custody?: 'SELF' | 'CUSTODIAL'; sameXdr?: boolean } = {
     id: 'acc_investor',
     custodyMode: opts.custody ?? 'SELF',
     publicKey: investor.publicKey(),
+    termsAcceptedAt: new Date().toISOString(),
+    termsVersion: DEFAULT_LEGAL_VERSION,
   } as Account;
   const listing = { id: 'IPO-USDC', licitacionContract: TENDER } as Listing;
   const calls = {

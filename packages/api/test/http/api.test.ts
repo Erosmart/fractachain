@@ -2,6 +2,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import request from 'supertest';
+import { DEFAULT_LEGAL_VERSION as LEGAL } from '../../src/domain/account/Account';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { loadConfig } from '../../src/config/env';
 import { buildContainer, type Container } from '../../src/container';
@@ -51,8 +52,10 @@ afterAll(() => {
 const api = () => request(container.app);
 
 async function register(email: string, password = 'investor-pass-1') {
-  const res = await api().post('/api/auth/email').send({ email, password });
-  expect(res.status).toBe(200);
+  const res = await api()
+    .post('/api/auth/register')
+    .send({ name: email.split('@')[0], email, password, acceptTerms: true, termsVersion: LEGAL });
+  expect(res.status).toBe(201);
   return res.body as { token: string; expiresAt: string; user: { id: string; isAdmin: boolean } };
 }
 
@@ -125,7 +128,9 @@ describe('auth', () => {
   });
 
   it('validates input and reports field issues', async () => {
-    const res = await api().post('/api/auth/email').send({ email: 'x@example.com', password: 'short' });
+    const res = await api()
+      .post('/api/auth/register')
+      .send({ name: 'X', email: 'x@example.com', password: 'short', acceptTerms: true, termsVersion: LEGAL });
     expect(res.status).toBe(400);
     const bad = await api()
       .post('/api/auth/wallet')

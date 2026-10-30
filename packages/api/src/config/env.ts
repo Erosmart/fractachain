@@ -75,6 +75,12 @@ const EnvSchema = z.object({
   ADMIN_REQUIRE_2FA: bool,
   REQUIRE_EMAIL_VERIFICATION: bool,
 
+  /** Version (date) of the Terms of Service and Privacy Policy users must accept. */
+  LEGAL_VERSION: z
+    .string()
+    .regex(/^[0-9A-Za-z._-]{1,32}$/)
+    .default('2026-10-30'),
+
   /** Public URL of the app, used in links sent by email. */
   APP_URL: z.string().url().optional(),
   /** smtp(s)://user:pass@host:port — without it emails are written to the log (development). */
@@ -135,6 +141,8 @@ export interface AppConfig {
     cookie: { name: string; secure: boolean };
   };
   mail: { appUrl: string; smtpUrl?: string; from: string };
+  /** Current Terms of Service / Privacy Policy version (the web shows the same date). */
+  legal: { version: string };
   /** Hosted identity verification; absent → in-app form with selfie (manual review). */
   kyc: {
     didit?: { apiKey: string; workflowId: string; webhookSecret?: string; apiUrl: string };
@@ -282,6 +290,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
       // `__Host-` binds the cookie to this exact origin; it requires HTTPS.
       cookie: { name: isProduction ? '__Host-fc_session' : 'fc_session', secure: isProduction },
     },
+    legal: { version: e.LEGAL_VERSION },
     mail: {
       appUrl: (e.APP_URL || `http://localhost:${e.PORT}`).replace(/\/+$/, ''),
       smtpUrl: e.SMTP_URL?.trim() || undefined,

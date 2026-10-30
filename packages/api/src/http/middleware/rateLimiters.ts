@@ -24,6 +24,9 @@ export class RateLimiters {
     'Límite de exportación de clave alcanzado. Probá en una hora.',
   );
   readonly faucet = limiter(10 * 60_000, 20, 'Demasiados pedidos de fondeo. Esperá unos minutos.');
+  /** Contact form: public, so spam-limited. */
+  readonly support = limiter(60 * 60_000, 5, 'Ya nos escribiste varias veces. Probá de nuevo en una hora.');
+  readonly accountExport = limiter(60 * 60_000, 10, 'Demasiadas descargas de datos. Probá en una hora.');
   readonly kycSubmit = limiter(60 * 60_000, 10, 'Demasiados envíos de KYC. Probá en una hora.');
   /** Each new hosted session is a billable verification at the provider. */
   readonly kycVerificationStart = limiter(
