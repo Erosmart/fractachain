@@ -53,3 +53,8 @@ export interface ModuleDeps {
 export interface FeatureModule {
   controllers: Controller[];
 }
+
+/** What the chain module offers other modules (cache invalidation after writes). */
+export interface ChainReadsHook {
+  forget(contractId?: string, address?: string): void;
+}

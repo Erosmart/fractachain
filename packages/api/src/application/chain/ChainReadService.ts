@@ -488,6 +488,19 @@ export class ChainReadService {
     return `${this.env.explorerUrl.replace(/\/+$/, '')}/contract/${contractId}`;
   }
 
+  /**
+   * Drops cached reads that a confirmed transaction made stale: the tender
+   * (all holders) and the signer's portfolio. The next read goes to the chain.
+   */
+  forget(contractId?: string, address?: string): void {
+    if (contractId) {
+      this.payloads.forget(`tender|${contractId}`);
+      this.payloads.forget(`tender-core|${contractId}`);
+    }
+    if (address) this.payloads.forget(`portfolio|${address}`);
+    this.payloads.forget('stocks');
+  }
+
   private cached<T>(key: string, load: () => Promise<T>): Promise<T> {
     return this.payloads.get(key, load) as Promise<T>;
   }

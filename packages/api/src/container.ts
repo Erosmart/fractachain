@@ -476,7 +476,8 @@ export async function buildContainer(
     limits,
     auditRoutes,
   };
-  const featureModules = [createTxModule(moduleDeps), createChainModule(moduleDeps)];
+  const chainModule = createChainModule(moduleDeps);
+  const featureModules = [createTxModule(moduleDeps, chainModule.chainReads), chainModule];
   const app = createApp({
     config,
     logger: logger.child({ component: 'http' }),

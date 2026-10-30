@@ -56,7 +56,12 @@ function harness(opts: { custody?: 'SELF' | 'CUSTODIAL'; sameXdr?: boolean } = {
     publicKey: investor.publicKey(),
   } as Account;
   const listing = { id: 'IPO-USDC', licitacionContract: TENDER } as Listing;
-  const calls = { submitContribute: 0, recordFinalize: 0, sent: [] as string[] };
+  const calls = {
+    submitContribute: 0,
+    recordFinalize: 0,
+    sent: [] as string[],
+    confirmed: [] as [string | undefined, string][],
+  };
   let chainOutcome: 'SUCCESS' | 'FAILED' | 'PENDING' = 'SUCCESS';
   let seq = 100;
   const fixed = contributeXdr(investor.publicKey(), 200_000_000n);
@@ -105,6 +110,8 @@ function harness(opts: { custody?: 'SELF' | 'CUSTODIAL'; sameXdr?: boolean } = {
     clock,
     network: () => ({ name: 'testnet', passphrase: Networks.TESTNET }),
     logger: new NullLogger(),
+    onConfirmed: (contractId: string | undefined, source: string) =>
+      calls.confirmed.push([contractId, source]),
   };
   return {
     service: new TxService(deps),
@@ -149,6 +156,8 @@ describe('TxService (non-custodial signing)', () => {
     expect(result).toMatchObject({ status: 'SUCCESS', ledger: 123, action: 'contribute' });
     expect(result.explorer).toBe(`https://stellar.expert/explorer/testnet/tx/${result.hash}`);
     expect(calls.submitContribute).toBe(1);
+    // Cached chain reads of this tender and of the signer are dropped once confirmed.
+    expect(calls.confirmed).toEqual([[TENDER, investor.publicKey()]]);
   });
 
   it('refuses expired, reused, tampered and badly signed submissions', async () => {

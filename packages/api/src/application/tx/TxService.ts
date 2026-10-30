@@ -73,6 +73,8 @@ export interface TxDeps {
   /** Network name and passphrase the server signs/validates for (runtime settings). */
   network(): { name: string; passphrase: string };
   logger: ILogger;
+  /** Called after a confirmed transaction so cached chain reads are not stale. */
+  onConfirmed?: (contractId: string | undefined, source: string) => void;
 }
 
 const txError = (message: string, status: number, code: ConstructorParameters<typeof AppError>[2]) =>
@@ -238,6 +240,7 @@ export class TxService {
     record.status = 'SUCCESS';
     record.ledger = settled?.ledger;
     this.deps.builds.update(record);
+    this.deps.onConfirmed?.(record.contractId, caller.publicKey);
     return { ...this.result(record, 'SUCCESS'), ...(listing ? { listing } : {}) };
   }
 

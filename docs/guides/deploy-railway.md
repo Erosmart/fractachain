@@ -29,13 +29,13 @@ se leen en runtime.
 
 ## Railway (un servicio)
 
-| | |
-|---|---|
-| **Root Directory** | *(vacío — raíz del repo)* |
-| **Dockerfile path** | `Dockerfile` |
-| **Watch paths** | `apps/web/**`, `packages/**`, `deployments/testnet.json`, `package-lock.json`, `Dockerfile` |
-| **Volume** | montado en `/app/data` |
-| **Healthcheck** | `GET /health` |
+|                     |                                                                                             |
+| ------------------- | ------------------------------------------------------------------------------------------- |
+| **Root Directory**  | _(vacío — raíz del repo)_                                                                   |
+| **Dockerfile path** | `Dockerfile`                                                                                |
+| **Watch paths**     | `apps/web/**`, `packages/**`, `deployments/testnet.json`, `package-lock.json`, `Dockerfile` |
+| **Volume**          | montado en `/app/data`                                                                      |
+| **Healthcheck**     | `GET /health`                                                                               |
 
 > **Migración desde v1 (dos servicios):** creá (o reutilizá) **un** servicio
 > con el `Dockerfile` de la raíz y montale el volumen que tenía el API en
@@ -67,6 +67,9 @@ FIREBASE_PROJECT_ID=...          # habilita "Ingresar con Google"
 DIDIT_API_KEY=...                # KYC con Didit (junto con DIDIT_WORKFLOW_ID)
 DIDIT_WORKFLOW_ID=...
 DIDIT_WEBHOOK_SECRET=...         # webhook: https://<tu-app>/api/kyc/didit/webhook
+USDC_MODE=circle                 # USDC de Circle (testnet); team = USDC propio de prueba
+STELLAR_USDC_POOL_SECRET=S...    # pool de demo que fondea a los revisores (npm run stellar:fund-pool)
+STELLAR_DEPLOYMENT_FILE=...      # deployment de npm run stellar:deploy (ver docs/instaward-1/deploy.md)
 DATABASE_URL=postgres://...      # espejo + restore en Postgres y locks entre réplicas
 HACKATHON_DEMO=true              # KYC auto-aprobado para el demo
 SESSION_TTL_HOURS=12

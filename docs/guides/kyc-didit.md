@@ -51,15 +51,15 @@ Didit ─ webhook firmado ─▶ POST /api/kyc/didit/webhook ─▶ el API re-le
 
 ## 4. Estados
 
-| Didit | Cuenta | Qué ve el inversor |
-|---|---|---|
-| Not Started · In Progress | `PENDING` | Continuar (mismo link) |
-| Awaiting User · Resubmitted | `PENDING` | Corregir (mismo link) |
-| In Review | `PENDING` | En revisión (hasta 72 hs hábiles) |
-| Approved | `APPROVED` | Listo: autorización on-chain + whitelist en licitaciones vivas |
-| Declined | `REJECTED` (o `REVOKED` si ya estaba aprobado) | Reintentar con una sesión nueva |
-| Abandoned · Expired | `PENDING` | Empezar de nuevo |
-| Kyc Expired | `REVOKED` | Re-verificar |
+| Didit                       | Cuenta                                         | Qué ve el inversor                                             |
+| --------------------------- | ---------------------------------------------- | -------------------------------------------------------------- |
+| Not Started · In Progress   | `PENDING`                                      | Continuar (mismo link)                                         |
+| Awaiting User · Resubmitted | `PENDING`                                      | Corregir (mismo link)                                          |
+| In Review                   | `PENDING`                                      | En revisión (hasta 72 hs hábiles)                              |
+| Approved                    | `APPROVED`                                     | Listo: autorización on-chain + whitelist en licitaciones vivas |
+| Declined                    | `REJECTED` (o `REVOKED` si ya estaba aprobado) | Reintentar con una sesión nueva                                |
+| Abandoned · Expired         | `PENDING`                                      | Empezar de nuevo                                               |
+| Kyc Expired                 | `REVOKED`                                      | Re-verificar                                                   |
 
 Compliance ve en **Consola → Verificaciones** el estado de Didit, cada chequeo
 (documento, vida, rostro, AML con cantidad de coincidencias) y el nombre y país
