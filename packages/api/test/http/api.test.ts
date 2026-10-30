@@ -251,3 +251,59 @@ describe('sandbox market', () => {
     expect(por.body.data.verified).toBe(true);
   });
 });
+
+describe('offering activity', () => {
+  it('reports anonymous daily contributions and the investor count', async () => {
+    const { listings, accounts } = container.services;
+    const listing = listings.create({
+      legalName: 'Agropecuaria Activity S.A.',
+      tradeName: 'Activity',
+      cuit: '30681920149',
+      jurisdiction: 'Pergamino, Buenos Aires',
+      sector: 'Soja',
+      ticker: 'ACTV',
+      tokenTicker: 'ACTV',
+      isin: 'ARACTV000001',
+      authorizedShares: 50000,
+      sharesToTokenize: 4000,
+      pricePerShareUsdc: 5,
+      cajaSubaccount: 'CV-1',
+      custodianCuit: '30700000000',
+      cnvRecordId: 'CNV-1',
+      bymaRequestId: 'BYMA-1',
+      legalTermsUri: 'https://example.com/terms',
+      estatutoHash: 'hash',
+      auditor: 'Auditor',
+      issuerPublicKey: '',
+      proceedsWallet: 'GDUA6DQZJXBPTAQANQXEKXV3VXCPUIP5XQEHDAKJLRAVTXK35ZX2YORW',
+      paymentKind: 'USDC',
+      offeringSoftCapUsdc: 1000,
+      offeringHardCapUsdc: 20000,
+      offeringDays: 21,
+      tnaUsd: 12,
+      useOfProceeds: 'Campaña',
+      minInvestmentUsdc: 10,
+    });
+    const stored = listings.require(listing.id);
+    stored.tokensMinted = 4000;
+    listings.markOpen(listing.id);
+
+    for (const email of ['ivy@example.com', 'jon@example.com']) {
+      const { user } = await register(email);
+      const account = accounts.require(user.id);
+      account.kycStatus = 'APPROVED';
+      account.custodyMode = 'CUSTODIAL';
+      account.publicKey = 'GDUA6DQZJXBPTAQANQXEKXV3VXCPUIP5XQEHDAKJLRAVTXK35ZX2YORW';
+      accounts.save(account);
+      accounts.creditCash(user.id, 1000);
+      listings.contributeSandbox(listing.id, 100, user.id);
+    }
+
+    const res = await api().get(`/api/listings/${listing.id}/activity`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.investors).toBe(2);
+    expect(res.body.data.undatedUsdc).toBe(0);
+    expect(res.body.data.daily).toEqual([{ date: new Date().toISOString().slice(0, 10), usdc: 200 }]);
+    expect(JSON.stringify(res.body)).not.toMatch(/@example\.com/);
+  });
+});

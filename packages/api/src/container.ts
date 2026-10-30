@@ -69,6 +69,10 @@ import {
   JsonDividendRepository,
 } from './infrastructure/persistence/repositories/JsonDividendRepository';
 import {
+  CONTRIBUTIONS_KEY,
+  JsonContributionLog,
+} from './infrastructure/persistence/repositories/JsonContributionLog';
+import {
   JsonKycRecordRepository,
   KYC_KEY,
 } from './infrastructure/persistence/repositories/JsonKycRecordRepository';
@@ -127,6 +131,7 @@ export const PERSISTED_DOCUMENTS: ReadonlySet<string> = new Set([
   STOCKS_KEY,
   KYC_KEY,
   AUDIT_KEY,
+  CONTRIBUTIONS_KEY,
   'revoked-sessions.json',
 ]);
 
@@ -281,11 +286,17 @@ export async function buildContainer(
     },
     logger.child({ component: 'bootstrap' }),
   );
-  const listings = new ListingLedger(listingRepo, accounts, networkSettings, {
-    platformIssuerPublicKey: () => keyring.platformIssuerPublicKey(),
-    deploymentIssuer: () => deployments.load()?.issuer ?? null,
-    sharedStockVault: () => deployments.load()?.stockVault ?? null,
-  });
+  const listings = new ListingLedger(
+    listingRepo,
+    accounts,
+    networkSettings,
+    {
+      platformIssuerPublicKey: () => keyring.platformIssuerPublicKey(),
+      deploymentIssuer: () => deployments.load()?.issuer ?? null,
+      sharedStockVault: () => deployments.load()?.stockVault ?? null,
+    },
+    new JsonContributionLog(store),
+  );
   const presenter = new ListingPresenter(listings);
   const compliance = new ComplianceService(listings, sdex, keyring);
   const sdexMarket = new SdexMarketService(

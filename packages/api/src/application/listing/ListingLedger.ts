@@ -8,6 +8,11 @@ import {
   type Listing,
   type SettleChoice,
 } from '../../domain/listing/Listing';
+import {
+  dailyTotals,
+  type IContributionLog,
+  type OfferingActivity,
+} from '../../domain/listing/ContributionLog';
 import type { IListingRepository } from '../../domain/listing/ListingRepository';
 import { isStellarPublicKey, normalizeAddress } from '../../domain/stellar/StellarAddress';
 import type { INetworkSettingsProvider } from '../../domain/testnet/NetworkSettings';
@@ -36,6 +41,7 @@ export class ListingLedger {
     private readonly accounts: AccountService,
     private readonly network: INetworkSettingsProvider,
     private readonly chain: ListingChainDefaults,
+    private readonly contributions?: IContributionLog,
   ) {}
 
   /* ------------------------------------ reads ------------------------------------ */
@@ -241,6 +247,25 @@ export class ListingLedger {
 
   /* ------------------------------------ contributions & closing ------------------------------------ */
 
+  /** Aggregated, anonymous subscription activity for the offering page. */
+  activity(id: string): OfferingActivity {
+    const listing = this.require(id);
+    const events = this.contributions?.forListing(id) ?? [];
+    const investors = this.accounts
+      .list()
+      .filter((a) => a.holdings.some((h) => h.listingId === id && h.usdcAmount > 0 && !h.refundedAt)).length;
+    const dated = events.reduce((sum, e) => sum + e.usdc, 0);
+    return {
+      investors,
+      daily: dailyTotals(events),
+      undatedUsdc: Math.max(0, Math.round((listing.raisedUsdc - dated) * 1e7) / 1e7),
+    };
+  }
+
+  private logContribution(listingId: string, usdc: number): void {
+    if (usdc > 0) this.contributions?.append({ listingId, at: new Date().toISOString(), usdc });
+  }
+
   /** Sandbox primary: debits sandbox cash and books the units as owed. */
   contributeSandbox(id: string, usdcAmount: number, accountId: string): Listing {
     const investor = this.accounts.require(accountId);
@@ -272,6 +297,7 @@ export class ListingLedger {
       tokens: 0,
       tokensOwed: amount / price,
     });
+    this.logContribution(listing.id, amount);
     this.applyDueClose(listing);
     this.repo.save(listing);
     return this.require(id);
@@ -294,6 +320,7 @@ export class ListingLedger {
         tokens: 0,
         tokensOwed: units,
       });
+      this.logContribution(listing.id, input.amount);
     }
     listing.raisedUsdc = input.raised;
     this.repo.save(listing);

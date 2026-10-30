@@ -62,6 +62,11 @@ export class ListingController implements Controller {
       });
     });
 
+    /** Anonymous subscription activity: investor count and money in per day. */
+    r.get('/api/listings/:id/activity', id, (req, res) => {
+      ok(res, this.ledger.activity(listingId(req)));
+    });
+
     r.get('/api/listings/:id/validation', id, (req, res) => {
       ok(res, this.presenter.validationPack(this.ledger.require(listingId(req))));
     });
