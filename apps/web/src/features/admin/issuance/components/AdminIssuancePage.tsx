@@ -1,81 +1,159 @@
 import { useState } from 'react';
+import { Plus, X } from 'lucide-react';
+import type { SettlePolicy } from '@fractachain/shared';
 import RequireAdmin from '@/components/guards/RequireAdmin';
 import { withIsland } from '@/components/island/withIsland';
-import Toast from '@/components/ui/Toast';
+import { EmptyState, Notice, PageHeader } from '@/components/ui/kit';
 import { useI18n } from '@/hooks/useI18n';
+import { RefreshButton } from '../../shared/RefreshButton';
 import { useIssuanceAdmin } from '../hooks/useIssuanceAdmin';
 import DossierFormSection from './DossierFormSection';
 import ListingCard from './ListingCard';
+import PipelineBoard from './PipelineBoard';
 import StockCatalogSection from './StockCatalogSection';
 
-/** Issuer console: dossier → deploy → mint → open → close, plus the Merval catalog. */
+/** Two big radio cards: distribute at the soft cap, or on a date. */
+function SettlePolicyCard({
+  policy,
+  onPolicy,
+  settleAt,
+  onSettleAt,
+}: {
+  policy: SettlePolicy;
+  onPolicy: (p: SettlePolicy) => void;
+  settleAt: string;
+  onSettleAt: (v: string) => void;
+}) {
+  const { t } = useI18n();
+  const option = (value: SettlePolicy, label: string) => (
+    <label
+      className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 text-sm transition-colors ${
+        policy === value
+          ? 'border-navy bg-surface-2 text-ink'
+          : 'border-line text-ink-2 hover:border-line-strong'
+      }`}
+    >
+      <input
+        type="radio"
+        name="issuance-settle"
+        className="h-4 w-4 accent-[rgb(var(--navy))]"
+        checked={policy === value}
+        onChange={() => onPolicy(value)}
+      />
+      {label}
+    </label>
+  );
+  return (
+    <section className="card card-pad" aria-labelledby="settle-title">
+      <h2 id="settle-title" className="title">
+        {t('admin.issuance.settle')}
+      </h2>
+      <p className="subtitle mt-0.5">{t('admin.issuance.settleSub')}</p>
+      <fieldset className="mt-4 grid gap-2 sm:grid-cols-2">
+        <legend className="sr-only">{t('admin.issuance.settle')}</legend>
+        {option('ON_MIN', t('admIss.onMin'))}
+        {option('ON_DATE', t('admIss.onDate'))}
+      </fieldset>
+      {policy === 'ON_DATE' && (
+        <div className="mt-3 max-w-xs">
+          <label htmlFor="issuance-settle-at" className="label">
+            {t('admTest.closeDate')}
+          </label>
+          <input
+            id="issuance-settle-at"
+            type="datetime-local"
+            className="input"
+            value={settleAt}
+            onChange={(e) => onSettleAt(e.target.value)}
+          />
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Issuer console: pipeline, dossier → deploy → mint → open → close, dividends and the Merval catalog. */
 function AdminIssuance() {
   const { t } = useI18n();
   const admin = useIssuanceAdmin();
   const [mintAmount, setMintAmount] = useState(1000);
   const [dividendAmount, setDividendAmount] = useState(1000);
-  const { settlePolicy, setSettlePolicy, settleAt, setSettleAt } = admin;
+  const [showForm, setShowForm] = useState(false);
+  const listings = [...admin.listings].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
 
   return (
-    <div className="space-y-8 py-6">
-      <div>
-        <p className="font-lcd text-[11px] uppercase tracking-[0.2em] text-neutral-500">
-          {t('admIss.kicker')}
-        </p>
-        <h1 className="text-3xl font-extrabold font-display">{t('admIss.title')}</h1>
-        <p className="text-neutral-600 mt-1 max-w-2xl">{t('admIss.lead')}</p>
-      </div>
-      <Toast message={admin.notice} />
+    <div className="space-y-6">
+      <PageHeader
+        title={t('admin.issuance.title')}
+        subtitle={t('admin.issuance.lead')}
+        actions={
+          <>
+            <RefreshButton onClick={() => void admin.reload()} busy={admin.loading} />
+            <button
+              type="button"
+              className="btn btn-primary"
+              aria-expanded={showForm}
+              aria-controls="dossier"
+              onClick={() => setShowForm((v) => !v)}
+            >
+              {showForm ? (
+                <X className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Plus className="h-4 w-4" aria-hidden="true" />
+              )}
+              {showForm ? t('admin.issuance.hideForm') : t('admin.issuance.newIssuance')}
+            </button>
+          </>
+        }
+      />
 
-      <DossierFormSection admin={admin} />
+      <div aria-live="polite">{admin.notice && <Notice tone="sky">{admin.notice}</Notice>}</div>
 
-      <section className="space-y-4">
-        <h2 className="font-section text-xl font-extrabold">{t('admIss.sec24')}</h2>
-        <div className="p-5 rounded-3xl crystal-card space-y-3">
-          <p className="font-display font-extrabold">{t('admIss.settleQ')}</p>
-          <label className="block text-sm">
-            <input
-              type="radio"
-              name="issuance-settle"
-              className="mr-2"
-              checked={settlePolicy === 'ON_MIN'}
-              onChange={() => setSettlePolicy('ON_MIN')}
-            />
-            {t('admIss.onMin')}
-          </label>
-          <label className="block text-sm">
-            <input
-              type="radio"
-              name="issuance-settle"
-              className="mr-2"
-              checked={settlePolicy === 'ON_DATE'}
-              onChange={() => setSettlePolicy('ON_DATE')}
-            />
-            {t('admIss.onDate')}
-          </label>
-          {settlePolicy === 'ON_DATE' && (
-            <input
-              type="datetime-local"
-              aria-label={t('admIss.onDate')}
-              className="w-full max-w-sm px-3 py-2 rounded-xl border border-black/10"
-              value={settleAt}
-              onChange={(e) => setSettleAt(e.target.value)}
-            />
-          )}
-          <p className="text-xs text-neutral-500">{t('admIss.settleNote')}</p>
+      {showForm && <DossierFormSection admin={admin} onClose={() => setShowForm(false)} />}
+
+      <PipelineBoard listings={listings} paying={admin.paying} />
+
+      <SettlePolicyCard
+        policy={admin.settlePolicy}
+        onPolicy={admin.setSettlePolicy}
+        settleAt={admin.settleAt}
+        onSettleAt={admin.setSettleAt}
+      />
+
+      <section className="space-y-4" aria-labelledby="listings-title">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 id="listings-title" className="title">
+            {t('admin.issuance.listings')}
+          </h2>
+          <span className="text-xs text-muted">
+            {t('admin.issuance.listingsSub', { n: listings.length })}
+          </span>
         </div>
-        {admin.listings.length === 0 && <p className="text-neutral-500">{t('admIss.noFiles')}</p>}
-        {admin.listings.map((l) => (
-          <ListingCard
-            key={`${l.id}:${l.dossier.proceedsWallet}`}
-            listing={l}
-            admin={admin}
-            mintAmount={mintAmount}
-            onMintAmount={setMintAmount}
-            dividendAmount={dividendAmount}
-            onDividendAmount={setDividendAmount}
-          />
-        ))}
+        {listings.length === 0 ? (
+          <div className="card">
+            <EmptyState
+              title={t('admIss.noFiles')}
+              action={
+                <button type="button" className="btn btn-primary" onClick={() => setShowForm(true)}>
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  {t('admin.issuance.newIssuance')}
+                </button>
+              }
+            />
+          </div>
+        ) : (
+          listings.map((l) => (
+            <ListingCard
+              key={`${l.id}:${l.dossier.proceedsWallet}`}
+              listing={l}
+              admin={admin}
+              mintAmount={mintAmount}
+              onMintAmount={setMintAmount}
+              dividendAmount={dividendAmount}
+              onDividendAmount={setDividendAmount}
+            />
+          ))
+        )}
       </section>
 
       <StockCatalogSection admin={admin} />

@@ -1,5 +1,6 @@
 ---
 import AdminKycPage from '@/features/admin/kyc/components/AdminKycPage';
+import SectionNav from '@/components/layout/SectionNav';
 import PageFallback from '@/components/ui/PageFallback.astro';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { translate } from '@/core/i18n/translate';
@@ -7,8 +8,11 @@ import { translate } from '@/core/i18n/translate';
 const locale = Astro.locals.locale;
 ---
 
-<BaseLayout title={translate(locale, 'admKyc.title')}>
-  <AdminKycPage client:only="react" locale={locale}>
-    <PageFallback slot="fallback" />
-  </AdminKycPage>
+<BaseLayout title={translate(locale, 'admin.kyc.title')}>
+  <div class="space-y-6">
+    <SectionNav section="console" active="kyc" client:load locale={locale} />
+    <AdminKycPage client:only="react" locale={locale}>
+      <PageFallback slot="fallback" />
+    </AdminKycPage>
+  </div>
 </BaseLayout>

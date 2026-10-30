@@ -79,6 +79,53 @@ export interface PublicAccount {
   createdAt?: string;
 }
 
+/** Who verifies identity: Didit's hosted flow, or the in-app form reviewed by compliance. */
+export type KycProvider = 'didit' | 'manual';
+
+/** `GET /api/kyc/provider` */
+export interface KycProviderInfo {
+  provider: KycProvider;
+  /** The in-app selfie is required only without an identity provider. */
+  selfieRequired: boolean;
+}
+
+/** Didit session statuses (case-sensitive, as Didit reports them). */
+export type VerificationSessionStatus =
+  | 'Not Started'
+  | 'In Progress'
+  | 'In Review'
+  | 'Approved'
+  | 'Declined'
+  | 'Resubmitted'
+  | 'Awaiting User'
+  | 'Abandoned'
+  | 'Expired'
+  | 'Kyc Expired';
+
+/** `GET /api/kyc/verification` and `POST /api/kyc/verification/sync` (`data`). */
+export interface VerificationView {
+  provider: KycProvider;
+  kycStatus: KycStatus;
+  /** Present once a hosted session was started. */
+  session?: {
+    status: VerificationSessionStatus;
+    /** Only while the session can still be completed with the same link. */
+    resumeUrl?: string;
+    canRestart: boolean;
+    updatedAt: string;
+  };
+  /** What the provider read from the document, once approved. */
+  identity?: { fullName?: string; documentType?: string; issuingState?: string };
+  /** Why the account was rejected or revoked, when it was. */
+  reason?: string;
+}
+
+/** `POST /api/kyc/verification`: where to send the browser. */
+export interface VerificationStart {
+  url: string;
+  sessionId: string;
+}
+
 export interface SessionPayload {
   success: true;
   token: string;

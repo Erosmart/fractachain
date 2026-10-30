@@ -14,7 +14,13 @@ export default function RequireAuth({ children }: { children: ReactNode }) {
     if (!isLoading && !user) navigator.replace(navigator.loginUrl());
   }, [user, isLoading]);
 
-  if (isLoading) return <p className="py-16 text-center text-neutral-500">{t('misc.loadingSession')}</p>;
+  if (isLoading) {
+    return (
+      <p className="py-20 text-center text-sm text-muted" role="status" aria-live="polite">
+        {t('misc.loadingSession')}
+      </p>
+    );
+  }
   if (!user) return null;
   return <>{children}</>;
 }

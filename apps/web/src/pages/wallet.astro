@@ -1,5 +1,6 @@
 ---
 import WalletPage from '@/features/wallet/components/WalletPage';
+import SectionNav from '@/components/layout/SectionNav';
 import PageFallback from '@/components/ui/PageFallback.astro';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { translate } from '@/core/i18n/translate';
@@ -7,8 +8,11 @@ import { translate } from '@/core/i18n/translate';
 const locale = Astro.locals.locale;
 ---
 
-<BaseLayout title={translate(locale, 'pages.walletTitle')}>
-  <WalletPage client:only="react" locale={locale}>
-    <PageFallback slot="fallback" />
-  </WalletPage>
+<BaseLayout title={translate(locale, 'account.walletPage.title')}>
+  <div class="mx-auto flex max-w-6xl flex-col gap-6">
+    <SectionNav section="account" active="wallet" client:load locale={locale} className="self-start" />
+    <WalletPage client:only="react" locale={locale}>
+      <PageFallback slot="fallback" />
+    </WalletPage>
+  </div>
 </BaseLayout>

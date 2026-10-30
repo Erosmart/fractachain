@@ -22,6 +22,9 @@ export function useIssuanceAdmin() {
   const [form, setForm] = useState<DossierForm>(EMPTY_DOSSIER);
   const [listings, setListings] = useState<Listing[]>([]);
   const [stocks, setStocks] = useState<MervalStock[]>([]);
+  /** Closed listings that already paid at least one dividend ("Pagando renta"). */
+  const [paying, setPaying] = useState<ReadonlySet<string>>(new Set());
+  const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [settlePolicy, setSettlePolicy] = useState<SettlePolicy>('ON_MIN');
@@ -42,12 +45,27 @@ export function useIssuanceAdmin() {
   }, []);
 
   const load = useCallback(async () => {
+    setLoading(true);
     const [ls, st] = await Promise.all([
       api.admin.listings().catch(() => null),
       api.admin.stocks().catch(() => null),
     ]);
     if (ls) setListings(ls);
     if (st) setStocks(st);
+    setLoading(false);
+    if (ls) {
+      const paid = await Promise.all(
+        ls
+          .filter((l) => l.status === 'CLOSED_SUCCESS')
+          .map((l) =>
+            api.admin
+              .dividends(l.id)
+              .then((d) => (d.length ? l.id : null))
+              .catch(() => null),
+          ),
+      );
+      setPaying(new Set(paid.filter((id): id is string => Boolean(id))));
+    }
   }, []);
 
   useEffect(() => {
@@ -196,6 +214,9 @@ export function useIssuanceAdmin() {
     setField,
     listings,
     stocks,
+    paying,
+    loading,
+    reload: load,
     notice,
     busy,
     settlePolicy,

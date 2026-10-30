@@ -1,8 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Activity, CheckCircle2, Scale, Users, Zap } from 'lucide-react';
+import { RotateCcw, Scale, Zap } from 'lucide-react';
 import RequireAdmin from '@/components/guards/RequireAdmin';
 import { withIsland } from '@/components/island/withIsland';
+import {
+  Card,
+  GradientPanel,
+  Notice,
+  PageHeader,
+  RiskCallout,
+  StatusChip,
+  type Tone,
+} from '@/components/ui/kit';
 import { useI18n } from '@/hooks/useI18n';
+import { CopyValue } from '../../shared/CopyValue';
 
 interface TokenHolder {
   address: string;
@@ -14,6 +24,7 @@ interface TokenHolder {
   isDominant: boolean;
 }
 
+/** Sample scenario: per-contract holdings are not exposed by the API yet. */
 const INITIAL_HOLDERS: TokenHolder[] = [
   {
     address: 'GD6CGAZZY4Z2HQAIBL4RHJJWHJULLCO5F5XW6VL3CECJWLDBCDKWB7KR',
@@ -47,23 +58,35 @@ const INITIAL_HOLDERS: TokenHolder[] = [
   },
 ];
 
+const OPA_THRESHOLD = 50;
+const SQUEEZE_THRESHOLD = 95;
+
+function regime(pct: number): { tone: Tone; key: string } {
+  if (pct >= SQUEEZE_THRESHOLD) return { tone: 'bad', key: 'admin.opa.regime.squeeze' };
+  if (pct >= OPA_THRESHOLD) return { tone: 'warn', key: 'admin.opa.regime.opa' };
+  return { tone: 'good', key: 'admin.opa.regime.normal' };
+}
+
 /** Takeover-bid (OPA) and squeeze-out governance simulator. */
 function AdminOpa() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [holders, setHolders] = useState<TokenHolder[]>(INITIAL_HOLDERS);
-  const [dominantPercent, setDominantPercent] = useState<number>(52.4);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const dominant = holders.find((h) => h.isDominant) ?? holders[0];
+  const pct = dominant.percentage;
+  const state = regime(pct);
+  const loc = locale === 'en' ? 'en-US' : 'es-AR';
+  const nf = (n: number) => n.toLocaleString(loc);
+  const pf = (n: number) => n.toLocaleString(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const total = holders.reduce((s, h) => s + h.tokensHeld, 0);
 
   useEffect(() => {
     if (!actionMessage) return;
-    const timer = setTimeout(() => setActionMessage(null), 5000);
+    const timer = setTimeout(() => setActionMessage(null), 6000);
     return () => clearTimeout(timer);
   }, [actionMessage]);
 
-  const handleTriggerOpa = () => setActionMessage(t('admOpa.opaMsg'));
-
-  const handleSimulateSqueezeOut = () => {
-    setDominantPercent(96.2);
+  const simulateSqueezeOut = () => {
     setHolders((prev) => [
       { ...prev[0], percentage: 96.2, tokensHeld: 481000 },
       { ...prev[1], percentage: 1.8, tokensHeld: 9000 },
@@ -73,205 +96,186 @@ function AdminOpa() {
     setActionMessage(t('admOpa.squeezeMsg'));
   };
 
+  const reset = () => {
+    setHolders(INITIAL_HOLDERS);
+    setActionMessage(null);
+  };
+
   const holderName = (h: TokenHolder) => (h.nameKey ? t(h.nameKey) : h.name);
 
   return (
-    <div className="space-y-8 py-4">
-      {/* Header */}
-      <div className="space-y-2">
-        <div className="inline-flex max-w-full flex-wrap items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-700 text-xs font-semibold uppercase tracking-wider">
-          <Activity className="w-3.5 h-3.5 shrink-0" />
-          {t('admOpa.kicker')}
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-black tracking-tight">{t('admOpa.title')}</h1>
-        <p className="text-neutral-600 text-xs sm:text-sm max-w-2xl">{t('admOpa.lead')}</p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow={
+          <StatusChip tone="peach" icon={false}>
+            {t('admin.opa.simulation')}
+          </StatusChip>
+        }
+        title={t('admin.opa.title')}
+        subtitle={t('admin.opa.lead')}
+        actions={
+          <button type="button" className="btn btn-secondary" onClick={reset}>
+            <RotateCcw className="h-4 w-4" aria-hidden="true" />
+            {t('admin.opa.reset')}
+          </button>
+        }
+      />
 
-      {/* Threshold Status Banner */}
-      <div className="p-6 rounded-3xl crystal-card space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-bold text-black">{t('admOpa.gov')}</h3>
-            <p className="text-xs text-neutral-600">
-              {t('admOpa.dominantPre')} <strong className="text-black font-mono">{dominantPercent}%</strong>{' '}
-              {t('admOpa.dominantPost')}
-            </p>
-          </div>
+      <RiskCallout>{t('admin.opa.simulationNote')}</RiskCallout>
 
-          <div className="flex items-center gap-2">
-            {dominantPercent >= 95 ? (
-              <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200 text-xs font-bold font-mono">
-                {t('admOpa.squeezeOn')}
-              </span>
-            ) : dominantPercent >= 50 ? (
-              <span className="px-3 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 text-xs font-bold font-mono">
-                {t('admOpa.opaOn')}
-              </span>
-            ) : (
-              <span className="px-3 py-1 rounded-full bg-leaf-100 text-[#2f6f28] border border-[#8fcb7a]/50 text-xs font-bold font-mono">
-                {t('admOpa.normal')}
-              </span>
-            )}
-          </div>
-        </div>
+      <div aria-live="polite">{actionMessage && <Notice tone="sky">{actionMessage}</Notice>}</div>
 
-        {/* Progress Bar of Dominance */}
-        <div className="space-y-1.5">
-          <div className="relative w-full h-4 bg-black/10 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                dominantPercent >= 95
-                  ? 'bg-purple-500'
-                  : dominantPercent >= 50
-                    ? 'bg-gradient-to-r from-yellow-500 to-red-500'
-                    : 'bg-[#7ed86a]'
-              }`}
-              style={{ width: `${dominantPercent}%` }}
-            />
-            {/* 50% OPA line marker */}
-            <div
-              className="absolute top-0 bottom-0 w-0.5 bg-red-500"
-              style={{ left: '50%' }}
-              title={t('admOpa.opaThreshold')}
-            />
-            {/* 95% Squeeze-out line marker */}
-            <div
-              className="absolute top-0 bottom-0 w-0.5 bg-purple-500"
-              style={{ left: '95%' }}
-              title={t('admOpa.squeezeThreshold')}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-1 sm:flex sm:justify-between text-[10px] sm:text-[11px] text-neutral-500 font-mono">
-            <span>0%</span>
-            <span className="text-red-700 font-bold">50% OPA</span>
-            <span className="text-purple-700 font-bold">95% Squeeze</span>
-            <span>100%</span>
-          </div>
-        </div>
-      </div>
-
-      {actionMessage && (
-        <div
-          className="p-3 rounded-xl bg-leaf-100 border border-[#8fcb7a]/50 text-[#2f6f28] text-xs flex items-center gap-2"
-          role="status"
-        >
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>{actionMessage}</span>
-        </div>
-      )}
-
-      {/* Holders Table & Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Left: Table (8 Cols) */}
-        <div className="lg:col-span-8 rounded-3xl crystal-card overflow-hidden">
-          <div className="p-4 bg-black/5 border-b border-black/8 flex flex-col gap-1 sm:flex-row sm:justify-between sm:items-center">
-            <span className="text-xs font-bold text-black uppercase tracking-wider flex items-center gap-2">
-              <Users className="w-4 h-4 text-[#2f6f28] shrink-0" />
-              {t('admOpa.holders')}
-            </span>
-            <span className="text-[11px] text-neutral-500 font-mono">
-              {t('admOpa.totalTokens', { n: '500,000' })}
-            </span>
-          </div>
-
-          {/* Mobile cards */}
-          <div className="md:hidden divide-y divide-black/8">
-            {holders.map((holder) => (
-              <div key={holder.address} className={`p-4 space-y-2 ${holder.isDominant ? 'bg-red-50' : ''}`}>
-                <div className="font-bold text-black text-xs break-words">{holderName(holder)}</div>
-                {holder.isDominant && (
-                  <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-50 text-red-700 border border-red-200">
-                    {t('admOpa.obliged')}
-                  </span>
-                )}
-                <div className="font-mono text-[11px] text-neutral-500 break-all">{holder.address}</div>
-                <div className="flex justify-between text-xs font-mono">
-                  <span className="text-black">
-                    {holder.tokensHeld.toLocaleString()} {t('admOpa.tokensUnit')}
-                  </span>
-                  <span className={holder.percentage >= 50 ? 'text-red-700 font-bold' : 'text-neutral-700'}>
-                    {holder.percentage.toFixed(1)}%
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left text-xs min-w-[36rem]">
-              <thead className="text-neutral-500 font-mono text-[11px] uppercase border-b border-black/8 bg-black/5">
-                <tr>
-                  <th className="px-4 py-3">{t('admOpa.thHolder')}</th>
-                  <th className="px-4 py-3">{t('admOpa.thAddress')}</th>
-                  <th className="px-4 py-3 text-right">{t('admOpa.thTokens')}</th>
-                  <th className="px-4 py-3 text-right">{t('admOpa.thPct')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-black/8">
-                {holders.map((holder) => (
-                  <tr key={holder.address} className={holder.isDominant ? 'bg-red-50' : ''}>
-                    <td className="px-4 py-3">
-                      <div className="font-bold text-black text-xs">{holderName(holder)}</div>
-                      {holder.isDominant && (
-                        <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-red-50 text-red-700 border border-red-200">
-                          {t('admOpa.obliged')}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-[11px] text-neutral-500">
-                      <span className="truncate block max-w-[140px]">{holder.address}</span>
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono text-black">
-                      {holder.tokensHeld.toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono font-bold">
-                      <span className={holder.percentage >= 50 ? 'text-red-700' : 'text-neutral-700'}>
-                        {holder.percentage.toFixed(1)}%
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Right: Simulation Controls (4 Cols) */}
-        <div className="lg:col-span-4 p-6 rounded-3xl crystal-card space-y-5">
-          <h3 className="text-sm font-bold text-black uppercase tracking-wider">{t('admOpa.actions')}</h3>
-
-          <div className="space-y-3">
-            <button
-              type="button"
-              onClick={handleTriggerOpa}
-              className="w-full py-2.5 rounded-xl bg-red-500 hover:bg-red-400 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
-            >
-              <Zap className="w-3.5 h-3.5" />
-              {t('admOpa.notifyOpa')}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleSimulateSqueezeOut}
-              className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
-            >
-              <Scale className="w-3.5 h-3.5" />
-              {t('admOpa.simSqueeze')}
-            </button>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-black/5 border border-black/8 space-y-2 text-xs text-neutral-600">
-            <div className="flex items-center gap-1.5 text-black font-semibold text-xs">
-              <Scale className="w-4 h-4 text-[#2f6f28]" /> {t('admOpa.legalTitle')}
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="min-w-0 space-y-6">
+          <Card title={t('admin.opa.concentration')} subtitle={t('admin.opa.issue')}>
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <p className="flex items-baseline gap-1.5 text-ink">
+                <span className="numeral text-[56px]">{pf(pct)}</span>
+                <span className="text-sm text-ink-2">%</span>
+              </p>
+              <StatusChip tone={state.tone}>{t(state.key)}</StatusChip>
             </div>
-            <p className="text-[11px] leading-relaxed">
-              <strong>{t('admOpa.art86Label')}</strong> {t('admOpa.art86Body')}
+            <p className="mt-1 text-xs text-muted">
+              {t('admin.opa.dominant')}: {holderName(dominant)}
             </p>
-            <p className="text-[11px] leading-relaxed">
-              <strong>{t('admOpa.art91Label')}</strong> {t('admOpa.art91Body')}
-            </p>
-          </div>
+
+            {/* Track with the two legal thresholds marked. */}
+            <div className="mt-6">
+              <div
+                className="relative h-2 rounded-full bg-sky-soft"
+                role="meter"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={pct}
+                aria-label={t('admin.opa.concentration')}
+              >
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-500"
+                  style={{
+                    width: `${pct}%`,
+                    background: 'linear-gradient(90deg, rgb(var(--sky-strong)), rgb(var(--sky)))',
+                  }}
+                />
+                {[OPA_THRESHOLD, SQUEEZE_THRESHOLD].map((m) => (
+                  <div
+                    key={m}
+                    className={`absolute -top-1 h-4 w-[2px] rounded-full ${pct >= m ? 'bg-ink' : 'bg-ink/45'}`}
+                    style={{ left: `calc(${m}% - 1px)` }}
+                    aria-hidden="true"
+                  />
+                ))}
+              </div>
+              <div className="relative mt-2 h-4 text-[11px] text-muted tnum" aria-hidden="true">
+                <span className="absolute left-0">0 %</span>
+                <span
+                  className="absolute -translate-x-1/2 whitespace-nowrap"
+                  style={{ left: `${OPA_THRESHOLD}%` }}
+                >
+                  {t('admin.opa.opaMark')}
+                </span>
+                <span
+                  className="absolute -translate-x-full whitespace-nowrap"
+                  style={{ left: `${SQUEEZE_THRESHOLD}%` }}
+                >
+                  {t('admin.opa.squeezeMark')}
+                </span>
+              </div>
+            </div>
+          </Card>
+
+          <section className="card min-w-0 overflow-hidden" aria-labelledby="holders-title">
+            <header className="flex flex-wrap items-baseline justify-between gap-2 px-5 pt-5 sm:px-6 sm:pt-6">
+              <h2 id="holders-title" className="title">
+                {t('admin.opa.holders')}
+              </h2>
+              <span className="text-xs text-muted tnum">{t('admin.opa.total', { n: nf(total) })}</span>
+            </header>
+            <ul className="mt-3 divide-y divide-line md:hidden">
+              {holders.map((h) => (
+                <li key={h.address} className="space-y-1.5 px-5 py-3.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="min-w-0 text-sm font-medium text-ink">{holderName(h)}</span>
+                    <span className="shrink-0 text-sm text-ink tnum">{pf(h.percentage)} %</span>
+                  </div>
+                  {h.isDominant && <StatusChip tone="warn">{t('admin.opa.obliged')}</StatusChip>}
+                  <p className="text-xs text-muted tnum">
+                    {nf(h.tokensHeld)} {t('admOpa.tokensUnit')}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-3 hidden overflow-x-auto md:block">
+              <table className="table-clean">
+                <thead>
+                  <tr>
+                    <th scope="col" className="!pl-6">
+                      {t('admin.opa.thHolder')}
+                    </th>
+                    <th scope="col">{t('admOpa.thAddress')}</th>
+                    <th scope="col" className="!text-right">
+                      {t('admOpa.thTokens')}
+                    </th>
+                    <th scope="col" className="!pr-6 !text-right">
+                      {t('admOpa.thPct')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {holders.map((h) => (
+                    <tr key={h.address}>
+                      <td className="!pl-6">
+                        <span className="block text-sm text-ink">{holderName(h)}</span>
+                        {h.isDominant && (
+                          <StatusChip tone="warn" className="mt-1">
+                            {t('admin.opa.obliged')}
+                          </StatusChip>
+                        )}
+                      </td>
+                      <td>
+                        {h.address.includes('...') ? (
+                          <span className="font-mono text-xs text-muted">{h.address}</span>
+                        ) : (
+                          <CopyValue value={h.address} />
+                        )}
+                      </td>
+                      <td className="text-right">{nf(h.tokensHeld)}</td>
+                      <td className="!pr-6 text-right">{pf(h.percentage)} %</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div className="min-w-0 space-y-6">
+          <GradientPanel title={t('admin.opa.actions')}>
+            <div className="space-y-2 px-5 py-5 sm:px-6">
+              <button
+                type="button"
+                onClick={() => setActionMessage(t('admOpa.opaMsg'))}
+                className="btn btn-primary w-full"
+              >
+                <Zap className="h-4 w-4" aria-hidden="true" />
+                {t('admin.opa.notify')}
+              </button>
+              <button type="button" onClick={simulateSqueezeOut} className="btn btn-secondary w-full">
+                <Scale className="h-4 w-4" aria-hidden="true" />
+                {t('admin.opa.simulate')}
+              </button>
+            </div>
+          </GradientPanel>
+
+          <Card title={t('admin.opa.legal')}>
+            <div className="space-y-3 text-[13px] leading-relaxed text-ink-2">
+              <p>
+                <span className="font-medium text-ink">{t('admOpa.art86Label')}</span> {t('admOpa.art86Body')}
+              </p>
+              <p>
+                <span className="font-medium text-ink">{t('admOpa.art91Label')}</span> {t('admOpa.art91Body')}
+              </p>
+            </div>
+          </Card>
         </div>
       </div>
     </div>

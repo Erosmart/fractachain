@@ -24,7 +24,13 @@ export default function RequireOnboarding({ children }: { children: ReactNode })
     if (dest !== '/dashboard') navigator.replace(dest);
   }, [user, isLoading]);
 
-  if (isLoading) return <p className="py-16 text-center text-neutral-500">{t('auth.loading')}</p>;
+  if (isLoading) {
+    return (
+      <p className="py-20 text-center text-sm text-muted" role="status" aria-live="polite">
+        {t('auth.loading')}
+      </p>
+    );
+  }
   if (!user || nextOnboardingPath(user) !== '/dashboard') return null;
   return <>{children}</>;
 }

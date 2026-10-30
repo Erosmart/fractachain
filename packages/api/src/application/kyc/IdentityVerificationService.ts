@@ -33,6 +33,8 @@ export interface VerificationView {
   };
   /** What the provider extracted from the document, once approved. */
   identity?: { fullName?: string; documentType?: string; issuingState?: string };
+  /** Why the account was rejected or revoked (provider or compliance), shown to the owner. */
+  reason?: string;
 }
 
 /** Sessions the investor can keep going in (same link). */
@@ -75,7 +77,9 @@ export class IdentityVerificationService {
 
   view(accountId: string): VerificationView {
     const account = this.accounts.require(accountId);
-    const v = this.recordOf(account)?.verification;
+    const record = this.recordOf(account);
+    const v = record?.verification;
+    const refused = account.kycStatus === 'REJECTED' || account.kycStatus === 'REVOKED';
     return {
       provider: this.providerName,
       kycStatus: account.kycStatus,
@@ -93,6 +97,7 @@ export class IdentityVerificationService {
               issuingState: v.identity.issuingState,
             }
           : undefined,
+      reason: refused ? record?.rejectionReason : undefined,
     };
   }
 
@@ -208,7 +213,13 @@ export class IdentityVerificationService {
     } else if (target === 'REJECTED' || target === 'REVOKED') {
       // A decision that lands on an already approved investor freezes them on-chain too.
       const outcome = current === 'APPROVED' || target === 'REVOKED' ? 'REVOKED' : 'REJECTED';
-      this.kyc.settle(record.id, outcome, `Verificación de identidad: ${decision.status}`);
+      this.kyc.settle(
+        record.id,
+        outcome,
+        decision.status === 'Kyc Expired'
+          ? 'Tu verificación de identidad venció: hacé una nueva.'
+          : 'Didit no pudo verificar tu identidad.',
+      );
     } else if (current === 'REJECTED' || current === 'UNREGISTERED') {
       // In-flight states never downgrade an approved investor.
       this.kyc.settle(record.id, 'PENDING');

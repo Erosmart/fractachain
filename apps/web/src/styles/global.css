@@ -327,3 +327,13 @@ p {
   grid-template-columns: repeat(3, 4px);
   gap: 2px;
 }
+
+/*
+ * Astro renders islands with `display: contents`, so `space-y-*` and margins
+ * on them are ignored and page sections collapse together. Inside <main>
+ * they are plain blocks (the header island stays outside, so its sticky
+ * header keeps sticking to the page).
+ */
+main astro-island {
+  display: block;
+}

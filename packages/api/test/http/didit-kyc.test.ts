@@ -219,6 +219,7 @@ describe('KYC with Didit', () => {
     didit.decide(first.sessionId, 'Declined');
     const view = (await api().post('/api/kyc/verification/sync').set('Authorization', auth)).body.data;
     expect(view).toMatchObject({ kycStatus: 'REJECTED', session: { status: 'Declined', canRestart: true } });
+    expect(view.reason).toBe('Didit no pudo verificar tu identidad.');
     const second = (await api().post('/api/kyc/verification').set('Authorization', auth).send({})).body;
     expect(second.sessionId).not.toBe(first.sessionId);
     expect((await api().get('/api/auth/me').set('Authorization', auth)).body.user.kycStatus).toBe('PENDING');

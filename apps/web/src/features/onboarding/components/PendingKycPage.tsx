@@ -1,42 +1,53 @@
 import { useEffect } from 'react';
-import { Clock } from 'lucide-react';
 import { withIsland } from '@/components/island/withIsland';
 import { container } from '@/core/container';
+import { stepperIndex, verificationStage } from '@/core/onboarding/verification';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/hooks/useI18n';
-import { useVisibleInterval } from '@/hooks/useVisibleInterval';
+import { useVerification } from '../hooks/useVerification';
+import OnboardingFrame, { LoadingLine } from './OnboardingFrame';
+import VerificationStatusCard from './VerificationStatusCard';
+import WhileYouWait from './WhileYouWait';
 
 const { navigator } = container;
 
-/** Step 3: waits for the compliance decision, polling the session. */
+/**
+ * Review step: the verification status, re-read from the provider (through
+ * the API) with backoff while it is pending.
+ */
 function PendingKycPage() {
-  const { user, isLoading, refreshUser, logout } = useAuth();
+  const { user, isLoading, logout } = useAuth();
   const { t } = useI18n();
-
-  useVisibleInterval(refreshUser, 4000, Boolean(user));
+  const verification = useVerification({ sync: true });
 
   useEffect(() => {
     if (isLoading) return;
-    if (!user) navigator.replace('/login');
-    else if (user.kycStatus === 'APPROVED') navigator.replace('/dashboard');
+    if (!user) navigator.replace(navigator.loginUrl());
+    else if (!user.custodyMode && !user.isAdmin) navigator.replace('/onboarding/wallet');
     else if (user.kycStatus === 'UNREGISTERED') navigator.replace('/onboarding/kyc');
   }, [user, isLoading]);
 
-  const rejected = user?.kycStatus === 'REJECTED';
+  if (isLoading) return <LoadingLine>{t('auth.loading')}</LoadingLine>;
+  if (!user || user.kycStatus === 'UNREGISTERED') return null;
+
+  const stage = verification.view ? verificationStage(verification.view) : 'manual_review';
   return (
-    <div className="max-w-lg mx-auto py-16 text-center space-y-5">
-      <Clock className="w-10 h-10 mx-auto" />
-      <h1 className="text-3xl font-extrabold font-display">
-        {rejected ? t('onboarding.rejectedTitle') : t('onboarding.pendingTitle')}
-      </h1>
-      <p className="text-neutral-600">
-        {rejected ? t('onboarding.rejectedBody') : t('onboarding.pendingBody')}
-      </p>
-      <p className="text-sm text-neutral-500">{t('onboarding.pendingHint')}</p>
-      <button type="button" onClick={logout} className="text-sm text-neutral-500">
-        {t('auth.logout')}
-      </button>
-    </div>
+    <OnboardingFrame
+      step={stepperIndex({ custodyMode: user.custodyMode, stage })}
+      eyebrow={t('onboard.status.eyebrow')}
+      title={t('onboard.status.title')}
+      aside={stage === 'approved' ? undefined : <WhileYouWait />}
+    >
+      <VerificationStatusCard state={verification} />
+      <div className="mt-4 flex flex-wrap gap-2">
+        <a href="/account" className="btn btn-ghost btn-sm">
+          {t('onboard.status.goAccount')}
+        </a>
+        <button type="button" onClick={logout} className="btn btn-ghost btn-sm">
+          {t('onboard.status.logout')}
+        </button>
+      </div>
+    </OnboardingFrame>
   );
 }
 

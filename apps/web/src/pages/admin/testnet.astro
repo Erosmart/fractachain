@@ -1,5 +1,6 @@
 ---
 import AdminTestnetPage from '@/features/admin/testnet/components/AdminTestnetPage';
+import SectionNav from '@/components/layout/SectionNav';
 import PageFallback from '@/components/ui/PageFallback.astro';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { translate } from '@/core/i18n/translate';
@@ -7,8 +8,11 @@ import { translate } from '@/core/i18n/translate';
 const locale = Astro.locals.locale;
 ---
 
-<BaseLayout title={translate(locale, 'admTest.title')}>
-  <AdminTestnetPage client:only="react" locale={locale}>
-    <PageFallback slot="fallback" />
-  </AdminTestnetPage>
+<BaseLayout title={translate(locale, 'admin.testnet.title')}>
+  <div class="space-y-6">
+    <SectionNav section="console" active="testnet" client:load locale={locale} />
+    <AdminTestnetPage client:only="react" locale={locale}>
+      <PageFallback slot="fallback" />
+    </AdminTestnetPage>
+  </div>
 </BaseLayout>

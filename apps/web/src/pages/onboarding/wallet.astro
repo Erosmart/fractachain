@@ -7,7 +7,7 @@ import { translate } from '@/core/i18n/translate';
 const locale = Astro.locals.locale;
 ---
 
-<BaseLayout title={translate(locale, 'onboarding.walletTitle')}>
+<BaseLayout title={translate(locale, 'onboarding.walletTitle')} bare>
   <WalletOnboardingPage client:only="react" locale={locale}>
     <PageFallback slot="fallback" />
   </WalletOnboardingPage>

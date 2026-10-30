@@ -1,5 +1,8 @@
 import { useState } from 'react';
+import { Sparkles } from 'lucide-react';
+import { StatusChip } from '@/components/ui/kit';
 import type { NewStockInput } from '@/core/api/types';
+import { formatAmount, formatInt } from '@/core/format/number';
 import { useI18n } from '@/hooks/useI18n';
 import { EMPTY_STOCK, STOCK_TEXT_FIELDS, randomDemoStock } from '../model';
 import type { IssuanceAdmin } from '../hooks/useIssuanceAdmin';
@@ -14,109 +17,118 @@ export default function StockCatalogSection({ admin }: { admin: IssuanceAdmin })
   };
 
   return (
-    <section className="space-y-4">
-      <h2 className="font-section text-xl font-extrabold">{t('admIss.secStocks')}</h2>
-      <p className="text-sm text-neutral-600 max-w-2xl">
-        {t('admIss.secStocksBodyPre')} <span className="font-mono">/stocks</span>{' '}
-        {t('admIss.secStocksBodyPost')}
-      </p>
+    <section className="card card-pad space-y-5" aria-labelledby="stocks-title">
+      <header>
+        <h2 id="stocks-title" className="title">
+          {t('admin.issuance.stocks')}
+        </h2>
+        <p className="subtitle mt-0.5 max-w-2xl">{t('admin.issuance.stocksSub')}</p>
+      </header>
 
-      <div className="p-5 rounded-3xl crystal-card space-y-3">
+      <form
+        className="space-y-4 rounded-2xl bg-surface-2 p-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void emit();
+        }}
+      >
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-bold">{t('admIss.newStock')}</h3>
+          <h3 className="text-sm font-medium text-ink">{t('admIss.newStock')}</h3>
           <button
             type="button"
             onClick={() => setStockForm(randomDemoStock())}
-            className="px-3 py-1.5 rounded-xl border border-black/20 text-xs font-bold"
+            className="btn btn-soft btn-sm"
           >
+            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
             {t('admIss.autofill')}
           </button>
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {STOCK_TEXT_FIELDS.map((key) => (
-            <label key={key} className="text-xs space-y-1">
-              <span className="font-bold">{t(`admIss.sf.${key}`)}</span>
+            <div key={key}>
+              <label htmlFor={`stock-${key}`} className="label">
+                {t(`admIss.sf.${key}`)}
+              </label>
               <input
-                className="w-full px-3 py-2 rounded-xl border border-black/10"
+                id={`stock-${key}`}
+                className="input"
                 value={stockForm[key]}
                 onChange={(e) => setStockForm((f) => ({ ...f, [key]: e.target.value }))}
               />
-            </label>
+            </div>
           ))}
-          <label className="text-xs space-y-1">
-            <span className="font-bold">{t('admIss.sf.priceUsdc')}</span>
+          <div>
+            <label htmlFor="stock-price" className="label">
+              {t('admIss.sf.priceUsdc')}
+            </label>
             <input
+              id="stock-price"
               type="number"
-              className="w-full px-3 py-2 rounded-xl border border-black/10"
+              inputMode="decimal"
+              className="input"
               value={stockForm.priceUsdc}
               onChange={(e) => setStockForm((f) => ({ ...f, priceUsdc: Number(e.target.value) }))}
               onFocus={(e) => e.target.select()}
             />
-          </label>
-          <label className="text-xs space-y-1">
-            <span className="font-bold">{t('admIss.sf.custodiedShares')}</span>
+          </div>
+          <div>
+            <label htmlFor="stock-custody" className="label">
+              {t('admIss.sf.custodiedShares')}
+            </label>
             <input
+              id="stock-custody"
               type="number"
-              className="w-full px-3 py-2 rounded-xl border border-black/10"
+              inputMode="numeric"
+              className="input"
               value={stockForm.custodiedShares}
               onChange={(e) => setStockForm((f) => ({ ...f, custodiedShares: Number(e.target.value) }))}
               onFocus={(e) => e.target.select()}
             />
-          </label>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={emit}
-          className="px-5 py-3 rounded-2xl bg-black text-white font-display font-bold text-sm"
-        >
+        <button type="submit" className="btn btn-primary">
           {t('admIss.emit')}
         </button>
-      </div>
+      </form>
 
-      <div className="space-y-2">
-        {admin.stocks.length === 0 && <p className="text-neutral-500 text-sm">{t('admIss.noStocks')}</p>}
-        {admin.stocks.map((s) => (
-          <div
-            key={s.ticker}
-            className="p-4 rounded-3xl crystal-card flex flex-wrap items-center justify-between gap-3"
-          >
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-display font-extrabold">{s.tokenTicker}</span>
-                <span className="text-xs text-neutral-500 font-mono">({s.ticker})</span>
-                <span
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    s.active
-                      ? 'bg-leaf-100 text-[#2f6f28] border border-[#8fcb7a]/50'
-                      : 'bg-neutral-200 text-neutral-500'
-                  }`}
+      {admin.stocks.length === 0 ? (
+        <p className="text-sm text-muted">{t('admIss.noStocks')}</p>
+      ) : (
+        <ul className="divide-y divide-line">
+          {admin.stocks.map((s) => (
+            <li key={s.ticker} className="flex flex-wrap items-center justify-between gap-3 py-3.5">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium text-ink">{s.tokenTicker}</span>
+                  <span className="font-mono text-xs text-muted">{s.ticker}</span>
+                  <StatusChip tone={s.active ? 'good' : 'neutral'}>
+                    {s.active ? t('admin.issuance.inMarket') : t('admin.issuance.hidden')}
+                  </StatusChip>
+                </div>
+                <p className="mt-0.5 truncate text-xs text-ink-2">
+                  {s.companyName} · ISIN <span className="font-mono">{s.isin}</span>
+                </p>
+                <p className="mt-0.5 text-xs text-muted tnum">
+                  {formatAmount(Number(s.priceUsdc) || 0, 2)} USDC ·{' '}
+                  {formatInt(Number(s.custodiedSharesInCajaDeValores || 0))} {t('admIss.inCustody')}
+                </p>
+              </div>
+              <div className="flex items-center gap-1">
+                <a href="/stocks" className="btn btn-ghost btn-sm">
+                  {t('admIss.viewMarket')}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => admin.toggleStock(s.ticker, !s.active)}
+                  className={`btn btn-sm ${s.active ? 'btn-danger' : 'btn-primary'}`}
                 >
-                  {s.active ? t('admIss.inMarket') : t('admIss.hidden')}
-                </span>
+                  {s.active ? t('admIss.deactivate') : t('admIss.activate')}
+                </button>
               </div>
-              <div className="text-xs text-neutral-600 truncate">
-                {s.companyName} · ISIN {s.isin}
-              </div>
-              <div className="text-[11px] text-neutral-500 font-mono">
-                ${s.priceUsdc} USDC · {Number(s.custodiedSharesInCajaDeValores || 0).toLocaleString()}{' '}
-                {t('admIss.inCustody')}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <a href="/stocks" className="px-3 py-2 text-xs font-bold underline">
-                {t('admIss.viewMarket')}
-              </a>
-              <button
-                type="button"
-                onClick={() => admin.toggleStock(s.ticker, !s.active)}
-                className={`px-3 py-2 rounded-xl text-xs font-bold ${s.active ? 'border border-red-300 text-red-700' : 'bg-black text-white'}`}
-              >
-                {s.active ? t('admIss.deactivate') : t('admIss.activate')}
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

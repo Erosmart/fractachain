@@ -1,26 +1,71 @@
-import { useEffect, useState } from 'react';
-import { KeyRound, Landmark, Wallet } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { ArrowRight, Check, Copy, KeyRound, Landmark, ShieldAlert, Wallet } from 'lucide-react';
 import { withIsland } from '@/components/island/withIsland';
-import BrandLogo from '@/components/ui/BrandLogo';
+import { Notice, StatusChip } from '@/components/ui/kit';
 import { container } from '@/core/container';
 import { errorMessage } from '@/core/errors';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/hooks/useI18n';
+import OnboardingFrame, { LoadingLine } from './OnboardingFrame';
 
 const { navigator } = container;
 
-/** Step 1 of onboarding: custodial wallet, generated self-custody key, or Freighter. */
+function Option({
+  icon,
+  title,
+  body,
+  badge,
+  disabled,
+  onClick,
+}: {
+  icon: ReactNode;
+  title: string;
+  body: string;
+  badge?: ReactNode;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="card card-pad group flex h-full flex-col items-start gap-4 text-left transition-colors hover:border-line-strong hover:shadow-lift disabled:cursor-wait disabled:opacity-60"
+    >
+      <span className="flex w-full items-start justify-between gap-3">
+        <span
+          className="grid h-11 w-11 place-items-center rounded-xl bg-sky-soft text-ink"
+          aria-hidden="true"
+        >
+          {icon}
+        </span>
+        {badge}
+      </span>
+      <span className="space-y-1.5">
+        <span className="block text-[17px] font-medium text-ink">{title}</span>
+        <span className="block text-sm leading-relaxed text-ink-2">{body}</span>
+      </span>
+      <ArrowRight
+        className="mt-auto h-4 w-4 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-ink"
+        aria-hidden="true"
+      />
+    </button>
+  );
+}
+
+/** Step 2 of onboarding: custodial wallet, generated self-custody key, or Freighter. */
 function WalletOnboardingPage() {
   const { user, chooseCustody, linkFreighterWallet, revealedSecret, isLoading } = useAuth();
   const { t } = useI18n();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const mustLogin = !isLoading && !user;
   const alreadyChosen = Boolean(user?.custodyMode && !revealedSecret);
 
   useEffect(() => {
-    if (mustLogin) navigator.replace('/login');
+    if (mustLogin) navigator.replace(navigator.loginUrl());
     else if (alreadyChosen) navigator.replace('/onboarding/kyc');
   }, [mustLogin, alreadyChosen]);
 
@@ -51,72 +96,107 @@ function WalletOnboardingPage() {
     }
   };
 
-  if (isLoading) return <p className="py-16 text-center text-neutral-500">{t('auth.loading')}</p>;
+  const copySecret = async () => {
+    if (!revealedSecret) return;
+    try {
+      await window.navigator.clipboard.writeText(revealedSecret);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard blocked: the key stays selectable on screen
+    }
+  };
+
+  if (isLoading) return <LoadingLine>{t('auth.loading')}</LoadingLine>;
   if (mustLogin || alreadyChosen) return null;
 
   return (
-    <div className="max-w-3xl mx-auto py-12 space-y-8">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-extrabold font-display">{t('onboarding.walletTitle')}</h1>
-        <p className="text-neutral-600">{t('onboarding.walletLead')}</p>
-      </div>
-
-      <div className="grid md:grid-cols-3 gap-4">
-        <button
-          type="button"
-          disabled={busy || isLoading}
-          onClick={() => pick('CUSTODIAL')}
-          className="p-6 rounded-3xl crystal-card text-left space-y-3 hover:border-black/20"
-        >
-          <Landmark className="w-7 h-7" />
-          <h2 className="font-section text-xl font-extrabold">{t('onboarding.custodialTitle')}</h2>
-          <p className="text-neutral-600 text-sm">{t('onboarding.custodialBody')}</p>
-        </button>
-        <button
-          type="button"
-          disabled={busy || isLoading}
-          onClick={() => pick('SELF')}
-          className="p-6 rounded-3xl crystal-card text-left space-y-3 hover:border-black/20"
-        >
-          <KeyRound className="w-7 h-7" />
-          <h2 className="font-section text-xl font-extrabold">{t('onboarding.selfTitle')}</h2>
-          <p className="text-neutral-600 text-sm">{t('onboarding.selfBody')}</p>
-        </button>
-        <button
-          type="button"
-          disabled={busy || isLoading}
-          onClick={pickFreighter}
-          className="p-6 rounded-3xl crystal-card text-left space-y-3 hover:border-black/20"
-        >
-          <BrandLogo
-            slug="freighter"
-            alt="Freighter"
-            className="h-7 w-auto object-contain object-left"
-            fallback={<Wallet className="w-7 h-7" />}
-          />
-          <h2 className="font-section text-xl font-extrabold">{t('onboarding.freighterTitle')}</h2>
-          <p className="text-neutral-600 text-sm">{t('onboarding.freighterBody')}</p>
-        </button>
-      </div>
-
-      {revealedSecret && (
-        <div className="p-6 rounded-3xl border border-black/10 bg-white space-y-3">
-          <p className="font-bold">{t('onboarding.secretWarn')}</p>
-          <code className="block p-3 rounded-xl bg-neutral-100 text-xs break-all">{revealedSecret}</code>
-          <button
-            type="button"
-            onClick={() => {
-              container.stores.session.setRevealedSecret(null);
-              navigator.navigate('/onboarding/kyc');
-            }}
-            className="px-5 py-3 rounded-2xl bg-black text-white font-display font-bold"
-          >
-            {t('onboarding.secretCta')}
-          </button>
+    <OnboardingFrame
+      step={1}
+      eyebrow={t('onboard.wallet.eyebrow')}
+      title={t('onboarding.walletTitle')}
+      lead={t('onboarding.walletLead')}
+    >
+      {revealedSecret ? (
+        <section className="card card-pad max-w-2xl space-y-4" aria-labelledby="secret-title">
+          <div className="flex items-start gap-3">
+            <span
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-warn-soft text-warn"
+              aria-hidden="true"
+            >
+              <ShieldAlert className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 id="secret-title" className="title">
+                {t('onboard.wallet.secretTitle')}
+              </h2>
+              <p className="mt-1 text-sm text-ink-2">{t('onboarding.secretWarn')}</p>
+            </div>
+          </div>
+          <code className="block select-all break-all rounded-xl border border-line bg-surface-2 px-4 py-3 font-mono text-[13px] text-ink">
+            {revealedSecret}
+          </code>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="btn btn-secondary" onClick={() => void copySecret()}>
+              {copied ? (
+                <Check className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Copy className="h-4 w-4" aria-hidden="true" />
+              )}
+              {copied ? t('onboard.wallet.copied') : t('onboard.wallet.copy')}
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                container.stores.session.setRevealedSecret(null);
+                navigator.navigate('/onboarding/kyc');
+              }}
+            >
+              {t('onboarding.secretCta')}
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+        </section>
+      ) : (
+        <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-3">
+            <Option
+              icon={<Landmark className="h-5 w-5" />}
+              title={t('onboarding.custodialTitle')}
+              body={t('onboarding.custodialBody')}
+              badge={
+                <StatusChip tone="sky" icon={false}>
+                  {t('onboard.wallet.recommended')}
+                </StatusChip>
+              }
+              disabled={busy}
+              onClick={() => void pick('CUSTODIAL')}
+            />
+            <Option
+              icon={<KeyRound className="h-5 w-5" />}
+              title={t('onboarding.selfTitle')}
+              body={t('onboarding.selfBody')}
+              disabled={busy}
+              onClick={() => void pick('SELF')}
+            />
+            <Option
+              icon={<Wallet className="h-5 w-5" />}
+              title={t('onboarding.freighterTitle')}
+              body={t('onboarding.freighterBody')}
+              disabled={busy}
+              onClick={() => void pickFreighter()}
+            />
+          </div>
+          <p className="text-xs text-muted">{t('onboard.wallet.trustlineNote')}</p>
         </div>
       )}
-      {error && <p className="text-red-700 text-sm">{error}</p>}
-    </div>
+      {error && (
+        <Notice tone="bad" className="mt-4">
+          {error}
+        </Notice>
+      )}
+    </OnboardingFrame>
   );
 }
 

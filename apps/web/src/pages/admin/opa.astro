@@ -1,5 +1,6 @@
 ---
 import AdminOpaPage from '@/features/admin/opa/components/AdminOpaPage';
+import SectionNav from '@/components/layout/SectionNav';
 import PageFallback from '@/components/ui/PageFallback.astro';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { translate } from '@/core/i18n/translate';
@@ -7,8 +8,11 @@ import { translate } from '@/core/i18n/translate';
 const locale = Astro.locals.locale;
 ---
 
-<BaseLayout title={translate(locale, 'admOpa.title')}>
-  <AdminOpaPage client:only="react" locale={locale}>
-    <PageFallback slot="fallback" />
-  </AdminOpaPage>
+<BaseLayout title={translate(locale, 'admin.opa.title')}>
+  <div class="space-y-6">
+    <SectionNav section="console" active="opa" client:load locale={locale} />
+    <AdminOpaPage client:only="react" locale={locale}>
+      <PageFallback slot="fallback" />
+    </AdminOpaPage>
+  </div>
 </BaseLayout>

@@ -3,6 +3,17 @@ import { AlertTriangle, Check, CircleDashed, Clock3, Info, X } from 'lucide-reac
 
 export type Tone = 'neutral' | 'sky' | 'good' | 'warn' | 'bad' | 'peach' | 'butter';
 
+/** Literal class names: Tailwind only keeps classes it can see in the source. */
+const CLASSES: Record<Tone, string> = {
+  neutral: 'chip-neutral',
+  sky: 'chip-sky',
+  good: 'chip-good',
+  warn: 'chip-warn',
+  bad: 'chip-bad',
+  peach: 'chip-peach',
+  butter: 'chip-butter',
+};
+
 const ICONS: Record<Tone, typeof Check | null> = {
   neutral: CircleDashed,
   sky: Clock3,
@@ -36,7 +47,7 @@ export function StatusChip({
       <Icon className="h-3 w-3" aria-hidden="true" />
     ) : null;
   return (
-    <span className={`chip chip-${tone} ${className}`}>
+    <span className={`chip ${CLASSES[tone]} ${className}`}>
       {glyph}
       {children}
     </span>

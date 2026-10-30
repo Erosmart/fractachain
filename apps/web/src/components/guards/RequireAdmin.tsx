@@ -1,4 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
+import { ShieldAlert } from 'lucide-react';
+import { EmptyState } from '@/components/ui/kit';
 import { container } from '@/core/container';
 import { useI18n } from '@/hooks/useI18n';
 import { useSession } from '@/hooks/useSession';
@@ -19,8 +21,22 @@ export default function RequireAdmin({ children }: { children: ReactNode }) {
     if (!user.isAdmin) navigator.replace('/dashboard');
   }, [user, isLoading]);
 
-  if (isLoading) return <p className="py-16 text-center text-neutral-500">{t('misc.loadingSession')}</p>;
+  if (isLoading) {
+    return (
+      <p className="py-16 text-center text-sm text-muted" aria-busy="true">
+        {t('admin.guard.loading')}
+      </p>
+    );
+  }
   if (!user) return null;
-  if (!user.isAdmin) return <p className="py-16 text-center text-neutral-500">{t('misc.adminOnly')}</p>;
+  if (!user.isAdmin) {
+    return (
+      <EmptyState
+        icon={<ShieldAlert className="h-5 w-5" aria-hidden="true" />}
+        title={t('admin.guard.adminOnly')}
+        className="py-16"
+      />
+    );
+  }
   return <>{children}</>;
 }

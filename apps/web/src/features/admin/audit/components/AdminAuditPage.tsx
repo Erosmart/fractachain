@@ -1,34 +1,40 @@
-import { useCallback, useEffect, useState, type SubmitEvent } from 'react';
-import { RefreshCw, ScrollText, Search } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState, type SubmitEvent } from 'react';
+import { Download, Search } from 'lucide-react';
 import RequireAdmin from '@/components/guards/RequireAdmin';
 import { withIsland } from '@/components/island/withIsland';
+import { EmptyState, Notice, PageHeader, PillTabs, StatusChip } from '@/components/ui/kit';
 import type { AuditEntry } from '@/core/api/types';
 import { container } from '@/core/container';
 import { errorMessage } from '@/core/errors';
 import { useI18n } from '@/hooks/useI18n';
 import { useSession } from '@/hooks/useSession';
+import { CopyValue } from '../../shared/CopyValue';
+import { RefreshButton } from '../../shared/RefreshButton';
+import { auditToCsv, downloadText } from '../csv';
 import { actorLabel, detailsText, formatAuditTime } from '../model';
 
 const { api } = container;
 
-function Outcome({ entry, ok, ko }: { entry: AuditEntry; ok: string; ko: string }) {
-  const success = entry.outcome === 'success';
+/** Quick action prefixes (the API filters by prefix). */
+const PREFIXES = ['', 'auth.', 'kyc.', 'listing.', 'offering.', 'testnet.', 'compliance.'] as const;
+type OutcomeFilter = 'all' | 'success' | 'failure';
+
+function Outcome({ entry }: { entry: AuditEntry }) {
+  const { t } = useI18n();
+  const ok = entry.outcome === 'success';
   return (
-    <span
-      className={`px-2 py-0.5 rounded-full text-[11px] font-display font-bold ${success ? 'bg-leaf-100 text-[#2f6f28]' : 'bg-red-50 text-red-700'}`}
-    >
-      {success ? ok : ko}
-    </span>
+    <StatusChip tone={ok ? 'good' : 'bad'}>{ok ? t('admAudit.success') : t('admAudit.failure')}</StatusChip>
   );
 }
 
-function Details({ entry, label }: { entry: AuditEntry; label: string }) {
+function Details({ entry }: { entry: AuditEntry }) {
+  const { t } = useI18n();
   const text = detailsText(entry);
   if (!text) return null;
   return (
-    <details className="mt-1">
-      <summary className="cursor-pointer text-xs text-neutral-500">{label}</summary>
-      <pre className="mt-1 p-2 rounded-lg bg-black/5 text-[11px] whitespace-pre-wrap break-all max-w-md">
+    <details className="mt-1.5">
+      <summary className="cursor-pointer text-xs text-muted hover:text-ink">{t('admAudit.details')}</summary>
+      <pre className="mt-1.5 max-w-md whitespace-pre-wrap break-all rounded-lg bg-surface-2 p-2.5 font-mono text-[11px] text-ink-2">
         {text}
       </pre>
     </details>
@@ -40,10 +46,11 @@ function AdminAudit() {
   const { user } = useSession();
   const { t, locale } = useI18n();
   const sessionId = user?.id ?? null;
-  const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [entries, setEntries] = useState<AuditEntry[] | null>(null);
   const [action, setAction] = useState('');
   const [actor, setActor] = useState('');
   const [query, setQuery] = useState({ action: '', actor: '' });
+  const [outcome, setOutcome] = useState<OutcomeFilter>('all');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -64,122 +71,196 @@ function AdminAudit() {
     void load();
   }, [load]);
 
+  const visible = useMemo(
+    () => (entries ?? []).filter((e) => outcome === 'all' || e.outcome === outcome),
+    [entries, outcome],
+  );
+
   const applyFilters = (e: SubmitEvent) => {
     e.preventDefault();
     setQuery({ action, actor });
   };
 
-  return (
-    <div className="space-y-6 py-4">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <p className="font-lcd text-[11px] uppercase tracking-[0.2em] text-neutral-500 inline-flex items-center gap-1.5">
-            <ScrollText className="w-3.5 h-3.5" /> {t('admAudit.kicker')}
-          </p>
-          <h1 className="text-2xl sm:text-3xl font-extrabold font-display">{t('admAudit.title')}</h1>
-          <p className="text-neutral-600 mt-1">{t('admAudit.lead')}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => void load()}
-          disabled={loading}
-          className="px-4 py-2 rounded-xl border border-black/10 text-sm font-display font-bold inline-flex items-center gap-2 disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> {t('admAudit.refresh')}
-        </button>
-      </div>
+  const pickPrefix = (prefix: string) => {
+    setAction(prefix);
+    setQuery((q) => ({ ...q, action: prefix }));
+  };
 
-      <form onSubmit={applyFilters} className="flex flex-col sm:flex-row gap-3">
-        <input
-          value={action}
-          onChange={(e) => setAction(e.target.value)}
-          aria-label={t('admAudit.actionPh')}
-          placeholder={t('admAudit.actionPh')}
-          className="sm:w-72 px-3 py-2.5 rounded-xl border border-black/10 text-sm font-mono"
+  const exportCsv = () => {
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    downloadText(`fractachain-auditoria-${stamp}.csv`, auditToCsv(visible));
+  };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={t('admin.audit.title')}
+        subtitle={t('admin.audit.lead')}
+        actions={
+          <>
+            <RefreshButton onClick={() => void load()} busy={loading} />
+            <button type="button" className="btn btn-primary" onClick={exportCsv} disabled={!visible.length}>
+              <Download className="h-4 w-4" aria-hidden="true" />
+              {t('admin.audit.exportCsv')}
+            </button>
+          </>
+        }
+      />
+
+      {/* One filter row above everything it scopes. */}
+      <form onSubmit={applyFilters} className="card card-pad space-y-4">
+        <PillTabs
+          label={t('admin.audit.prefixes')}
+          active={query.action}
+          onChange={pickPrefix}
+          items={PREFIXES.map((p) => ({
+            key: p,
+            label: p ? <span className="font-mono">{p}</span> : t('admin.audit.allActions'),
+          }))}
         />
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-          <input
-            value={actor}
-            onChange={(e) => setActor(e.target.value)}
-            aria-label={t('admAudit.actorPh')}
-            placeholder={t('admAudit.actorPh')}
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-black/10 text-sm"
-          />
+        <div className="grid gap-3 md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)_minmax(0,12rem)_auto]">
+          <div>
+            <label htmlFor="audit-action" className="sr-only">
+              {t('admin.audit.actionPh')}
+            </label>
+            <input
+              id="audit-action"
+              value={action}
+              onChange={(e) => setAction(e.target.value)}
+              placeholder={t('admin.audit.actionPh')}
+              className="input font-mono text-xs"
+              spellCheck={false}
+            />
+          </div>
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+              aria-hidden="true"
+            />
+            <label htmlFor="audit-actor" className="sr-only">
+              {t('admAudit.actorPh')}
+            </label>
+            <input
+              id="audit-actor"
+              value={actor}
+              onChange={(e) => setActor(e.target.value)}
+              placeholder={t('admAudit.actorPh')}
+              className="input pl-10"
+            />
+          </div>
+          <div>
+            <label htmlFor="audit-outcome" className="sr-only">
+              {t('admin.audit.outcome')}
+            </label>
+            <select
+              id="audit-outcome"
+              className="input"
+              value={outcome}
+              onChange={(e) => setOutcome(e.target.value as OutcomeFilter)}
+            >
+              <option value="all">{t('admin.audit.outcomeAll')}</option>
+              <option value="success">{t('admin.audit.outcomeOk')}</option>
+              <option value="failure">{t('admin.audit.outcomeKo')}</option>
+            </select>
+          </div>
+          <button type="submit" className="btn btn-secondary h-11">
+            <Search className="h-4 w-4" aria-hidden="true" />
+            {t('admAudit.filter')}
+          </button>
         </div>
-        <button
-          type="submit"
-          className="px-4 py-2.5 rounded-xl bg-black text-white text-sm font-display font-bold"
-        >
-          <Search className="w-4 h-4 inline" aria-hidden />{' '}
-          <span className="sr-only sm:not-sr-only">{t('admAudit.filter')}</span>
-        </button>
       </form>
 
-      {error && (
-        <p className="text-sm text-red-700" role="alert">
-          {error}
-        </p>
-      )}
-      <p className="text-xs text-neutral-500">{t('admAudit.count', { n: entries.length })}</p>
+      <div aria-live="polite" className="space-y-2">
+        {error && <Notice tone="bad">{error}</Notice>}
+        {entries && (
+          <p className="text-xs text-muted">
+            {t('admin.audit.showing', { shown: visible.length, n: entries.length })}
+          </p>
+        )}
+      </div>
 
-      <div className="rounded-2xl sm:rounded-3xl crystal-card overflow-hidden">
-        {entries.length === 0 ? (
-          <p className="p-8 text-sm text-neutral-500 text-center">{t('admAudit.empty')}</p>
+      <section className="card min-w-0 overflow-hidden" aria-label={t('admin.audit.title')}>
+        {entries === null ? (
+          <p className="p-8 text-center text-sm text-muted">{t('admin.common.loading')}</p>
+        ) : visible.length === 0 ? (
+          <EmptyState title={t('admAudit.empty')} />
         ) : (
           <>
-            <div className="md:hidden divide-y divide-black/5">
-              {entries.map((e) => (
-                <div key={e.id} className="p-4 space-y-1.5 text-xs">
+            <ul className="divide-y divide-line md:hidden">
+              {visible.map((e) => (
+                <li key={e.id} className="space-y-1.5 px-4 py-3.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono font-bold break-all">{e.action}</span>
-                    <Outcome entry={e} ok={t('admAudit.success')} ko={t('admAudit.failure')} />
+                    <span className="min-w-0 truncate font-mono text-xs text-ink">{e.action}</span>
+                    <Outcome entry={e} />
                   </div>
-                  <div className="text-neutral-600 break-all">{actorLabel(e, t('admAudit.system'))}</div>
-                  {e.target && <div className="font-mono text-neutral-500 break-all">{e.target}</div>}
-                  <div className="text-neutral-500" title={e.at}>
-                    {formatAuditTime(e.at, locale)} {e.ip ? `· ${e.ip}` : ''}
-                  </div>
-                  <Details entry={e} label={t('admAudit.details')} />
-                </div>
+                  <p className="truncate text-xs text-ink-2">{actorLabel(e, t('admAudit.system'))}</p>
+                  {e.target && (
+                    <CopyValue value={e.target} label={t('admin.audit.copyTarget')} head={16} tail={10} />
+                  )}
+                  <p className="text-xs text-muted" title={e.at}>
+                    {formatAuditTime(e.at, locale)}
+                    {e.ip ? ` · ${e.ip}` : ''}
+                  </p>
+                  <Details entry={e} />
+                </li>
               ))}
-            </div>
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="text-xs uppercase text-neutral-500 border-b border-black/10">
+            </ul>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="table-clean">
+                <thead>
                   <tr>
-                    <th className="px-4 py-3">{t('admAudit.when')}</th>
-                    <th className="px-4 py-3">{t('admAudit.actor')}</th>
-                    <th className="px-4 py-3">{t('admAudit.action')}</th>
-                    <th className="px-4 py-3">{t('admAudit.target')}</th>
-                    <th className="px-4 py-3">{t('admAudit.origin')}</th>
-                    <th className="px-4 py-3 text-right">{t('admAudit.outcome')}</th>
+                    <th scope="col" className="!pl-5">
+                      {t('admAudit.when')}
+                    </th>
+                    <th scope="col">{t('admAudit.actor')}</th>
+                    <th scope="col">{t('admAudit.action')}</th>
+                    <th scope="col">{t('admAudit.target')}</th>
+                    <th scope="col">{t('admAudit.origin')}</th>
+                    <th scope="col" className="!pr-5 !text-right">
+                      {t('admAudit.outcome')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {entries.map((e) => (
-                    <tr key={e.id} className="border-b border-black/5 align-top">
-                      <td className="px-4 py-3 whitespace-nowrap text-xs" title={e.at}>
+                  {visible.map((e) => (
+                    <tr key={e.id} className="align-top">
+                      <td className="whitespace-nowrap !pl-5 text-xs text-ink-2" title={e.at}>
                         {formatAuditTime(e.at, locale)}
                       </td>
-                      <td className="px-4 py-3 text-xs break-all">{actorLabel(e, t('admAudit.system'))}</td>
-                      <td className="px-4 py-3">
-                        <span className="font-mono text-xs font-bold">{e.action}</span>
-                        <Details entry={e} label={t('admAudit.details')} />
+                      <td className="max-w-[14rem] truncate text-xs">
+                        {actorLabel(e, t('admAudit.system'))}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs break-all max-w-[14rem]">
-                        {e.target || '—'}
+                      <td>
+                        <span className="font-mono text-xs text-ink">{e.action}</span>
+                        <Details entry={e} />
                       </td>
-                      <td className="px-4 py-3 font-mono text-[11px] text-neutral-500">
-                        {e.ip || '—'}
+                      <td className="max-w-[14rem]">
+                        {e.target ? (
+                          <CopyValue
+                            value={e.target}
+                            label={t('admin.audit.copyTarget')}
+                            head={10}
+                            tail={6}
+                          />
+                        ) : (
+                          <span className="text-muted">—</span>
+                        )}
+                      </td>
+                      <td className="text-xs">
+                        <span className="font-mono text-ink-2">{e.ip || '—'}</span>
                         {e.requestId && (
-                          <div className="truncate max-w-[9rem]" title={e.requestId}>
-                            {e.requestId}
+                          <div className="mt-0.5">
+                            <CopyValue
+                              value={e.requestId}
+                              label={t('admin.audit.copyRequest')}
+                              head={8}
+                              tail={4}
+                            />
                           </div>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <Outcome entry={e} ok={t('admAudit.success')} ko={t('admAudit.failure')} />
+                      <td className="!pr-5 text-right">
+                        <Outcome entry={e} />
                       </td>
                     </tr>
                   ))}
@@ -188,7 +269,7 @@ function AdminAudit() {
             </div>
           </>
         )}
-      </div>
+      </section>
     </div>
   );
 }
