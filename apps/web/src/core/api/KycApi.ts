@@ -1,7 +1,5 @@
 import type { KycProviderInfo, VerificationStart, VerificationView } from '@fractachain/shared';
 import type { IHttpClient } from '../http/HttpClient';
-import { enc } from './timeouts';
-import type { KycRecord } from './types';
 
 export interface KycSubmission {
   legalName: string;
@@ -11,8 +9,8 @@ export interface KycSubmission {
 }
 
 /**
- * Investor-side KYC (`/api/kyc/onboard`, hosted identity verification) and
- * the admin review queue.
+ * Investor-side KYC: the onboarding form (`/api/kyc/onboard`) and the hosted
+ * identity verification. The compliance queue lives in `AdminApi`.
  */
 export class KycApi {
   constructor(private readonly http: IHttpClient) {}
@@ -51,23 +49,5 @@ export class KycApi {
   /** Asks the API to re-read the decision from the provider (after the browser comes back). */
   syncVerification(): Promise<VerificationView> {
     return this.http.post<VerificationView>('/api/kyc/verification/sync', {});
-  }
-
-  async list(): Promise<KycRecord[]> {
-    const data = await this.http.get<unknown>('/api/kyc');
-    return Array.isArray(data) ? (data as KycRecord[]) : [];
-  }
-
-  approve(id: string): Promise<unknown> {
-    return this.http.send(`/api/kyc/${enc(id)}/approve`, { method: 'POST', body: {} });
-  }
-
-  reject(id: string, reason: string): Promise<unknown> {
-    return this.http.send(`/api/kyc/${enc(id)}/reject`, { method: 'POST', body: { reason } });
-  }
-
-  /** Selfies sit behind admin/owner auth, so they are fetched as blobs, never `<img src>`. */
-  selfie(selfieUrl: string): Promise<Blob> {
-    return this.http.blob(selfieUrl);
   }
 }

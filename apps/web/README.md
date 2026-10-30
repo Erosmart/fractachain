@@ -3,7 +3,8 @@
 La aplicación de Fractachain: **Astro 7 (SSR, adaptador Node en modo middleware)** con
 **islas React 19**, y el **API montado en el mismo servidor** (`/api/*`, `/health`).
 Un proceso, un puerto, un origen. Reemplaza a la app Next.js 14 y al servidor Express
-separado; las URLs, el copy y el diseño son los mismos.
+separado. Diseño: sistema propio claro (cielo → durazno → manteca, tinta azul marino),
+ver [Sistema de diseño](#sistema-de-diseño).
 
 ```bash
 npm run dev                             # (raíz) http://localhost:3000 — astro dev + API adentro
@@ -25,16 +26,20 @@ compilar; `PUBLIC_API_URL` vacío = API en el mismo origen.
 ```
 src/
 ├── pages/                 Rutas. Archivos finos: layout + una isla (o HTML estático).
-├── layouts/BaseLayout     <html>, fuentes, script de tema, Navbar, Footer.
+├── layouts/BaseLayout     <html>, fuentes, script de tema, header, Footer (`bare` para flujos).
 ├── middleware.ts          Locale (cookie fc_lang) + headers de seguridad.
 ├── components/
 │   ├── marketing/         Secciones de la home en .astro (cero JS).
-│   ├── layout/            Navbar (isla), Footer (.astro + isla admin), toggles.
+│   ├── layout/            Navbar (pestañas + menú de cuenta + barra inferior mobile),
+│   │                      SectionNav (pills de sección), navigation.ts (arquitectura), Footer.
 │   ├── guards/            RequireOnboarding / RequireAdmin (UX; el API valida).
 │   ├── island/            withIsland(): raíz de cada isla (locale para SSR).
 │   └── ui/                Piezas reutilizables (WalletAddress, AuthenticatedImage…).
-├── features/<dominio>/    Pantallas por dominio: auth, onboarding, market, orderbook,
-│                          portfolio, stocks, derivatives, wallet, admin/*.
+│       └── kit/           Sistema de diseño: Card, StatusChip, Stat, GradientPanel,
+│                          Gauge, DenseBars, CapProgress, ChecklistItem, PillTabs…
+├── features/<dominio>/    Pantallas por dominio: landing, auth, home (Inicio), portfolio,
+│                          market (licitaciones), orderbook, stocks, derivatives,
+│                          account, wallet, onboarding (KYC/Didit), admin/*.
 ├── core/                  Lógica sin UI (no importa React):
 │   ├── config/            AppConfig (env tipado, reescritura localhost → host LAN).
 │   ├── http/              IHttpClient + FetchHttpClient (timeouts, envelope, 401).
@@ -44,12 +49,33 @@ src/
 │   ├── investor/          InvestorService (trustline, claim, refund, dividendos…).
 │   ├── wallet/            IWalletSigner + Freighter, SelfCustodyRelay, fondeo USDC.
 │   ├── firebase/          Google sign-in con import dinámico.
-│   ├── i18n/ theme/       Diccionarios + stores de idioma y tema.
+│   ├── i18n/ theme/       Diccionarios (+ messages/<área>.ts del rediseño) y stores de idioma y tema.
 │   ├── security/csp.mjs   Política CSP compartida por astro.config y el middleware.
 │   └── container.ts       Composition root: instancia todo una sola vez.
 ├── hooks/                 useAuth, useSession, useI18n, useTheme, useVisibleInterval.
 └── styles/global.css
 ```
+
+## Sistema de diseño
+
+Referencia visual: tableros claros y aireados (Dribbble "oncopath"); contenido y
+arquitectura de información: [`docs/design/benchmark.md`](../../docs/design/benchmark.md).
+
+- **Tokens** en `src/styles/global.css` como variables CSS (canales RGB), con un set
+  propio para modo oscuro; Tailwind sólo los nombra (`bg-surface`, `text-ink`,
+  `text-muted`, `border-line`, `bg-sky-soft`, `chip-*`, `btn-*`…). Ningún color crudo en
+  las pantallas.
+- **Tipografía:** Inter Tight; números grandes livianos (`numeral`, 300), cifras
+  tabulares sólo en columnas (`tnum`).
+- **Kit** (`components/ui/kit`): tarjeta blanca con ↗, panel en gradiente, medidor
+  radial de ticks, barras densas con gradiente (tooltip, teclado y vista de tabla),
+  progreso con marca de mínimo, filas de checklist, chips de estado (ícono + texto,
+  nunca sólo color), pills.
+- **Datos:** paleta categórica `viz-1…4` validada para daltonismo en ambos temas; texto
+  siempre en tokens de tinta; sin doble eje; cada gráfico con su tabla.
+- **Arquitectura:** cinco pestañas (Inicio, Licitaciones, Mercado, Portfolio, Cuenta) +
+  Consola para admins; pills de sección dentro de Mercado, Cuenta y Consola; barra
+  inferior en mobile.
 
 ### Decisiones
 

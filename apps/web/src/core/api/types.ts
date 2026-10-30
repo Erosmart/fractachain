@@ -358,22 +358,6 @@ export interface OnChainStatus {
 
 /* ---------------------------- admin --------------------------- */
 
-export interface KycRecord {
-  id: string;
-  fullName: string;
-  docType: 'DNI' | 'PASSPORT' | 'CUIT';
-  docNumber: string;
-  country: string;
-  walletAddress: string;
-  userType: 'PRODUCER' | 'INVESTOR' | 'INSTITUTIONAL';
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'REVOKED';
-  isGafiHighRisk: boolean;
-  createdAt: string;
-  selfieUrl?: string;
-  userId?: string;
-  email?: string;
-}
-
 export interface TestnetDeployment {
   network?: string;
   deployer?: string;

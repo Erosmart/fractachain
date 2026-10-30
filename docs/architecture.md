@@ -114,6 +114,10 @@ el servidor (cero JS). Ver `apps/web/README.md` para el detalle de capas
 (`core/` con config, cliente HTTP, APIs por contexto, stores observables,
 servicios de auth/onboarding/inversor y firmador de wallet).
 
+El sistema de diseño (tokens claro/oscuro, kit de componentes, gráficos y
+arquitectura de cinco pestañas) está descripto en `apps/web/README.md`
+§ Sistema de diseño.
+
 Como cada isla de Astro es una raíz React independiente, el estado global
 (sesión, idioma, tema) **no** vive en React Context sino en stores observables
 singleton (`core/store/Store.ts`) consumidos con `useSyncExternalStore`.
