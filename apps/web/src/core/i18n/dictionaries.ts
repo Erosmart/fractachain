@@ -90,12 +90,6 @@ const es = {
     marketCta: 'Ir al mercado secundario',
     xlmOnChain: 'Saldo XLM on-chain: {n}',
   },
-  mock: {
-    title: 'Simulador: no opera en Stellar',
-    body: '{product} está diseñado como contrato Soroban, pero esta pantalla es una maqueta. Lo que opera en vivo en testnet es la',
-    listing: 'licitación',
-    tail: ': cuenta, verificación, wallet y aporte en USDC.',
-  },
   wallet: {
     copy: 'Copiar',
     copied: 'Copiado',
@@ -516,12 +510,6 @@ const en: Messages = {
     hello: 'Hi, {name}',
     marketCta: 'Go to the secondary market',
     xlmOnChain: 'On-chain XLM balance: {n}',
-  },
-  mock: {
-    title: 'Simulator: not on Stellar',
-    body: '{product} is designed as a Soroban contract, but this screen is a mockup. What runs live on testnet is the',
-    listing: 'offering',
-    tail: ': account, verification, wallet and a USDC contribution.',
   },
   wallet: {
     copy: 'Copy',

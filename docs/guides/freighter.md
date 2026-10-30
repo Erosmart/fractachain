@@ -13,20 +13,25 @@ Arquitectura: el backend **arma la transacción sin firmar**, Freighter la firma
 y el backend la retransmite a la red. La clave privada nunca sale de la extensión.
 
 ```
-frontend --> POST .../prepare   (backend construye + simula) --> XDR sin firmar
-frontend --> Freighter.signTransaction(XDR)                  --> XDR firmada
-frontend --> POST .../submit                                 --> hash on-chain
+frontend --> POST /api/tx/build   (backend construye, simula y prepara) --> XDR sin firmar + buildId
+frontend --> Freighter.signTransaction(XDR, red Testnet)                --> XDR firmada
+frontend --> POST /api/tx/submit  (valida y envía; espera el resultado) --> hash on-chain
 ```
 
-| Operación | Cuenta self-custody (Freighter) | Cuenta custodial |
-|---|---|---|
-| Login | firma un mensaje (`signMessage`) | email + password |
-| Aportar a una licitación (`contribute`) | `POST /api/listings/:id/contribute/prepare` → firma → `/contribute/submit` | el backend firma |
-| Reembolso (`refund`, emisión Failed) | `/api/listings/:id/refund/prepare` → firma → `/refund/submit` | el backend firma |
-| Trustline del token clásico | `/api/sdex/:id/trustline/prepare` → firma → `/api/sdex/submit` | el backend abre la trustline |
-| Orden en el DEX (SDEX) | `/api/sdex/:id/orders/prepare` → firma → `/api/sdex/submit` | `/api/sdex/:id/orders` (one-shot) |
-| Cancelar orden SDEX | `/api/sdex/:id/orders/cancel` devuelve XDR → firma → `/api/sdex/submit` | el backend ya la envía |
-| `finalize()` de la licitación | la dispara el backend automáticamente (hard cap o deadline) | ídem |
+El submit sólo acepta la transacción que el backend armó (mismo hash: contrato, función,
+argumentos, footprint, comisión, secuencia y vencimiento), firmada por la wallet del inversor
+para esta red, una sola vez y antes de que venza. Ver `docs/instaward-1/plan.md`.
+
+| Operación                                         | Cuenta self-custody (Freighter)                                                          | Cuenta custodial                                   |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| Login                                             | firma un mensaje (`signMessage`)                                                         | email + password                                   |
+| Habilitar USDC (trustline)                        | `POST /api/tx/build {action:'usdc_trustline'}` → firma → `/api/tx/submit`                | el backend la abre                                 |
+| Aportar a una licitación (`contribute`)           | `POST /api/tx/build {action:'contribute', listingId, amount}` → firma → `/api/tx/submit` | el backend firma                                   |
+| Reembolso (`refund`, emisión Failed)              | `POST /api/tx/build {action:'refund', listingId}` → firma → `/api/tx/submit`             | el backend firma                                   |
+| Cerrar la licitación (`finalize`, permissionless) | `POST /api/tx/build {action:'finalize', listingId}` → firma → `/api/tx/submit`           | el backend lo dispara al llegar al tope o al plazo |
+| Trustline del token clásico                       | `/api/sdex/:id/trustline/prepare` → firma → `/api/sdex/submit`                           | el backend abre la trustline                       |
+| Orden en el DEX (SDEX)                            | `/api/sdex/:id/orders/prepare` → firma → `/api/sdex/submit`                              | `/api/sdex/:id/orders` (one-shot)                  |
+| Cancelar orden SDEX                               | `/api/sdex/:id/orders/cancel` devuelve XDR → firma → `/api/sdex/submit`                  | el backend ya la envía                             |
 
 Requisitos antes de operar:
 
@@ -37,7 +42,8 @@ Requisitos antes de operar:
 
 Notas:
 
-- `finalize()` es una operación administrativa del emisor; no se firma desde Freighter.
+- `finalize()` no requiere permisos: cualquiera puede cerrar una licitación vencida o completa.
+  El backend también lo hace solo al llegar al tope o al plazo.
 - Cada firma abre el popup de Freighter: es obligatorio por protocolo, no se puede saltear.
 - Si Freighter rechaza la firma, el backend nunca recibe una XDR y no se registra nada.
 
@@ -74,7 +80,7 @@ Antes de recibir el token, la wallet tiene que aceptarlo (operación `changeTrus
 
 Freighter muestra automáticamente cualquier asset con trustline y saldo. Si no aparece:
 
-1. Freighter → *Manage Assets* → *Add another asset*.
+1. Freighter → _Manage Assets_ → _Add another asset_.
 2. Pegar el **código** y la **clave del emisor** (o buscar por código si el asset está en el
    directorio de assets, lo que exige `stellar.toml` publicado en el home domain del emisor).
 3. Confirmar que arriba dice **Test Net** si estás en la demo.
@@ -101,7 +107,7 @@ Para que exista precio:
    para un RWA de nicho lo habitual es que muestre el saldo y no una valuación en fiat.
 
 Por eso en FractaChain la valuación confiable se muestra en la app (portfolio, con la fuente de precio
-explícita) y en el DEX; la wallet es la prueba de *tenencia*, no el oráculo de precio.
+explícita) y en el DEX; la wallet es la prueba de _tenencia_, no el oráculo de precio.
 
 ### 2.5 Checklist de verificación
 

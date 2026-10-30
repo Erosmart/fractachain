@@ -1,10 +1,10 @@
-import type { Portfolio, Position } from '@/core/api/types';
 import type { SessionUser } from '@/core/auth/SessionUser';
+import type { ChainHolding, ChainWallet } from './chain';
 
-export type TaskAction = 'fundUsdc' | 'approve' | 'claim' | 'distribute' | 'refund' | 'dividend';
+export type TaskAction = 'fundUsdc' | 'enableUsdc' | 'approve' | 'claim' | 'distribute' | 'refund';
 
 export type TaskKind =
-  'email' | 'wallet' | 'kyc' | 'usdc' | 'twoFa' | 'trustline' | 'claim' | 'receive' | 'refund' | 'dividend';
+  'email' | 'wallet' | 'kyc' | 'usdc' | 'twoFa' | 'trustline' | 'claim' | 'receive' | 'refund';
 
 export interface Task {
   id: string;
@@ -17,6 +17,8 @@ export interface Task {
   listingId?: string;
   ticker?: string;
   amount?: number;
+  /** Payment asset code for the copy ("USDC"). */
+  code?: string;
 }
 
 type UserView = Pick<
@@ -31,46 +33,42 @@ type UserView = Pick<
 >;
 
 /**
- * The investor's to-do list, from the session and the portfolio: account
- * setup (done items stay, checked, like the reference's check-ins) plus every
- * pending action on a position. Pending first, position actions before setup.
+ * The investor's to-do list, from the session and what the chain says:
+ * account setup (done items stay, checked) plus every pending action on a
+ * holding. Pending first, holding actions before setup.
  */
-export function tasksFor(user: UserView | null, book: Portfolio | null, positions: Position[]): Task[] {
+export function tasksFor(
+  user: UserView | null,
+  wallet: ChainWallet | null,
+  holdings: ChainHolding[],
+): Task[] {
   if (!user) return [];
   const actions: Task[] = [];
   const setup: Task[] = [];
   const approved = new Set(user.trustlines || []);
 
-  for (const p of positions) {
-    const base = { listingId: p.listingId, ticker: p.tokenTicker, done: false };
-    if (p.canRefund) {
-      actions.push({ ...base, id: `refund-${p.listingId}`, kind: 'refund', action: 'refund' });
+  for (const h of holdings) {
+    const base = { listingId: h.listingId, ticker: h.ticker, done: false };
+    if (h.stateName === 'Failed' && h.units > 0) {
+      actions.push({ ...base, id: `refund-${h.listingId}`, kind: 'refund', action: 'refund', code: h.code });
       continue;
     }
-    if (!approved.has(p.listingId) && !p.refundedAt && p.listingStatus !== 'CLOSED_FAILED') {
-      actions.push({ ...base, id: `trust-${p.listingId}`, kind: 'trustline', action: 'approve' });
+    if (h.stateName === 'Open') continue;
+    if (h.sdex && !approved.has(h.listingId)) {
+      actions.push({ ...base, id: `trust-${h.listingId}`, kind: 'trustline', action: 'approve' });
       continue;
     }
-    if ((p.canClaim ?? p.tokensOwed > 0) && p.listingStatus !== 'CLOSED_FAILED' && !p.refundedAt) {
+    if (h.tokensOwed > 0) {
       actions.push({
         ...base,
-        id: `claim-${p.listingId}`,
+        id: `claim-${h.listingId}`,
         kind: 'claim',
         action: 'claim',
-        amount: p.tokensOwed,
+        amount: h.tokensOwed,
       });
     }
-    if (p.sdex && p.tokens > 0 && (p.tokensOnChain || 0) + 1e-9 < p.tokens) {
-      actions.push({ ...base, id: `dist-${p.listingId}`, kind: 'receive', action: 'distribute' });
-    }
-    if (p.pendingDividendUsdc > 0) {
-      actions.push({
-        ...base,
-        id: `div-${p.listingId}`,
-        kind: 'dividend',
-        action: 'dividend',
-        amount: p.pendingDividendUsdc,
-      });
+    if (h.sdex && h.tokens > 0 && h.tokensOnChain + 1e-9 < h.tokens) {
+      actions.push({ ...base, id: `dist-${h.listingId}`, kind: 'receive', action: 'distribute' });
     }
   }
 
@@ -89,14 +87,16 @@ export function tasksFor(user: UserView | null, book: Portfolio | null, position
     done: user.kycStatus === 'APPROVED',
     href: user.kycStatus === 'PENDING' ? '/onboarding/pending' : '/onboarding/kyc',
   });
-  if (user.publicKey && book) {
-    const usdc = book.usdcOnChain ?? 0;
+  if (user.publicKey && wallet?.usdc) {
+    const { balance, trustline, asset } = wallet.usdc;
+    const funded = trustline && balance > 0;
     setup.push({
       id: 'usdc',
       kind: 'usdc',
-      done: usdc > 0,
-      action: usdc > 0 ? undefined : 'fundUsdc',
-      amount: usdc,
+      done: funded,
+      action: funded ? undefined : !trustline && user.custodyMode === 'SELF' ? 'enableUsdc' : 'fundUsdc',
+      amount: balance,
+      code: asset.code,
     });
   }
   setup.push({ id: 'twoFa', kind: 'twoFa', done: Boolean(user.twoFactorEnabled), href: '/account/security' });

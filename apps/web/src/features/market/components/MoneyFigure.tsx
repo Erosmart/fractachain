@@ -1,28 +1,30 @@
 import { formatAmount } from '@/core/format/number';
-import type { PaymentUnit } from '../model';
 
 /**
- * A big light numeral with its currency in small ink ("US$ 1.234" /
- * "1.234 XLM"): the unit never competes with the number.
+ * A big light numeral with its asset code in small ink ("1.234 USDC",
+ * "15 XLM"): the code is always the real payment asset, never a currency
+ * symbol assumed by the screen.
  */
 export default function MoneyFigure({
   value,
-  unit,
+  code,
   digits,
   className = 'text-[40px]',
 }: {
-  value: number;
-  unit: PaymentUnit;
+  value: number | null;
+  code: string;
   digits?: number;
   className?: string;
 }) {
+  if (value === null || !Number.isFinite(value)) {
+    return <span className={`numeral text-ink ${className}`}>—</span>;
+  }
   const n = Number(value) || 0;
   const text = formatAmount(n, digits ?? (Number.isInteger(n) ? 0 : 2));
   return (
     <span className="inline-flex items-baseline gap-1.5 text-ink">
-      {unit === 'USDC' && <span className="text-sm text-ink-2">US$</span>}
       <span className={`numeral ${className}`}>{text}</span>
-      {unit === 'XLM' && <span className="text-sm text-ink-2">XLM</span>}
+      {code && <span className="text-sm text-ink-2">{code}</span>}
     </span>
   );
 }

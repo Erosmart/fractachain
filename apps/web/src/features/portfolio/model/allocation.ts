@@ -1,4 +1,4 @@
-import type { Position } from '@/core/api/types';
+import type { ChainHolding } from './chain';
 
 /** Categorical slot (viz-1..4, fixed order) or the neutral "others" fold. */
 export type Slot = 1 | 2 | 3 | 4 | 'other';
@@ -11,15 +11,16 @@ export interface Segment {
 }
 
 /**
- * Split of the token value by asset. Up to four assets each get a slot; past
- * four, the three largest stay and the rest fold into "Otros" (never a 5th
- * hue). Slots follow the ticker's alphabetical order among the shown assets,
- * so an asset keeps its color when values move.
+ * Split of the token value by asset, for holdings priced in one payment
+ * asset (`code`). Up to four assets each get a slot; past four, the three
+ * largest stay and the rest fold into "Otros" (never a 5th hue). Slots follow
+ * the ticker's alphabetical order among the shown assets, so an asset keeps
+ * its color when values move.
  */
-export function byAsset(positions: Position[], othersLabel: string): Segment[] {
-  const rows = positions
-    .filter((p) => p.marketValue > 0)
-    .map((p) => ({ key: p.listingId, label: p.tokenTicker, value: p.marketValue }));
+export function byAsset(holdings: ChainHolding[], othersLabel: string, code = 'USDC'): Segment[] {
+  const rows = holdings
+    .filter((h) => h.value > 0 && h.code === code)
+    .map((h) => ({ key: h.listingId, label: h.ticker, value: h.value }));
   if (!rows.length) return [];
   const sorted = [...rows].sort((a, b) => b.value - a.value);
   const shown = rows.length <= 4 ? rows : sorted.slice(0, 3);
@@ -37,15 +38,15 @@ export function byAsset(positions: Position[], othersLabel: string): Segment[] {
   return segments;
 }
 
-/** Tokens vs. cash, both in USDC. */
+/** Tokens vs. cash in the wallet, both in the same payment asset. */
 export function byType(
   tokensValue: number,
-  cashUsdc: number,
+  cash: number,
   labels: { tokens: string; cash: string },
 ): Segment[] {
   return [
     { key: 'tokens', label: labels.tokens, value: Math.max(0, tokensValue), slot: 1 as Slot },
-    { key: 'cash', label: labels.cash, value: Math.max(0, cashUsdc), slot: 2 as Slot },
+    { key: 'cash', label: labels.cash, value: Math.max(0, cash), slot: 2 as Slot },
   ].filter((s) => s.value > 0);
 }
 

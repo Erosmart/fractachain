@@ -62,22 +62,6 @@ export class ListingsApi {
     );
   }
 
-  contributePreparePath(id: string): string {
-    return `/api/listings/${enc(id)}/contribute/prepare`;
-  }
-
-  contributeSubmitPath(id: string): string {
-    return `/api/listings/${enc(id)}/contribute/submit`;
-  }
-
-  refundPreparePath(id: string): string {
-    return `/api/listings/${enc(id)}/refund/prepare`;
-  }
-
-  refundSubmitPath(id: string): string {
-    return `/api/listings/${enc(id)}/refund/submit`;
-  }
-
   finalize(id: string): Promise<ChainActionResult> {
     return this.http.post<ChainActionResult>(
       `/api/listings/${enc(id)}/finalize`,

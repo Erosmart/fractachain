@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { Layers } from 'lucide-react';
 import RequireOnboarding from '@/components/guards/RequireOnboarding';
 import { withIsland } from '@/components/island/withIsland';
+import { assetAmount } from '@/components/tx/format';
+import TxPanel from '@/components/tx/TxPanel';
 import ExternalLink from '@/components/ui/ExternalLink';
 import { Card, EmptyState, Notice, PageHeader, Stat } from '@/components/ui/kit';
 import { explorerAccount } from '@/core/format/number';
@@ -10,32 +12,31 @@ import { usePortfolio } from '../hooks/usePortfolio';
 import { useWalletActivity } from '../hooks/useWalletActivity';
 import { describeOperation } from '../model/activity';
 import { byAsset, byType } from '../model/allocation';
-import { amount, money, signed, signedPct } from '../model/format';
-import { dominantSource } from '../model/positions';
-import { ActionMessage } from './ActionMessage';
+import { amount, clock } from '../model/format';
 import { ActivityList } from './ActivityList';
 import { AllocationBar } from './AllocationBar';
 import { HoldingsTable } from './HoldingsTable';
-import { IncomeCard } from './IncomeCard';
-import { OpenOrdersCard } from './OpenOrdersCard';
 import { ProceedsCard } from './ProceedsCard';
 import { WalletKeyCard } from './WalletKeyCard';
 
-/** Portfolio: holdings, allocation, income, open orders and on-chain movements. */
+/**
+ * Portfolio (Instaward 1, D3): balances and holdings read from Stellar —
+ * XLM and USDC from the account, units from each tender contract — with the
+ * contract id of every holding. No sandbox balances.
+ */
 function Portfolio() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const pf = usePortfolio();
-  const { user, book, positions, totals, status } = pf;
+  const { user, book, wallet, holdings, byCode, tokensValue, usdcCode, status, loadedAt, flow } = pf;
   const activity = useWalletActivity(user?.publicKey || undefined);
 
-  const cash = book?.usdcOnChain;
-  const source = dominantSource(positions);
-  const listingIds = useMemo(() => positions.map((p) => p.listingId), [positions]);
-  const typeSegments = byType(totals.marketValue, cash ?? 0, {
+  const usdc = wallet?.usdc ?? null;
+  const others = byCode.filter((v) => v.code !== usdcCode);
+  const typeSegments = byType(tokensValue, usdc?.balance ?? 0, {
     tokens: t('dashboard.portfolio.tokens'),
-    cash: t('dashboard.portfolio.usdc'),
+    cash: t('dashboard.chain.usdc', { code: usdcCode }),
   });
-  const assetSegments = byAsset(positions, t('dashboard.portfolio.others'));
+  const assetSegments = byAsset(holdings, t('dashboard.portfolio.others'), usdcCode);
   const movements = useMemo(
     () =>
       user?.publicKey
@@ -43,7 +44,9 @@ function Portfolio() {
         : [],
     [activity.ops, user?.publicKey],
   );
-  const pnlTone = totals.pnl > 0 ? 'good' : totals.pnl < 0 ? 'bad' : 'neutral';
+  const readLine = loadedAt
+    ? t('dashboard.chain.sourceAt', { time: clock(loadedAt, locale) })
+    : t('dashboard.chain.source');
 
   return (
     <div className="space-y-6">
@@ -63,67 +66,82 @@ function Portfolio() {
         }
       />
 
-      {status === 'error' && !book && (
+      {status === 'noWallet' && <Notice tone="sky">{t('dashboard.chain.noWallet')}</Notice>}
+      {status === 'error' && (
         <Notice tone="bad" className="flex flex-wrap items-center justify-between gap-3">
-          <span>{t('dashboard.loadError')}</span>
+          <span>
+            <span className="font-medium">{t('dashboard.chain.error')}</span> {t('dashboard.chain.errorBody')}
+          </span>
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => void pf.reload()}>
             {t('dashboard.retry')}
           </button>
         </Notice>
       )}
-      <ActionMessage message={pf.message} />
+      <TxPanel
+        snap={flow.snap}
+        onSign={() => void flow.sign()}
+        onRetry={() => void flow.retry()}
+        onResign={() => flow.resign()}
+        onClose={() => flow.reset()}
+      />
 
       {/* Summary: one hero figure, the rest as plain stats separated by hairlines. */}
-      <section className="card grid grid-cols-2 overflow-hidden lg:grid-cols-5 [&>*]:border-line [&>*]:p-5 sm:[&>*]:p-6">
-        <Stat
-          className="col-span-2 border-b lg:col-span-1 lg:border-b-0 lg:border-r"
-          size="lg"
-          label={t('dashboard.portfolio.marketValue')}
-          value={money(totals.marketValue)}
-          unit="USDC"
-          delta={source ?? undefined}
-        />
-        <Stat
-          className="border-b border-r lg:border-b-0"
-          label={t('dashboard.portfolio.result')}
-          value={signed(totals.pnl)}
-          unit="USDC"
-          delta={signedPct(totals.pnlPct)}
-          deltaTone={pnlTone}
-        />
-        <Stat
-          className="border-b lg:border-b-0 lg:border-r"
-          label={t('dashboard.portfolio.cost')}
-          value={money(totals.costBasis)}
-          unit="USDC"
-        />
-        <Stat
-          className="border-r"
-          label={t('dashboard.portfolio.pending')}
-          value={money(totals.pendingDividends)}
-          unit="USDC"
-        />
-        <Stat
-          label={t('dashboard.portfolio.cash')}
-          value={cash === undefined ? '—' : money(cash)}
-          unit={cash === undefined ? undefined : 'USDC'}
-        />
+      <section className="card overflow-hidden" aria-label={t('dashboard.portfolio.title')}>
+        <div className="grid grid-cols-2 lg:grid-cols-4 [&>*]:border-line [&>*]:p-5 sm:[&>*]:p-6">
+          <Stat
+            className="col-span-2 border-b lg:col-span-1 lg:border-b-0 lg:border-r"
+            size="lg"
+            label={t('dashboard.chain.tokensValue')}
+            value={wallet ? amount(tokensValue) : '—'}
+            unit={wallet ? usdcCode : undefined}
+            delta={
+              others.length
+                ? t('dashboard.chain.otherAssets', {
+                    list: others.map((o) => assetAmount(o.value, o.code)).join(' · '),
+                  })
+                : t('dashboard.chain.tokensValueNote')
+            }
+          />
+          <Stat
+            className="border-b border-r lg:border-b-0"
+            label={t('dashboard.chain.usdc', { code: usdcCode })}
+            value={usdc ? amount(usdc.balance) : '—'}
+            unit={usdc ? usdcCode : undefined}
+            delta={usdc && !usdc.trustline ? t('dashboard.chain.usdcNoTrust', { code: usdcCode }) : undefined}
+          />
+          <Stat
+            className="border-b lg:border-b-0 lg:border-r"
+            label={t('dashboard.chain.xlm')}
+            value={wallet ? amount(wallet.xlm) : '—'}
+            unit={wallet ? 'XLM' : undefined}
+            delta={t('dashboard.chain.xlmNote')}
+          />
+          <Stat
+            label={t('dashboard.chain.positions')}
+            value={wallet ? String(holdings.length) : '—'}
+            delta={t('dashboard.chain.positionsNote')}
+          />
+        </div>
+        {wallet && (
+          <p className="border-t border-line px-5 py-2.5 text-[11px] text-ink-2 sm:px-6">
+            {readLine} ·{' '}
+            <ExternalLink
+              href={explorerAccount(wallet.address)}
+              className="font-mono underline-offset-2 hover:text-ink hover:underline"
+            >
+              {wallet.address.slice(0, 5)}…{wallet.address.slice(-5)}
+            </ExternalLink>
+          </p>
+        )}
       </section>
 
       <div className="grid gap-6 lg:grid-cols-12">
         <Card
           className="lg:col-span-8"
           title={t('dashboard.holdings.title')}
-          subtitle={
-            positions.length
-              ? t('dashboard.holdings.previewSub', {
-                  n: positions.length,
-                  source: (source ?? '').toLowerCase(),
-                })
-              : undefined
-          }
+          subtitle={holdings.length ? readLine : undefined}
         >
-          {positions.length === 0 ? (
+          {holdings.length === 0 ? (
             status === 'loading' ? (
               <p className="py-10 text-center text-sm text-muted">{t('dashboard.loading')}</p>
             ) : (
@@ -137,7 +155,10 @@ function Portfolio() {
               />
             )
           ) : (
-            <HoldingsTable positions={positions} tasks={pf.tasks} perform={pf.perform} isBusy={pf.isBusy} />
+            <HoldingsTable holdings={holdings} tasks={pf.tasks} perform={pf.perform} isBusy={pf.isBusy} />
+          )}
+          {others.length > 0 && (
+            <p className="mt-3 text-xs text-muted">{t('dashboard.chain.xlmNotSummed')}</p>
           )}
         </Card>
 
@@ -166,15 +187,13 @@ function Portfolio() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-12">
-        <div className="space-y-6 lg:col-span-5">
-          <IncomeCard positions={positions} perform={pf.perform} isBusy={pf.isBusy} />
-          <OpenOrdersCard listingIds={listingIds} run={pf.run} busy={pf.busy} />
-          {book?.proceeds?.length ? (
-            <ProceedsCard proceeds={book.proceeds} xlmOnChain={book.xlmOnChain} />
-          ) : null}
-        </div>
+        {book?.proceeds?.length ? (
+          <div className="space-y-6 lg:col-span-5">
+            <ProceedsCard proceeds={book.proceeds} xlmOnChain={wallet?.xlm} />
+          </div>
+        ) : null}
         <Card
-          className="lg:col-span-7"
+          className={book?.proceeds?.length ? 'lg:col-span-7' : 'lg:col-span-12'}
           title={t('dashboard.portfolio.movementsTitle')}
           subtitle={t('dashboard.portfolio.movementsSub')}
           actions={

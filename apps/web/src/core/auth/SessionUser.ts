@@ -51,7 +51,6 @@ export function normalizeUser(input: unknown): SessionUser {
     trustlines: Array.isArray(raw.trustlines)
       ? (raw.trustlines as unknown[]).filter((t): t is string => typeof t === 'string')
       : [],
-    cashUsdc: num(raw.cashUsdc),
     xlmBalance: num(raw.xlmBalance),
     faucetFunded: Boolean(raw.faucetFunded),
     isAdmin: Boolean(raw.isAdmin),

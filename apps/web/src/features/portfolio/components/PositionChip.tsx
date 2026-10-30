@@ -1,9 +1,7 @@
 import PhaseChip from '@/components/ui/PhaseChip';
-import type { Position } from '@/core/api/types';
-import { positionPhase } from '@/core/market/phase';
+import { holdingPhase, type ChainHolding } from '../model/chain';
 
-/** Offering state of a position in plain language (the shared phase chip). */
-export function PositionChip({ position }: { position: Position }) {
-  const phase = positionPhase(position);
-  return phase ? <PhaseChip phase={phase} /> : null;
+/** State of the tender behind a holding, read from the contract (the shared phase chip). */
+export function PositionChip({ holding }: { holding: Pick<ChainHolding, 'stateName' | 'units'> }) {
+  return <PhaseChip phase={holdingPhase(holding)} />;
 }

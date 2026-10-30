@@ -1,59 +1,48 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { ChainPortfolio } from '@fractachain/shared';
 import type { ListingActivity } from '@/core/api/ListingsApi';
-import type { ChainActionResult, ListingDetail, ValidationPack } from '@/core/api/types';
+import type { ListingDetail, ValidationPack } from '@/core/api/types';
 import { container } from '@/core/container';
-import { errorMessage } from '@/core/errors';
 import { explorerTx } from '@/core/format/number';
-import { ApiError } from '@/core/http/HttpClient';
+import { useTxFlow } from '@/components/tx/useTxFlow';
 import { useAuth } from '@/hooks/useAuth';
-import { useI18n } from '@/hooks/useI18n';
-import { humanizeError } from '../components/OpStatus';
-import {
-  listingDeadlineMs,
-  money,
-  offeringPhase,
-  unitOf,
-  type OfferingPhase,
-  type OnChainSnapshot,
-} from '../model';
+import { isContractId, tenderView, type TenderView } from '../chainModel';
+import { offeringPhase, type OfferingPhase } from '../model';
 
-export type TxKind = 'contribute' | 'trustline' | 'finalize' | 'refund' | 'distribute';
-export type TxState = 'signing' | 'pending' | 'confirmed' | 'done' | 'failed';
+export type ChainLoad = 'none' | 'loading' | 'ready' | 'error';
 
-export interface TxStatus {
-  kind: TxKind;
-  state: TxState;
-  message: string;
-  hash?: string | null;
-  explorer?: string | null;
-  detail?: string;
-}
-
-const { api, wallet } = container;
+const { api } = container;
 
 /**
- * The offering page's data and every investor action on it. Actions report
- * through one `tx` status (rendered in an aria-live region) and reload the
- * listing and the session afterwards.
+ * The offering page. Descriptive copy (issuer, dossier, documents) comes from
+ * the listing; every figure — state, raised, price, caps, deadline, the
+ * investor's balances — is read from the tender contract (Instaward 1, D3).
+ * Every on-chain action runs through the one transaction flow (D2):
+ * Freighter for self-custody, the server-signed endpoints as the custodial
+ * fallback.
  */
 export function useOffering(listingId: string) {
   const auth = useAuth();
   const { user, refreshUser } = auth;
-  const { t } = useI18n();
   const [listing, setListing] = useState<ListingDetail | null>(null);
   const [validation, setValidation] = useState<ValidationPack | null>(null);
   const [activity, setActivity] = useState<ListingActivity | null>(null);
   const [hasDividends, setHasDividends] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [tx, setTx] = useState<TxStatus | null>(null);
-  const [busy, setBusy] = useState<TxKind | null>(null);
+  const [tender, setTender] = useState<TenderView | null>(null);
+  const [chainLoad, setChainLoad] = useState<ChainLoad>('loading');
+  const [wallet, setWallet] = useState<ChainPortfolio | null>(null);
+  const [usdcMode, setUsdcMode] = useState<'circle' | 'team' | null>(null);
   const sessionId = user?.id ?? null;
+  const address = user?.publicKey || null;
+  const selfCustody = user?.custodyMode === 'SELF';
 
-  const load = useCallback(async () => {
+  const contractId = isContractId(listing?.licitacionContract) ? listing!.licitacionContract : null;
+
+  const loadListing = useCallback(async () => {
     const envelope = await api.listings.get(listingId);
     setListing(envelope.data);
     setValidation(envelope.validation);
-    // Secondary data: the page works without it.
     void api.listings
       .activity(listingId)
       .then(setActivity)
@@ -62,154 +51,145 @@ export function useOffering(listingId: string) {
       .dividends(listingId)
       .then((rows) => setHasDividends(rows.length > 0))
       .catch(() => undefined);
+    return envelope.data;
   }, [listingId]);
 
-  useEffect(() => {
-    load()
-      .catch(() => undefined)
-      .finally(() => setLoaded(true));
-  }, [load, sessionId]);
+  const loadChain = useCallback(
+    async (id: string | null) => {
+      if (!id) {
+        setTender(null);
+        setChainLoad('none');
+        return;
+      }
+      setChainLoad((s) => (s === 'ready' ? s : 'loading'));
+      try {
+        const data = await api.chain.tender(id, address || undefined);
+        setTender(tenderView(data));
+        setChainLoad('ready');
+      } catch {
+        // Never fall back to database figures: the page says the read failed.
+        setChainLoad((s) => (s === 'ready' ? s : 'error'));
+      }
+      if (address) {
+        void api.chain
+          .portfolio(address)
+          .then(setWallet)
+          .catch(() => undefined);
+      }
+    },
+    [address],
+  );
 
-  const unit = unitOf(listing?.dossier?.paymentKind);
-  const onChain = (listing?.onChain ?? {}) as OnChainSnapshot;
+  const reload = useCallback(async () => {
+    const data = await loadListing().catch(() => null);
+    await loadChain(isContractId(data?.licitacionContract) ? data!.licitacionContract : null);
+  }, [loadListing, loadChain]);
+
+  useEffect(() => {
+    reload().finally(() => setLoaded(true));
+  }, [reload, sessionId]);
+
+  // Where test USDC comes from, for the funding helper's label.
+  useEffect(() => {
+    if (!address) return;
+    void api.wallet
+      .state(address)
+      .then((s) => setUsdcMode(s.usdcMode ?? null))
+      .catch(() => undefined);
+  }, [address]);
+
+  const flow = useTxFlow(() => {
+    void reload();
+    void refreshUser().catch(() => undefined);
+  });
+
   const holding = listing ? user?.holdings?.find((h) => h.listingId === listing.id) : undefined;
-  const deadlineMs = listing
-    ? listingDeadlineMs(
-        listing,
-        validation?.offering && (validation.offering as { deadline?: unknown }).deadline,
-      )
-    : null;
-  const raised = Number(onChain.raised ?? listing?.raisedUsdc ?? 0);
+  const code = tender?.code ?? '';
+  const deadlineMs = tender?.deadlineMs ?? null;
 
   const phase: OfferingPhase | null = useMemo(() => {
     if (!listing) return null;
+    if (!tender) return chainLoad === 'none' ? 'upcoming' : null;
     return offeringPhase({
-      status: listing.status,
-      stateName: onChain.stateName,
-      raised,
-      softCap: listing.dossier.offeringSoftCapUsdc,
-      hardCap: listing.dossier.offeringHardCapUsdc,
+      status: tender.status,
+      stateName: tender.stateName,
+      raised: tender.raised,
+      softCap: tender.softCap ?? 0,
+      hardCap: tender.hardCap ?? 0,
       deadlineMs,
-      hasRefundableContribution: Boolean(onChain.live && holding && !holding.refundedAt),
+      hasRefundableContribution: (tender.holder?.rwa ?? 0) > 0,
       hasDividends,
     });
-  }, [listing, onChain.stateName, onChain.live, raised, deadlineMs, holding, hasDividends]);
+  }, [listing, tender, chainLoad, deadlineMs, hasDividends]);
 
-  /** Runs an action with one status line; errors become a failed status, never a throw. */
-  const run = async (kind: TxKind, action: () => Promise<Omit<TxStatus, 'kind'> | void>) => {
-    if (!sessionId) {
-      setTx({ kind, state: 'failed', message: t('offerings.tx.loginFirst') });
-      return;
-    }
-    setBusy(kind);
-    setTx({ kind, state: 'pending', message: t('offerings.tx.pending') });
-    try {
-      const result = await action();
-      if (result) setTx({ kind, ...result });
-      await Promise.all([load().catch(() => undefined), refreshUser().catch(() => undefined)]);
-    } catch (err) {
-      setTx(
-        err instanceof ApiError && err.isNetwork
-          ? { kind, state: 'failed', message: t('offerings.tx.apiDown') }
-          : {
-              kind,
-              state: 'failed',
-              ...humanizeError(errorMessage(err, t('offerings.tx.failed')), t('offerings.tx.rejected')),
-            },
-      );
-    } finally {
-      setBusy(null);
-    }
-  };
+  /** Payment asset readiness in the investor's wallet (classic assets need a trustline). */
+  const payment = useMemo(() => {
+    const classic = Boolean(tender?.asset?.issuer);
+    const usdc = wallet?.usdc;
+    const sameAsset = usdc && tender && usdc.asset.contractId === tender.asset.contractId;
+    return {
+      classic,
+      trustline: !classic || Boolean(sameAsset && usdc?.trustline),
+      balance: tender?.holder ? tender.holder.payment : sameAsset ? usdc!.balance : null,
+    };
+  }, [tender, wallet]);
+
+  const expected = address;
 
   const subscribe = (amount: number) =>
-    run('contribute', async () => {
-      let data: ListingDetail;
-      if (onChain.live && user?.custodyMode === 'SELF') {
-        // Own wallet: the contract needs the investor's signature; the backend
-        // builds the invocation and Freighter signs it.
-        setTx({ kind: 'contribute', state: 'signing', message: t('offerings.tx.signInFreighter') });
-        data = await wallet.relay.signAndRelay<ListingDetail>({
-          prepare: api.listings.contributePreparePath(listingId),
-          submit: api.listings.contributeSubmitPath(listingId),
-          body: { usdcAmount: amount },
+    selfCustody
+      ? flow.prepare({ action: 'contribute', listingId, amount }, expected)
+      : flow.custodial('contribute', async () => {
+          const data = await api.listings.contribute(listingId, amount);
+          const hash = data.onChain?.contributeHash || null;
+          return { hash, explorer: data.onChain?.contributeExplorer || (hash ? explorerTx(hash) : null) };
         });
-      } else {
-        data = await api.listings.contribute(listingId, amount);
-      }
-      setListing(data);
-      const hash = data.onChain?.contributeHash || data.onChain?.trustlineHash || null;
-      const total = money(Number(data.onChain?.raised ?? data.raisedUsdc), unitOf(data.dossier?.paymentKind));
-      return {
-        state: hash ? 'confirmed' : 'done',
-        message: t('offerings.tx.subscribed', { n: total }),
-        hash,
-        explorer:
-          data.onChain?.contributeExplorer ||
-          data.onChain?.trustlineExplorer ||
-          (hash ? explorerTx(hash) : null),
-      };
+
+  const refund = () =>
+    selfCustody
+      ? flow.prepare({ action: 'refund', listingId }, expected)
+      : flow.custodial('refund', async () => {
+          const data = await api.listings.refund(listingId);
+          const hash = data?.onChain?.hash ?? null;
+          return { hash, explorer: data?.onChain?.explorer ?? (hash ? explorerTx(hash) : null) };
+        });
+
+  const finalize = () =>
+    selfCustody
+      ? flow.prepare({ action: 'finalize', listingId }, expected)
+      : flow.custodial('finalize', async () => {
+          const data = await api.listings.finalize(listingId);
+          const hash = data?.onChain?.hash ?? null;
+          return { hash, explorer: data?.onChain?.explorer ?? (hash ? explorerTx(hash) : null) };
+        });
+
+  /** Classic trustline to the payment asset (USDC): signed by the investor. */
+  const enablePayment = () => flow.prepare({ action: 'usdc_trustline' }, expected);
+
+  /** Reviewer funding helper: test USDC from the demo pool (server-side transfer). */
+  const fund = () =>
+    flow.custodial('fund', async () => {
+      const res = await api.wallet.fundUsdc();
+      const hash = res?.hash ?? null;
+      return { hash, explorer: hash ? explorerTx(hash) : null };
     });
 
-  const approve = () =>
-    run('trustline', async () => {
-      await auth.approveToken(listingId);
-      return { state: 'done', message: t('offerings.tx.approved') };
-    });
+  /** Opt-in to the RWA token on the DEX (legacy relay; the wallet signs when self-custody). */
+  const approve = () => flow.custodial('trustline', async () => void (await auth.approveToken(listingId)));
 
   const claim = () =>
-    run('distribute', async () => {
-      const data: ChainActionResult = await auth.claimTokens(listingId);
-      const dist = data?.distribution;
-      if (dist?.hash) {
-        return {
-          state: 'confirmed',
-          message: t('offerings.tx.claimed'),
-          hash: dist.hash,
-          explorer: explorerTx(dist.hash),
-        };
-      }
-      if (dist?.error) return { state: 'failed', ...humanizeError(dist.error, t('offerings.tx.rejected')) };
-      return { state: 'done', message: t('offerings.tx.claimed') };
+    flow.custodial('distribute', async () => {
+      const data = await auth.claimTokens(listingId);
+      const hash = data?.distribution?.hash ?? null;
+      if (data?.distribution?.error) throw new Error(data.distribution.error);
+      return { hash, explorer: hash ? explorerTx(hash) : null };
     });
 
   const receive = () =>
-    run('distribute', async () => {
+    flow.custodial('distribute', async () => {
       const data = await auth.distributeTokens(listingId);
-      const code = listing?.dossier.tokenTicker ?? '';
-      if (data?.hash) {
-        return {
-          state: 'confirmed',
-          message: t('offerings.tx.received', { n: Number(data.amount ?? 0).toFixed(4), code }),
-          hash: data.hash,
-          explorer: explorerTx(data.hash),
-        };
-      }
-      return { state: 'done', message: t('offerings.tx.claimed') };
-    });
-
-  const refund = () =>
-    run('refund', async () => {
-      const data = await auth.refundContribution(listingId, user?.custodyMode === 'SELF');
-      const hash = data?.onChain?.hash ?? null;
-      return {
-        state: hash ? 'confirmed' : 'done',
-        message: t('offerings.tx.refundDone'),
-        hash,
-        explorer: data?.onChain?.explorer ?? (hash ? explorerTx(hash) : null),
-      };
-    });
-
-  const finalize = () =>
-    run('finalize', async () => {
-      const data = await auth.finalizeOffering(listingId);
-      const hash = data?.onChain?.hash ?? null;
-      return {
-        state: hash ? 'confirmed' : 'done',
-        message: t('offerings.tx.finalized'),
-        hash,
-        explorer: data?.onChain?.explorer ?? (hash ? explorerTx(hash) : null),
-      };
+      const hash = data?.hash ?? null;
+      return { hash, explorer: hash ? explorerTx(hash) : null };
     });
 
   return {
@@ -218,15 +198,19 @@ export function useOffering(listingId: string) {
     validation,
     activity,
     loaded,
-    unit,
-    onChain,
+    tender,
+    chainLoad,
+    contractId,
+    code,
     holding,
     deadlineMs,
-    raised,
     phase,
-    tx,
-    busy,
-    actions: { subscribe, approve, claim, receive, refund, finalize },
+    payment,
+    usdcMode,
+    selfCustody,
+    flow,
+    reloadChain: () => loadChain(contractId),
+    actions: { subscribe, refund, finalize, enablePayment, fund, approve, claim, receive },
   };
 }
 

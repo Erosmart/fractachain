@@ -68,6 +68,8 @@ export class SandboxOrderBookService {
       myOrders: accountId ? orders.filter((o) => o.listingId === listingId && o.accountId === accountId) : [],
       // Cash is reserved across every market, so the client cannot derive it from myOrders.
       reservedCash: accountId ? this.reservedCash(accountId) : 0,
+      // Demo cash of this book only (Instaward 2 brings the market on-chain); never shown as a wallet balance.
+      demoCash: accountId ? this.accounts.cashBalance(accountId) : 0,
       reservedTokens: accountId ? this.reservedTokens(accountId, listingId) : 0,
       sandbox: true as const,
     };

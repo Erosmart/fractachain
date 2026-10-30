@@ -2,9 +2,9 @@ import { ArrowUpRight, Check, Clock3, TriangleAlert } from 'lucide-react';
 import { Card } from '@/components/ui/kit';
 import ExternalLink from '@/components/ui/ExternalLink';
 import type { ListingDetail, ValidationPack } from '@/core/api/types';
-import { explorerAccount, explorerContract, formatAmount } from '@/core/format/number';
+import { explorerAccount, explorerContract } from '@/core/format/number';
 import { useI18n } from '@/hooks/useI18n';
-import type { OnChainSnapshot } from '../../model';
+import type { TenderView } from '../../chainModel';
 
 const short = (id: string) => (id.length > 14 ? `${id.slice(0, 6)}…${id.slice(-6)}` : id);
 
@@ -30,11 +30,12 @@ function ChainLink({ label, id, href }: { label: string; id?: string | null; hre
 export default function OnChainCard({
   listing,
   validation,
-  onChain,
+  tender,
 }: {
   listing: ListingDetail;
   validation: ValidationPack | null;
-  onChain: OnChainSnapshot;
+  /** Fiduciary, payment asset and the withdrawal flag are read from the contract. */
+  tender: TenderView | null;
 }) {
   const { t } = useI18n();
   const k = (key: string) => t(`offerings.detail.chain.${key}`);
@@ -42,32 +43,27 @@ export default function OnChainCard({
     ? listing.licitacionContract
     : null;
   const vault = String(listing.stockContract || '').startsWith('C') ? listing.stockContract : null;
-  const balance =
-    typeof onChain.fiduciaryUsdc === 'number'
-      ? `US$ ${formatAmount(onChain.fiduciaryUsdc, 2)}`
-      : typeof onChain.fiduciaryXlm === 'number'
-        ? `${formatAmount(onChain.fiduciaryXlm, 2)} XLM`
-        : null;
+  const fiduciary = tender?.fiduciary ?? null;
+  const mismatch = Boolean(
+    fiduciary && listing.dossier.proceedsWallet && fiduciary !== listing.dossier.proceedsWallet,
+  );
 
   return (
     <Card title={k('title')} subtitle={k('subtitle')}>
       <ul className="-mt-3">
         <ChainLink label={k('licitacion')} id={licitacion} href={explorerContract} />
         <ChainLink label={k('vault')} id={vault} href={explorerContract} />
-        <ChainLink
-          label={k('fiduciary')}
-          id={onChain.fiduciary || listing.dossier.proceedsWallet}
-          href={explorerAccount}
-        />
-        <ChainLink label={k('issuer')} id={listing.dossier.issuerPublicKey} href={explorerAccount} />
-        {balance && (
-          <li className="flex items-center justify-between gap-3 border-b border-line/70 py-3">
-            <span className="text-[13px] text-muted">{k('companyBalance')}</span>
-            <span className="text-sm text-ink tnum">{balance}</span>
-          </li>
+        {tender && (
+          <ChainLink
+            label={`${k('payment')} · ${tender.code}`}
+            id={tender.asset.contractId}
+            href={explorerContract}
+          />
         )}
+        <ChainLink label={k('fiduciary')} id={fiduciary} href={explorerAccount} />
+        <ChainLink label={k('issuer')} id={listing.dossier.issuerPublicKey} href={explorerAccount} />
       </ul>
-      {onChain.fiduciaryMismatch && (
+      {mismatch && (
         <p
           className="mt-3 flex items-start gap-2 rounded-xl bg-warn-soft px-3 py-2.5 text-[13px] text-warn"
           role="note"

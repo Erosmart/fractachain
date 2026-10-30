@@ -62,6 +62,8 @@ export interface WalletState {
   usdcIssuer: string | null;
   usdcCode: string;
   usdcSac: string | null;
+  /** `circle`: Circle's testnet USDC from the demo pool; `team`: a test asset the team issues. */
+  usdcMode?: 'circle' | 'team';
 }
 
 export interface UsdcFundResult {
@@ -202,7 +204,6 @@ export interface Proceed {
 }
 
 export interface Portfolio {
-  cashUsdc: number;
   usdcOnChain?: number;
   xlmOnChain?: number;
   proceeds?: Proceed[];
@@ -265,6 +266,8 @@ export interface SandboxBook {
   trades: BookTrade[];
   myOrders: SandboxOrder[];
   reservedCash?: number;
+  /** Sandbox book only: its own demo cash (not a wallet balance). */
+  demoCash?: number;
   reservedTokens?: number;
 }
 

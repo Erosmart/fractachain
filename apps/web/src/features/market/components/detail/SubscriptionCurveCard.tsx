@@ -3,7 +3,8 @@ import { Card, DenseBars, EmptyState } from '@/components/ui/kit';
 import type { ListingActivity } from '@/core/api/ListingsApi';
 import type { ListingDetail } from '@/core/api/types';
 import { useI18n } from '@/hooks/useI18n';
-import { money, subscriptionCurve, type PaymentUnit } from '../../model';
+import { assetAmount } from '@/components/tx/format';
+import { subscriptionCurve } from '../../model';
 
 /**
  * Cumulative raise per day with the minimum as a dashed threshold. Only
@@ -13,13 +14,18 @@ import { money, subscriptionCurve, type PaymentUnit } from '../../model';
 export default function SubscriptionCurveCard({
   listing,
   activity,
-  unit,
+  code,
+  softCap,
+  hardCap,
   live,
   deadlineMs,
 }: {
   listing: ListingDetail;
   activity: ListingActivity | null;
-  unit: PaymentUnit;
+  code: string;
+  /** Read from the contract; null hides the threshold line. */
+  softCap: number | null;
+  hardCap: number | null;
   /** Still raising: an empty curve is worth an empty state; a closed one without dates is hidden. */
   live: boolean;
   deadlineMs: number | null;
@@ -50,7 +56,7 @@ export default function SubscriptionCurveCard({
     ...future.map((date) => ({ date, value: null })),
   ];
 
-  const fmt = (n: number) => money(n, unit);
+  const fmt = (n: number) => assetAmount(n, code);
   const loc = locale === 'en' ? 'en-US' : 'es-AR';
   const dayLabel = (date: string, long = false) =>
     new Date(`${date}T12:00:00Z`).toLocaleDateString(
@@ -81,14 +87,14 @@ export default function SubscriptionCurveCard({
             summary={t('offerings.curve.summary', { total: fmt(last.cumulative), n: points.length })}
             columns={[t('offerings.curve.colDay'), t('offerings.curve.colRaised')]}
             reference={
-              listing.dossier.offeringSoftCapUsdc > 0
+              softCap && softCap > 0
                 ? {
-                    value: listing.dossier.offeringSoftCapUsdc,
-                    label: t('offerings.curve.reference', { n: fmt(listing.dossier.offeringSoftCapUsdc) }),
+                    value: softCap,
+                    label: t('offerings.curve.reference', { n: fmt(softCap) }),
                   }
                 : undefined
             }
-            max={listing.dossier.offeringHardCapUsdc}
+            max={hardCap ?? undefined}
             highlightKey={last.date}
             highlightLabel={`${fmt(last.cumulative)} · ${isToday ? t('offerings.curve.today') : t('offerings.curve.last')}`}
             ticks={[...new Set(tickIdx)].map((i) => ({ index: i, label: dayLabel(slots[i].date) }))}

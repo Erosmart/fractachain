@@ -51,7 +51,7 @@ export default function OfferingCard({ pool, phase }: { pool: Pool; phase: Offer
       </p>
 
       <div className="mt-6 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <MoneyFigure value={pool.raisedAmount} unit={unit} />
+        <MoneyFigure value={pool.raisedAmount} code={unit} />
         <span className="text-sm text-ink-2">{t('offerings.card.raisedOf', { cap: fmt(pool.hardCap) })}</span>
       </div>
       <p className="mt-1 text-xs text-muted tnum">

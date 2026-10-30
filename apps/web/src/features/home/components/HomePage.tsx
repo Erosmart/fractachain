@@ -4,7 +4,7 @@ import { withIsland } from '@/components/island/withIsland';
 import { Card, EmptyState, Greeting, Notice, WireframeAsset } from '@/components/ui/kit';
 import { formatAmount } from '@/core/format/number';
 import { useI18n } from '@/hooks/useI18n';
-import { ActionMessage } from '@/features/portfolio/components/ActionMessage';
+import TxPanel from '@/components/tx/TxPanel';
 import { ActivityList } from '@/features/portfolio/components/ActivityList';
 import { HoldingsTable } from '@/features/portfolio/components/HoldingsTable';
 import { useIsNarrow, useLedger, useListing, usePools } from '@/features/portfolio/hooks/useMarketContext';
@@ -12,7 +12,7 @@ import { usePortfolio } from '@/features/portfolio/hooks/usePortfolio';
 import { useWalletActivity } from '@/features/portfolio/hooks/useWalletActivity';
 import { describeOperation } from '@/features/portfolio/model/activity';
 import { amount, clock } from '@/features/portfolio/model/format';
-import { dominantSource, offeringDay } from '@/features/portfolio/model/positions';
+import { offeringDay } from '@/features/portfolio/model/positions';
 import { pendingCount } from '@/features/portfolio/model/tasks';
 import { ActivityChart } from './ActivityChart';
 import { CapitalPanel, type NextStep } from './CapitalPanel';
@@ -27,7 +27,7 @@ import { TaskList } from './TaskList';
 function Home() {
   const { t, locale } = useI18n();
   const pf = usePortfolio();
-  const { user, book, positions, totals, tasks, loadedAt, status } = pf;
+  const { user, wallet, holdings, tokensValue, usdcCode, tasks, loadedAt, status, flow } = pf;
   const pools = usePools();
   const ledger = useLedger();
   const narrow = useIsNarrow();
@@ -35,9 +35,9 @@ function Home() {
 
   // An open offering the investor is in: "Día 12 de 30 de la licitación X".
   const live = useMemo(() => {
-    const mine = new Set(positions.map((p) => p.listingId));
+    const mine = new Set(holdings.map((h) => h.listingId));
     return (pools ?? []).find((p) => p.status === 'OPEN' && mine.has(p.id));
-  }, [pools, positions]);
+  }, [pools, holdings]);
   const liveListing = useListing(live?.id);
   const day = liveListing ? offeringDay(liveListing.listedAt, liveListing.dossier?.offeringDays) : null;
 
@@ -52,11 +52,11 @@ function Home() {
         ? t('dashboard.status.pendingOne')
         : t('dashboard.status.pendingMany', { n: pending }),
     !day
-      ? positions.length === 0
+      ? holdings.length === 0
         ? t('dashboard.status.noAssets')
-        : positions.length === 1
+        : holdings.length === 1
           ? t('dashboard.status.assetsOne')
-          : t('dashboard.status.assetsMany', { n: positions.length })
+          : t('dashboard.status.assetsMany', { n: holdings.length })
       : null,
   ]
     .filter(Boolean)
@@ -77,7 +77,6 @@ function Home() {
         : [],
     [activity.ops, user?.publicKey],
   );
-  const source = dominantSource(positions);
 
   if (!user) return null;
 
@@ -108,23 +107,30 @@ function Home() {
 
         <CapitalPanel
           className="lg:col-span-4 lg:col-start-9 lg:row-span-3 lg:row-start-1"
-          book={book}
-          positions={positions}
-          totals={totals}
+          wallet={wallet}
+          holdings={holdings}
+          tokensValue={tokensValue}
+          code={usdcCode}
           loadedAt={loadedAt}
           next={next}
         />
 
         <div className="space-y-3 lg:col-span-8 lg:col-start-1">
-          {status === 'error' && !book && (
+          {status === 'error' && (
             <Notice tone="bad" className="flex flex-wrap items-center justify-between gap-3">
-              <span>{t('dashboard.loadError')}</span>
+              <span>{t('dashboard.chain.error')}</span>
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => void pf.reload()}>
                 {t('dashboard.retry')}
               </button>
             </Notice>
           )}
-          <ActionMessage message={pf.message} />
+          <TxPanel
+            snap={flow.snap}
+            onSign={() => void flow.sign()}
+            onRetry={() => void flow.retry()}
+            onResign={() => flow.resign()}
+            onClose={() => flow.reset()}
+          />
           <TaskList tasks={tasks} user={user} perform={pf.perform} isBusy={pf.isBusy} />
         </div>
 
@@ -136,7 +142,7 @@ function Home() {
             status={activity.status}
             days={narrow ? 14 : 30}
           />
-          <OfferingsCard className="md:col-span-2" pools={pools} positions={positions} />
+          <OfferingsCard className="md:col-span-2" pools={pools} holdings={holdings} />
         </div>
       </div>
 
@@ -144,18 +150,11 @@ function Home() {
         <Card
           className="lg:col-span-7"
           title={t('dashboard.holdings.title')}
-          subtitle={
-            positions.length
-              ? t('dashboard.holdings.previewSub', {
-                  n: positions.length,
-                  source: (source ?? '').toLowerCase(),
-                })
-              : undefined
-          }
+          subtitle={holdings.length ? t('dashboard.chain.source') : undefined}
           href="/portfolio"
           hrefLabel={t('dashboard.holdings.viewAll')}
         >
-          {positions.length === 0 ? (
+          {holdings.length === 0 ? (
             status === 'loading' ? (
               <p className="py-8 text-center text-sm text-muted">{t('dashboard.loading')}</p>
             ) : (
@@ -169,7 +168,7 @@ function Home() {
               />
             )
           ) : (
-            <HoldingsTable positions={positions.slice(0, 5)} variant="preview" />
+            <HoldingsTable holdings={holdings.slice(0, 5)} variant="preview" />
           )}
         </Card>
         <Card
@@ -212,7 +211,6 @@ function taskLabel(
     claim: 'dashboard.tasks.claim',
     receive: 'dashboard.tasks.receive',
     refund: 'dashboard.tasks.refund',
-    dividend: 'dashboard.tasks.dividend',
   };
   const label = t(key[kind] ?? 'dashboard.tasks.title', { ticker: ticker ?? '' });
   return label.charAt(0).toLowerCase() + label.slice(1);

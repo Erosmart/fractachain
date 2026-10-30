@@ -1,5 +1,6 @@
 import { Card, CapProgress, EmptyState } from '@/components/ui/kit';
-import type { Pool, Position } from '@/core/api/types';
+import type { Pool } from '@/core/api/types';
+import type { ChainHolding } from '@/features/portfolio/model/chain';
 import { useI18n } from '@/hooks/useI18n';
 import { money } from '@/features/portfolio/model/format';
 import PhaseChip from '@/components/ui/PhaseChip';
@@ -12,19 +13,19 @@ import { unitOf } from '@/features/portfolio/model/positions';
  */
 export function OfferingsCard({
   pools,
-  positions,
+  holdings,
   className = '',
 }: {
   pools: Pool[] | null;
-  positions: Position[];
+  holdings: ChainHolding[];
   className?: string;
 }) {
   const { t } = useI18n();
-  const mine = new Set(positions.map((p) => p.listingId));
+  const mine = new Set(holdings.map((h) => h.listingId));
   const subscribed = (pools ?? []).filter((p) => mine.has(p.id));
   const open = (pools ?? []).filter((p) => p.status === 'OPEN' && !mine.has(p.id));
   const rows = subscribed.length ? subscribed : open;
-  const names = new Map(positions.map((p) => [p.listingId, p.legalName]));
+  const names = new Map(holdings.map((h) => [h.listingId, h.title]));
 
   return (
     <Card

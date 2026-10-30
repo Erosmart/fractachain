@@ -70,18 +70,13 @@ export class InvestorService {
     return this.listings.finalize(listingId);
   };
 
-  readonly refundContribution = async (
-    listingId: string,
-    selfCustody?: boolean,
-  ): Promise<ChainActionResult> => {
+  /**
+   * Custodial refund: the platform signs with the custodial wallet. Self-custody
+   * refunds are built by `/api/tx/build` and signed in Freighter (the tx flow).
+   */
+  readonly refundContribution = async (listingId: string): Promise<ChainActionResult> => {
     this.requireSession();
-    const isSelf = selfCustody ?? this.session.getSnapshot().user?.custodyMode === 'SELF';
-    const data = isSelf
-      ? await this.relay.signAndRelay<ChainActionResult>({
-          prepare: this.listings.refundPreparePath(listingId),
-          submit: this.listings.refundSubmitPath(listingId),
-        })
-      : await this.listings.refund(listingId);
+    const data = await this.listings.refund(listingId);
     if (data?.user) this.applyUser(data.user);
     return data;
   };

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { ListingDetail, Pool, SandboxOrder } from '@/core/api/types';
+import type { ListingDetail, Pool } from '@/core/api/types';
 import { container } from '@/core/container';
 
 /** Public offerings (for progress against caps). */
@@ -54,48 +54,6 @@ export function useListing(listingId: string | undefined) {
   return listing;
 }
 
-export interface OpenOrder extends SandboxOrder {
-  listingId: string;
-  tokenTicker: string;
-}
-
-/** The investor's resting orders across the books of the assets they hold. */
-export function useOpenOrders(listingIds: string[]) {
-  const [orders, setOrders] = useState<OpenOrder[] | null>(null);
-  const [nonce, setNonce] = useState(0);
-  const key = listingIds.join('|');
-
-  useEffect(() => {
-    let alive = true;
-    if (!listingIds.length) {
-      setOrders([]);
-      return;
-    }
-    Promise.allSettled(listingIds.map((id) => container.api.market.sandboxBook(id)))
-      .then((results) => {
-        if (!alive) return;
-        const rows: OpenOrder[] = [];
-        results.forEach((r, i) => {
-          if (r.status !== 'fulfilled') return;
-          for (const o of r.value.myOrders || []) {
-            if (o.status === 'OPEN' || o.status === 'PARTIAL') {
-              rows.push({ ...o, listingId: listingIds[i], tokenTicker: r.value.tokenTicker });
-            }
-          }
-        });
-        setOrders(rows);
-      })
-      .catch(() => alive && setOrders([]));
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, nonce]);
-
-  return { orders, reload: () => setNonce((n) => n + 1) };
-}
-
-/** `true` below the `sm` breakpoint (fewer bars, cards instead of tables). */
 export function useIsNarrow(): boolean {
   const [narrow, setNarrow] = useState(false);
   useEffect(() => {

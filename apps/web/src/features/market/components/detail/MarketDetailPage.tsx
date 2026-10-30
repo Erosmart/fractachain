@@ -5,7 +5,8 @@ import { EmptyState } from '@/components/ui/kit';
 import { useI18n } from '@/hooks/useI18n';
 import { useMediaQuery } from '../../hooks/useNow';
 import { useOffering, type Offering } from '../../hooks/useOffering';
-import { LIVE_PHASES, money } from '../../model';
+import { assetAmount } from '@/components/tx/format';
+import { LIVE_PHASES } from '../../model';
 import CloseCard from './CloseCard';
 import DocumentsCard from './DocumentsCard';
 import InvestBox from './InvestBox';
@@ -29,9 +30,9 @@ function InvestSheet({ offering }: { offering: Offering }) {
   const [open, setOpen] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
-  const { listing, user, unit, phase } = offering;
+  const { listing, user, tender, phase } = offering;
   const d = listing!.dossier;
-  const live = phase !== null && LIVE_PHASES.has(phase);
+  const live = phase !== null && LIVE_PHASES.has(phase) && tender?.stateName === 'Open';
 
   useEffect(() => {
     if (desktop) setOpen(false);
@@ -74,7 +75,7 @@ function InvestSheet({ offering }: { offering: Offering }) {
         >
           {live
             ? t('offerings.invest.mobileCta', {
-                min: money(d.minInvestmentUsdc || d.pricePerShareUsdc, unit),
+                min: assetAmount(Math.max(d.minInvestmentUsdc || 0, tender?.price ?? 0), tender?.code ?? ''),
               })
             : t('offerings.invest.mobileClosed')}
         </button>
@@ -110,8 +111,9 @@ function InvestSheet({ offering }: { offering: Offering }) {
 function MarketDetailPage({ listingId }: { listingId: string }) {
   const { t } = useI18n();
   const offering = useOffering(listingId);
-  const { listing, validation, activity, unit, onChain, phase, deadlineMs, loaded } = offering;
-  const live = phase !== null && LIVE_PHASES.has(phase);
+  const { listing, validation, activity, tender, phase, deadlineMs, loaded } = offering;
+  const live = phase !== null && LIVE_PHASES.has(phase) && tender?.stateName === 'Open';
+  const code = tender?.code ?? '';
 
   if (!listing) {
     return loaded ? (
@@ -142,27 +144,35 @@ function MarketDetailPage({ listingId }: { listingId: string }) {
             <PositionCard offering={offering} />
             <CloseCard offering={offering} />
           </div>
-          <WhyInvest unit={unit} />
+          <WhyInvest code={code} />
           <SubscriptionCurveCard
             listing={listing}
             activity={activity}
-            unit={unit}
+            code={code}
+            softCap={tender?.softCap ?? null}
+            hardCap={tender?.hardCap ?? null}
             live={live}
             deadlineMs={deadlineMs}
           />
-          <TermsCard listing={listing} validation={validation} unit={unit} />
+          <TermsCard listing={listing} validation={validation} tender={tender} />
           <IssuerCard listing={listing} />
           <div className="grid gap-5 xl:grid-cols-2">
             <TimelineCard listing={listing} deadlineMs={deadlineMs} />
             <DocumentsCard listing={listing} />
           </div>
           <RisksCard />
-          <OnChainCard listing={listing} validation={validation} onChain={onChain} />
+          <OnChainCard listing={listing} validation={validation} tender={tender} />
           {/* Room for the fixed subscribe bar on phones. */}
           {live && <div className="h-16 lg:hidden" aria-hidden="true" />}
         </div>
         <aside
-          className={`min-w-0 lg:sticky lg:top-24 lg:order-none lg:self-start ${live ? '' : 'order-first'}`}
+          // Sticky but never taller than the screen: the box scrolls inside, so the
+          // transaction review at its bottom is always reachable.
+          className={`min-w-0 lg:sticky lg:top-24 lg:order-none lg:self-start ${
+            live
+              ? 'lg:-mx-2 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:px-2 lg:pb-2'
+              : 'order-first'
+          }`}
         >
           <div className="space-y-5">
             <InvestSheet offering={offering} />

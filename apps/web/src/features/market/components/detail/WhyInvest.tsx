@@ -1,9 +1,8 @@
 import { ArrowLeftRight, Landmark, RotateCcw, ScanSearch } from 'lucide-react';
 import { useI18n } from '@/hooks/useI18n';
-import type { PaymentUnit } from '../../model';
 
 /** Three to four product truths that hold for every offering on the platform. */
-export default function WhyInvest({ unit }: { unit: PaymentUnit }) {
+export default function WhyInvest({ code }: { code: string }) {
   const { t } = useI18n();
   const items = [
     { Icon: Landmark, title: 'backingTitle', body: 'backing' },
@@ -28,7 +27,7 @@ export default function WhyInvest({ unit }: { unit: PaymentUnit }) {
             <div className="min-w-0">
               <p className="text-sm font-medium text-ink">{t(`offerings.detail.why.${title}`)}</p>
               <p className="mt-0.5 text-[13px] leading-relaxed text-ink-2">
-                {t(`offerings.detail.why.${body}`, { u: unit })}
+                {t(`offerings.detail.why.${body}`, { u: code || '—' })}
               </p>
             </div>
           </li>

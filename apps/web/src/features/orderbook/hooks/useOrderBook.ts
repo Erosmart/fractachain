@@ -95,7 +95,7 @@ export function useOrderBook() {
   // liabilities). Sandbox: platform ledger minus what resting orders reserve.
   const freeCash = onSdex
     ? Number(book?.usdcBalance || 0)
-    : Math.max(0, Number(user?.cashUsdc || 0) - reservedCash);
+    : Math.max(0, Number(book?.demoCash || 0) - reservedCash);
   const freeTokens = onSdex
     ? Number(book?.tokenBalance || 0)
     : Math.max(0, Number(holding?.tokens || 0) - reservedTokens);

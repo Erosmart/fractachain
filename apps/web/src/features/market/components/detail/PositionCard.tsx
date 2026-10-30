@@ -1,29 +1,35 @@
 import { RotateCcw, Send } from 'lucide-react';
+import ChainSource from '@/components/tx/ChainSource';
+import { assetAmount } from '@/components/tx/format';
+import TxPanel from '@/components/tx/TxPanel';
 import { Card, Notice } from '@/components/ui/kit';
 import WalletAddress from '@/components/ui/WalletAddress';
 import { formatAmount } from '@/core/format/number';
 import { useI18n } from '@/hooks/useI18n';
 import type { Offering } from '../../hooks/useOffering';
-import { money } from '../../model';
 
-/** What the signed-in investor holds in this offering and what they can do with it. */
+const CARD_ACTIONS = new Set(['refund', 'distribute']);
+
+/**
+ * What the signed-in investor holds in this offering — the units are read
+ * from the contract (`get_rwa_balance`) — and what they can do with it.
+ */
 export default function PositionCard({ offering }: { offering: Offering }) {
   const { t } = useI18n();
-  const { listing, user, holding, unit, onChain, phase, busy, actions } = offering;
-  if (!listing || !user || !holding) return null;
+  const { listing, user, holding, tender, phase, flow, actions } = offering;
+  if (!listing || !user || !tender) return null;
   const d = listing.dossier;
-  const tokens = Number(holding.tokens || 0);
-  const onChainUnits = Number(holding.tokensOnChain || 0);
-  const pendingOnChain = Math.max(0, tokens - onChainUnits);
+  const units = tender.holder?.rwa ?? 0;
+  const code = tender.code;
+  const refunded = Boolean(holding?.refundedAt);
+  if (units <= 0 && !refunded && !(holding && (holding.tokensOwed || holding.tokens))) return null;
+
   const success = phase === 'closed' || phase === 'payingIncome';
-  const failed = phase === 'failed' || phase === 'refundAvailable';
+  const canRefund = tender.stateName === 'Failed' && units > 0;
+  const onChainUnits = Number(holding?.tokensOnChain || 0);
+  const classicPending = Math.max(0, Number(holding?.tokens || 0) - onChainUnits);
   const canClaim =
-    success &&
-    Boolean(user.trustlines?.includes(listing.id)) &&
-    (holding.tokensOwed || 0) > 0 &&
-    !holding.refundedAt;
-  const canRefund = Boolean(onChain.live) && failed && !holding.refundedAt;
-  if (tokens <= 0 && onChainUnits <= 0 && !(holding.usdcAmount > 0)) return null;
+    success && Boolean(user.trustlines?.includes(listing.id)) && (holding?.tokensOwed || 0) > 0 && !refunded;
 
   const stat = (label: string, value: string) => (
     <div className="min-w-0">
@@ -35,13 +41,18 @@ export default function PositionCard({ offering }: { offering: Offering }) {
   return (
     <Card title={t('offerings.position.title')}>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-5">
-        {stat(t('offerings.position.contributed'), money(holding.usdcAmount || 0, unit))}
-        {stat(t('offerings.position.tokens'), formatAmount(tokens, tokens % 1 ? 2 : 0))}
-        {stat(t('offerings.position.inWallet'), formatAmount(onChainUnits, onChainUnits % 1 ? 2 : 0))}
-        {stat(t('offerings.position.pending'), formatAmount(pendingOnChain, pendingOnChain % 1 ? 2 : 0))}
+        {stat(t('offerings.chain.holderRwa'), formatAmount(units, units % 1 ? 2 : 0))}
+        {stat(t('offerings.position.contributed'), assetAmount(units * tender.price, code))}
       </dl>
+      <ChainSource
+        className="mt-3"
+        contractId={tender.contractId}
+        explorer={tender.explorer}
+        reads={['get_rwa_balance', 'get_price_per_unit']}
+        readAt={tender.readAt}
+      />
 
-      {d.issuerPublicKey ? (
+      {success && d.issuerPublicKey ? (
         <div className="mt-5 rounded-xl bg-surface-2 px-3.5 py-3">
           <p className="eyebrow">{t('offerings.position.asset')}</p>
           <p className="mt-1 text-sm font-medium text-ink">{d.tokenTicker}</p>
@@ -52,16 +63,14 @@ export default function PositionCard({ offering }: { offering: Offering }) {
             {user.custodyMode === 'SELF' ? t('market.freighterHintSelf') : t('market.freighterHintCustodial')}
           </p>
         </div>
-      ) : (
-        <p className="mt-4 text-xs text-muted">{t('market.noIssuerYet')}</p>
-      )}
+      ) : null}
 
       <div className="mt-4 flex flex-col gap-2">
-        {pendingOnChain > 0 && !holding.refundedAt && (
+        {success && classicPending > 0 && !refunded && (
           <button
             type="button"
             className="btn btn-primary w-full"
-            disabled={busy !== null}
+            disabled={flow.busy}
             onClick={() => void actions.receive()}
           >
             <Send className="h-4 w-4" aria-hidden="true" />
@@ -73,7 +82,7 @@ export default function PositionCard({ offering }: { offering: Offering }) {
             <button
               type="button"
               className="btn btn-secondary w-full"
-              disabled={busy !== null}
+              disabled={flow.busy}
               onClick={() => void actions.claim()}
             >
               {t('offerings.position.claim')}
@@ -88,17 +97,26 @@ export default function PositionCard({ offering }: { offering: Offering }) {
             <button
               type="button"
               className="btn btn-primary mt-3 w-full"
-              disabled={busy !== null}
+              disabled={flow.busy}
               onClick={() => void actions.refund()}
             >
               <RotateCcw className="h-4 w-4" aria-hidden="true" />
-              {busy === 'refund'
+              {flow.busy && flow.snap.action === 'refund'
                 ? t('offerings.position.refunding')
-                : t('offerings.position.refund', { u: unit })}
+                : t('offerings.position.refund', { u: code })}
             </button>
           </div>
         )}
-        {holding.refundedAt && <Notice tone="good">{t('offerings.position.refunded')}</Notice>}
+        {refunded && units <= 0 && <Notice tone="good">{t('offerings.position.refunded')}</Notice>}
+        {flow.snap.action && CARD_ACTIONS.has(flow.snap.action) && (
+          <TxPanel
+            snap={flow.snap}
+            onSign={() => void flow.sign()}
+            onRetry={() => void flow.retry()}
+            onResign={() => flow.resign()}
+            onClose={() => flow.reset()}
+          />
+        )}
       </div>
     </Card>
   );

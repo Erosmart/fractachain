@@ -14,14 +14,12 @@ import { body, bodyOf, params } from '../middleware/validate';
 import { ok } from '../respond';
 import {
   ContributeBody,
-  ContributeSubmitBody,
   DividendBody,
   DossierBody,
   IdParam,
   MintBody,
   ProceedsWalletBody,
   SettleBody,
-  XdrBody,
 } from '../schemas';
 import type { Controller } from './Controller';
 
@@ -211,57 +209,9 @@ export class ListingController implements Controller {
       },
     );
 
-    r.post('/api/listings/:id/contribute/prepare', auth, id, body(ContributeBody), async (req, res) => {
-      ok(
-        res,
-        await this.offerings.prepareContribute(
-          listingId(req),
-          currentAccount(req).id,
-          bodyOf(req, ContributeBody).usdcAmount,
-        ),
-      );
-    });
-
-    /** `usdcAmount` in the body is ignored: the booked amount is read from the contract. */
-    r.post(
-      '/api/listings/:id/contribute/submit',
-      auth,
-      audited('offering.contribute'),
-      id,
-      body(ContributeSubmitBody),
-      async (req, res) => {
-        ok(
-          res,
-          await this.offerings.submitContribute(
-            listingId(req),
-            currentAccount(req).id,
-            bodyOf(req, ContributeSubmitBody).xdr,
-          ),
-        );
-      },
-    );
-
     r.post('/api/listings/:id/refund', auth, audited('offering.refund'), id, async (req, res) => {
       ok(res, await this.offerings.refund(listingId(req), currentAccount(req).id));
     });
-
-    r.post('/api/listings/:id/refund/prepare', auth, id, async (req, res) => {
-      ok(res, await this.offerings.prepareRefund(listingId(req), currentAccount(req).id));
-    });
-
-    r.post(
-      '/api/listings/:id/refund/submit',
-      auth,
-      audited('offering.refund'),
-      id,
-      body(XdrBody),
-      async (req, res) => {
-        ok(
-          res,
-          await this.offerings.submitRefund(listingId(req), currentAccount(req).id, bodyOf(req, XdrBody).xdr),
-        );
-      },
-    );
 
     r.post('/api/listings/:id/trustline', auth, id, async (req, res) => {
       ok(res, await this.offerings.approveToken(listingId(req), currentAccount(req).id));

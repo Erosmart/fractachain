@@ -15,6 +15,8 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code?: string,
     readonly issues?: ApiIssue[],
+    /** Extra fields of the error body (e.g. `hash` / `explorer` of a failed transaction). */
+    readonly details?: Record<string, unknown>,
   ) {
     super(message);
     this.name = 'ApiError';

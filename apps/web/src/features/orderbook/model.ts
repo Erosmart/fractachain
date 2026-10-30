@@ -34,6 +34,8 @@ export interface Book {
   myOrders: MyOrder[];
   reservedCash?: number;
   reservedTokens?: number;
+  /** Sandbox book only: its own demo cash (not a wallet balance). */
+  demoCash?: number;
   /** 'sdex' is the real Stellar order book; 'sandbox' is the local matcher. */
   venue: 'sdex' | 'sandbox';
   /** SDEX only: whether the issuer has authorized this holder's trustline. */

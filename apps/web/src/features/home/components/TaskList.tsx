@@ -2,7 +2,6 @@ import { useState, type ReactNode } from 'react';
 import {
   ArrowDownToLine,
   BadgeCheck,
-  Coins,
   DollarSign,
   Download,
   Link2,
@@ -27,7 +26,6 @@ const ICONS: Record<TaskKind, typeof Mail> = {
   claim: Download,
   receive: ArrowDownToLine,
   refund: Undo2,
-  dividend: Coins,
 };
 
 function copyFor(
@@ -64,7 +62,13 @@ function copyFor(
             title: t('dashboard.tasks.usdcDone'),
             sub: t('dashboard.tasks.usdcSub', { n: money(task.amount ?? 0) }),
           }
-        : { title: t('dashboard.tasks.usdc') };
+        : {
+            title: t('dashboard.tasks.usdc'),
+            sub:
+              task.action === 'enableUsdc'
+                ? t('dashboard.tasks.usdcTrustSub', { code: task.code ?? 'USDC' })
+                : t('dashboard.tasks.usdcPoolSub'),
+          };
     case 'twoFa':
       return {
         title: t(task.done ? 'dashboard.tasks.twoFaDone' : 'dashboard.tasks.twoFa'),
@@ -78,21 +82,16 @@ function copyFor(
       return { title: t('dashboard.tasks.receive', v), sub: t('dashboard.tasks.receiveSub') };
     case 'refund':
       return { title: t('dashboard.tasks.refund', v), sub: t('dashboard.tasks.refundSub') };
-    case 'dividend':
-      return {
-        title: t('dashboard.tasks.dividend', v),
-        sub: t('dashboard.tasks.dividendSub', { n: money(task.amount ?? 0) }),
-      };
   }
 }
 
 const ACTION_LABEL: Record<TaskAction, string> = {
   fundUsdc: 'dashboard.tasks.usdcAction',
+  enableUsdc: 'dashboard.tasks.usdcEnableAction',
   approve: 'dashboard.tasks.trustlineAction',
   claim: 'dashboard.tasks.claimAction',
   distribute: 'dashboard.tasks.receiveAction',
   refund: 'dashboard.tasks.refundAction',
-  dividend: 'dashboard.tasks.dividendAction',
 };
 
 /**

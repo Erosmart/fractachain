@@ -59,7 +59,15 @@ export class FetchHttpClient implements IHttpClient {
       const message = body.message || body.error || this.fallbackMessage(response.status);
       if (response.status === 403 && isPolicyViolationCode(body.code))
         this.deps.policy?.onPolicyViolation(body.code, message);
-      throw new ApiError(message, response.status, body.code, body.issues);
+      const {
+        success: _s,
+        message: _m,
+        error: _e,
+        code: _c,
+        issues: _i,
+        ...details
+      } = body as Record<string, unknown>;
+      throw new ApiError(message, response.status, body.code, body.issues, details);
     }
     return body;
   }
