@@ -66,7 +66,11 @@ export interface PublicAccount {
   selfieUrl?: string;
   holdings: Holding[];
   trustlines: string[];
-  cashUsdc: number;
+  /**
+   * @deprecated Instaward 1 removed sandbox balances from the API: tenders
+   * settle on-chain and balances are read from the chain. Never sent.
+   */
+  cashUsdc?: number;
   xlmBalance?: number;
   faucetFunded?: boolean;
   isAdmin: boolean;
@@ -373,10 +377,12 @@ export interface ChainForward extends ChainRef {
   totalKilos: number;
   parties: { producer: string; buyer: string } | null;
   arbiter: string | null;
+  /** `get_position()`: escrow in the payment asset, dates ISO. */
   position: {
     delivered: boolean;
     deliveredAt: string | null;
     disputed: boolean;
+    harvestDeadline: string | null;
     rollovers: number;
     escrow: number;
   } | null;
@@ -393,11 +399,21 @@ export interface ChainWarrant extends ChainRef {
     inventoryValue: number;
     ltvBps: number;
     interestRateBps: number;
+    /** Funding time (null while the loan is not funded). */
     fundedAt: string | null;
     dueAt: string | null;
-    graceSeconds: number;
+    /** Until when the loan offer can be funded. */
+    offerExpiresAt: string | null;
   } | null;
   paymentToken: ChainAsset;
+}
+
+/** `get_mint_proof(seq)` of the latest mint: recipient, amount and custody slip hash. */
+export interface ChainMintProof {
+  seq: number;
+  to: string;
+  amount: number;
+  cvDepositHash: string;
 }
 
 export interface ChainStockVault extends ChainRef {
@@ -406,7 +422,7 @@ export interface ChainStockVault extends ChainRef {
   metadata: Record<string, string | number | boolean | null>;
   unclaimedPool: number;
   mintPaused: boolean;
-  lastProof: Record<string, string | number | null> | null;
+  lastProof: ChainMintProof | null;
   paymentToken: ChainAsset;
   holder?: { address: string; balance: number; claimable: number };
 }
