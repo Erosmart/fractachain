@@ -18,6 +18,10 @@ export class JsonKycRecordRepository implements IKycRecordRepository {
     return this.records.find((r) => r.userId === userId);
   }
 
+  findBySessionId(sessionId: string): KycRecord | undefined {
+    return this.records.find((r) => r.verification?.sessionId === sessionId);
+  }
+
   list(): KycRecord[] {
     return [...this.records];
   }

@@ -65,6 +65,12 @@ const EnvSchema = z.object({
   KYC_AUTO_APPROVE: bool,
   KYC_ENFORCE_HOURS: bool,
 
+  /** Didit identity verification (https://business.didit.me). Both set → hosted KYC. */
+  DIDIT_API_KEY: z.string().optional(),
+  DIDIT_WORKFLOW_ID: z.string().optional(),
+  DIDIT_WEBHOOK_SECRET: z.string().optional(),
+  DIDIT_API_URL: z.string().url().default('https://verification.didit.me'),
+
   FIREBASE_PROJECT_ID: z.string().optional(),
   ADMIN_REQUIRE_2FA: bool,
   REQUIRE_EMAIL_VERIFICATION: bool,
@@ -120,6 +126,10 @@ export interface AppConfig {
     cookie: { name: string; secure: boolean };
   };
   mail: { appUrl: string; smtpUrl?: string; from: string };
+  /** Hosted identity verification; absent → in-app form with selfie (manual review). */
+  kyc: {
+    didit?: { apiKey: string; workflowId: string; webhookSecret?: string; apiUrl: string };
+  };
   demo: {
     hackathon: boolean;
     seedAccounts: boolean;
@@ -211,6 +221,24 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
     warnings.push('WALLET_PEPPER no configurado: se usa el valor de desarrollo (no apto para producción)');
   }
 
+  const didit =
+    e.DIDIT_API_KEY?.trim() && e.DIDIT_WORKFLOW_ID?.trim()
+      ? {
+          apiKey: e.DIDIT_API_KEY.trim(),
+          workflowId: e.DIDIT_WORKFLOW_ID.trim(),
+          webhookSecret: e.DIDIT_WEBHOOK_SECRET?.trim() || undefined,
+          apiUrl: e.DIDIT_API_URL.replace(/\/+$/, ''),
+        }
+      : undefined;
+  if (Boolean(e.DIDIT_API_KEY?.trim()) !== Boolean(e.DIDIT_WORKFLOW_ID?.trim())) {
+    warnings.push('Didit necesita DIDIT_API_KEY y DIDIT_WORKFLOW_ID: se usa el KYC manual');
+  }
+  if (didit && !didit.webhookSecret) {
+    warnings.push(
+      'DIDIT_WEBHOOK_SECRET no configurado: las decisiones sólo se sincronizan al volver del flujo',
+    );
+  }
+
   const hackathon = e.HACKATHON_DEMO ?? false;
   const isTestnet = e.STELLAR_NETWORK_PASSPHRASE.includes('Test SDF');
 
@@ -248,14 +276,16 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
       smtpUrl: e.SMTP_URL?.trim() || undefined,
       from: e.MAIL_FROM,
     },
+    kyc: { didit },
     demo: {
       hackathon,
       // The fixed test account is a convenience for local demos; a public
       // host must opt in explicitly.
       seedAccounts: e.DEMO_SEED_ACCOUNTS ?? !isProduction,
-      // There is no KYC provider behind the onboarding form: on testnet the
-      // only alternative to auto-approval is stranding users on "pending".
-      kycAutoApprove: e.KYC_AUTO_APPROVE ?? (hackathon || isTestnet),
+      // Without an identity provider behind the form, on testnet the only
+      // alternative to auto-approval is stranding users on "pending". With
+      // Didit the provider decides.
+      kycAutoApprove: e.KYC_AUTO_APPROVE ?? (!didit && (hackathon || isTestnet)),
       kycEnforceHours: e.KYC_ENFORCE_HOURS ?? false,
     },
     stellar: {

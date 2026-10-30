@@ -11,6 +11,8 @@ declare global {
       /** Where the token came from: CSRF checks only apply to the cookie. */
       authVia?: 'bearer' | 'cookie';
       requestId?: string;
+      /** Exact request bytes, kept only on signed webhook routes. */
+      rawBody?: Buffer;
     }
   }
 }

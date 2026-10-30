@@ -1,3 +1,5 @@
+import type { ProviderChecks, ProviderSessionStatus, VerifiedIdentity } from './IdentityVerification';
+
 export type InvestorType = 'National' | 'Foreign' | 'Qualified' | 'Institutional';
 
 /** Review state of a KYC file, as the compliance desk sees it. */
@@ -29,11 +31,26 @@ export interface KycRecord {
   createdAt: string;
   reviewedAt?: string;
   expiresAt?: string;
+  /** Hosted identity verification (Didit), when a provider is configured. */
+  verification?: KycVerification;
+}
+
+export interface KycVerification {
+  provider: 'didit';
+  sessionId: string;
+  /** Hosted flow link: lets the owner resume an unfinished session. Never shown to admins. */
+  url: string;
+  status: ProviderSessionStatus;
+  identity?: VerifiedIdentity;
+  checks?: ProviderChecks;
+  startedAt: string;
+  updatedAt: string;
 }
 
 export interface IKycRecordRepository {
   findById(id: string): KycRecord | undefined;
   findByUserId(userId: string): KycRecord | undefined;
+  findBySessionId(sessionId: string): KycRecord | undefined;
   list(): KycRecord[];
   upsert(record: KycRecord): void;
 }

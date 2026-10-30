@@ -82,6 +82,10 @@ export const OnboardingKycBody = z.object({
   email: optStr(254),
 });
 
+export const VerificationStartBody = z.object({
+  language: z.enum(['es', 'en']).optional(),
+});
+
 export const KycRegisterBody = z.object({
   id: optStr(80),
   userId: optStr(80),

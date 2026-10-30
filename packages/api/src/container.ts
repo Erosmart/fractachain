@@ -19,7 +19,10 @@ import { ComplianceService } from './application/compliance/ComplianceService';
 import { StockCatalogService } from './application/custody/StockCatalogService';
 import { DemoDossierService } from './application/demo/DemoDossierService';
 import { IssuanceProductService } from './application/issuance/IssuanceProductService';
+import { IdentityVerificationService } from './application/kyc/IdentityVerificationService';
 import { KycService } from './application/kyc/KycService';
+import { DiditClient, DiditWebhookAuthenticator } from './infrastructure/kyc/DiditClient';
+import type { IIdentityVerificationProvider } from './domain/kyc/IdentityVerification';
 import { IssuanceWorkflowService } from './application/listing/IssuanceWorkflowService';
 import { ListingLedger } from './application/listing/ListingLedger';
 import { ListingPresenter } from './application/listing/ListingPresenter';
@@ -132,6 +135,8 @@ export interface ContainerOverrides {
   secrets?: ISecretStore;
   clock?: IClock;
   mailer?: IMailer;
+  /** Replaces the Didit client (tests). Needs DIDIT_* in the config to take effect end to end. */
+  identityProvider?: IIdentityVerificationProvider;
 }
 
 export interface Container {
@@ -380,11 +385,26 @@ export async function buildContainer(
     admins,
     {
       autoApprove: config.demo.kycAutoApprove,
+      requireSelfie: !config.kyc.didit,
       enforceBusinessHours: config.demo.kycEnforceHours,
       requireEmailVerification: config.auth.requireEmailVerification,
     },
     logger.child({ component: 'kyc' }),
     emailVerification,
+  );
+  const didit = config.kyc.didit;
+  const verification = new IdentityVerificationService(
+    overrides.identityProvider ??
+      (didit
+        ? new DiditClient({ apiKey: didit.apiKey, workflowId: didit.workflowId, baseUrl: didit.apiUrl })
+        : undefined),
+    didit ? new DiditWebhookAuthenticator(didit.webhookSecret) : undefined,
+    kyc,
+    accounts,
+    kycRepo,
+    clock,
+    { callbackUrl: `${config.mail.appUrl}/onboarding/kyc/callback` },
+    logger.child({ component: 'identity' }),
   );
   const demo = new DemoDossierService(listings, keyring, deployments, friendbot);
   const issuance = new IssuanceWorkflowService(listings, stockVault, licitacion, keyring, demo, explorer);
@@ -431,7 +451,7 @@ export async function buildContainer(
         auditRoutes,
       ),
       new WalletController(wallets, guard, limits),
-      new KycController(kyc, guard, limits, auditRoutes),
+      new KycController(kyc, verification, guard, limits, auditRoutes),
       new CatalogController(stocks, products, mocks, guard, auditRoutes),
       new ListingController(
         listings,

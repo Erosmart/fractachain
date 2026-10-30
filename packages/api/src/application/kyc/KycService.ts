@@ -8,6 +8,11 @@ import {
   type KycRecord,
   type KycReviewStatus,
 } from '../../domain/kyc/KycRecord';
+import type {
+  ProviderChecks,
+  ProviderSessionStatus,
+  VerifiedIdentity,
+} from '../../domain/kyc/IdentityVerification';
 import {
   ConflictError,
   DomainError,
@@ -30,8 +35,10 @@ export interface IEmailChangeListener {
 }
 
 export interface KycPolicyOptions {
-  /** No KYC provider exists behind the form on testnet: approve on submit. */
+  /** Approve on submit (testnet without an identity provider behind the form). */
   autoApprove: boolean;
+  /** The in-app selfie is the liveness proof; off when a provider (Didit) does it. */
+  requireSelfie: boolean;
   /** Refuse approvals outside Argentine banking hours. */
   enforceBusinessHours: boolean;
   /** Email/password accounts must confirm their address before submitting KYC. */
@@ -59,7 +66,17 @@ export interface KycQueueRow {
   selfieUrl?: string;
   userId?: string;
   email: string;
+  /** Provider decision summary (no resume link, no biometrics). */
+  verification?: {
+    provider: 'didit';
+    status: ProviderSessionStatus;
+    identity?: VerifiedIdentity;
+    checks?: ProviderChecks;
+    updatedAt: string;
+  };
 }
+
+export type VerificationOutcome = 'APPROVED' | 'REJECTED' | 'REVOKED' | 'PENDING';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -121,7 +138,7 @@ export class KycService {
         account.emailVerifiedAt = undefined;
         void this.emailChanges?.onEmailChanged(account).catch(() => undefined);
       }
-    } else if (!input.selfieDataUrl) {
+    } else if (this.options.requireSelfie && !input.selfieDataUrl) {
       throw new ValidationError('Falta la foto');
     }
     if (input.selfieDataUrl) account.selfiePath = this.selfies.save(account.id, input.selfieDataUrl);
@@ -188,6 +205,7 @@ export class KycService {
         selfieUrl: u.selfiePath ? `/api/kyc/selfie/${u.id}` : undefined,
         userId: u.id,
         email: u.email,
+        verification: KycService.verificationSummary(this.records.findById(id)),
       });
     }
     for (const r of this.records.list()) {
@@ -206,6 +224,7 @@ export class KycService {
         selfieUrl: r.selfieUrl || undefined,
         userId: r.userId,
         email: '',
+        verification: KycService.verificationSummary(r),
       });
     }
     return rows
@@ -243,39 +262,38 @@ export class KycService {
         'Autorización on-chain bloqueada fuera del horario laboral argentino (Lunes a Viernes 08:00 a 16:00 ART). Medida de seguridad anti-compromiso.',
       );
     }
-    const { account, record } = this.decide(id, 'APPROVED', 'APPROVED');
+    return this.settle(id, 'APPROVED');
+  }
+
+  reject(id: string, reason?: string) {
+    return this.settle(id, 'REJECTED', reason || 'Documentación ilegible o inconsistente');
+  }
+
+  /** Hard freeze: the network also pulls the holder's open offers. */
+  revoke(id: string, reason?: string) {
+    return this.settle(id, 'REVOKED', reason || 'Revocación preventiva por compliance');
+  }
+
+  /**
+   * Applies a decision with its on-chain consequences. Used by the admin
+   * actions above and by the identity provider (Didit), which is not subject
+   * to the banking-hours guard: that guard limits a compromised admin key.
+   */
+  settle(id: string, outcome: VerificationOutcome, reason?: string) {
+    if (outcome === 'PENDING') {
+      const { account, record } = this.decide(id, 'PENDING', 'PENDING');
+      return { success: true as const, user: account ? this.accounts.toPublic(account) : undefined, record };
+    }
+    const { account, record } = this.decide(id, outcome, outcome, reason);
     const address = account?.publicKey || record?.stellarAddress;
-    if (address) {
+    if (address && outcome === 'APPROVED') {
       // On-chain half of the approval. Fire-and-forget: the decision is
       // recorded; a Horizon hiccup is recoverable via compliance/sync.
       void this.compliance
         .grant(address)
         .catch((err) => this.logger.warn('grant on-chain falló', { err: errorMessage(err) }));
       void this.whitelistOnLiveOfferings(address);
-    }
-    return { success: true as const, user: account ? this.accounts.toPublic(account) : undefined, record };
-  }
-
-  reject(id: string, reason?: string) {
-    const { account, record } = this.decide(
-      id,
-      'REJECTED',
-      'REJECTED',
-      reason || 'Documentación ilegible o inconsistente',
-    );
-    return { success: true as const, user: account ? this.accounts.toPublic(account) : undefined, record };
-  }
-
-  /** Hard freeze: the network also pulls the holder's open offers. */
-  revoke(id: string, reason?: string) {
-    const { account, record } = this.decide(
-      id,
-      'REVOKED',
-      'REVOKED',
-      reason || 'Revocación preventiva por compliance',
-    );
-    const address = account?.publicKey || record?.stellarAddress;
-    if (address) {
+    } else if (address && outcome === 'REVOKED') {
       void this.compliance
         .revoke(address, { allowUnwind: false })
         .catch((err) => this.logger.warn('revoke on-chain falló', { err: errorMessage(err) }));
@@ -294,9 +312,21 @@ export class KycService {
     return image;
   }
 
+  private static verificationSummary(record: KycRecord | undefined): KycQueueRow['verification'] {
+    const v = record?.verification;
+    if (!v) return undefined;
+    return {
+      provider: v.provider,
+      status: v.status,
+      identity: v.identity,
+      checks: v.checks,
+      updatedAt: v.updatedAt,
+    };
+  }
+
   private decide(
     id: string,
-    accountStatus: 'APPROVED' | 'REJECTED' | 'REVOKED',
+    accountStatus: 'APPROVED' | 'REJECTED' | 'REVOKED' | 'PENDING',
     recordStatus: KycReviewStatus,
     reason?: string,
   ) {
@@ -306,8 +336,8 @@ export class KycService {
     const now = new Date().toISOString();
     if (record) {
       record.status = recordStatus;
-      record.reviewedAt = now;
-      if (reason) record.rejectionReason = reason;
+      record.reviewedAt = recordStatus === 'PENDING' ? undefined : now;
+      record.rejectionReason = reason;
       if (recordStatus === 'APPROVED')
         record.expiresAt = new Date(Date.now() + 365 * 86_400_000).toISOString();
       this.records.upsert(record);

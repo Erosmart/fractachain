@@ -67,6 +67,16 @@ export function createApp({ config, logger, auth, limits, controllers }: AppDepe
   // The session is checked *before* reading 8 MB, so anonymous clients cannot
   // make the server buffer large bodies.
   app.use('/api/kyc/onboard', auth.attach, auth.requireAuth, auth.csrf, express.json({ limit: '8mb' }));
+  // Provider webhooks are signed over the exact bytes: keep them.
+  app.use(
+    '/api/kyc/didit/webhook',
+    express.json({
+      limit: '1mb',
+      verify: (req, _res, buf) => {
+        (req as express.Request).rawBody = Buffer.from(buf);
+      },
+    }),
+  );
   app.use(express.json({ limit: '100kb' }));
 
   app.use(auth.attach);

@@ -1,17 +1,19 @@
 import path from 'path';
 import type { Router } from 'express';
+import type { IdentityVerificationService } from '../../application/kyc/IdentityVerificationService';
 import type { KycService } from '../../application/kyc/KycService';
 import { param, type AuditMiddleware } from '../middleware/AuditMiddleware';
 import { currentAccount, type AuthMiddleware } from '../middleware/AuthMiddleware';
 import type { RateLimiters } from '../middleware/rateLimiters';
 import { body, bodyOf, params } from '../middleware/validate';
 import { noStore } from '../respond';
-import { IdParam, KycRegisterBody, OnboardingKycBody, ReasonBody } from '../schemas';
+import { IdParam, KycRegisterBody, OnboardingKycBody, ReasonBody, VerificationStartBody } from '../schemas';
 import type { Controller } from './Controller';
 
 export class KycController implements Controller {
   constructor(
     private readonly kyc: KycService,
+    private readonly verification: IdentityVerificationService,
     private readonly guard: AuthMiddleware,
     private readonly limits: RateLimiters,
     private readonly audit: AuditMiddleware,
@@ -29,6 +31,41 @@ export class KycController implements Controller {
         res.json({ success: true, user });
       },
     );
+
+    /** Which KYC flow the web shows: hosted (Didit) or the in-app form with selfie. */
+    r.get('/api/kyc/provider', (_req, res) => {
+      const provider = this.verification.providerName;
+      res.json({ success: true, provider, selfieRequired: provider === 'manual' });
+    });
+
+    r.get('/api/kyc/verification', this.guard.requireAuth, (req, res) => {
+      noStore(res).json({ success: true, data: this.verification.view(currentAccount(req).id) });
+    });
+
+    /** Starts or resumes the hosted verification → `{ url }` to redirect the browser to. */
+    r.post(
+      '/api/kyc/verification',
+      this.guard.requireAuth,
+      this.limits.kycVerificationStart,
+      this.audit.route('kyc.verification.start'),
+      body(VerificationStartBody),
+      async (req, res) => {
+        const { language } = bodyOf(req, VerificationStartBody);
+        const session = await this.verification.start(currentAccount(req).id, language);
+        noStore(res).json({ success: true, ...session });
+      },
+    );
+
+    /** After the provider redirects back: re-reads the decision from the provider (the query string is not trusted). */
+    r.post('/api/kyc/verification/sync', this.guard.requireAuth, this.limits.kycSync, async (req, res) => {
+      noStore(res).json({ success: true, data: await this.verification.sync(currentAccount(req).id) });
+    });
+
+    /** Didit webhook: authenticated by HMAC signature, not by session. */
+    r.post('/api/kyc/didit/webhook', async (req, res) => {
+      const result = await this.verification.handleWebhook(req.headers, req.rawBody, req.body);
+      res.json({ success: true, ...result });
+    });
 
     /** Personal data: admin or owner only, never cached, served with the type sniffed at upload. */
     r.get(

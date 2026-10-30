@@ -25,6 +25,14 @@ export class RateLimiters {
   );
   readonly faucet = limiter(10 * 60_000, 20, 'Demasiados pedidos de fondeo. Esperá unos minutos.');
   readonly kycSubmit = limiter(60 * 60_000, 10, 'Demasiados envíos de KYC. Probá en una hora.');
+  /** Each new hosted session is a billable verification at the provider. */
+  readonly kycVerificationStart = limiter(
+    60 * 60_000,
+    10,
+    'Demasiados intentos de verificación. Probá en una hora.',
+  );
+  /** Each sync is a call to the identity provider's API. */
+  readonly kycSync = limiter(10 * 60_000, 40, 'Demasiadas consultas de verificación. Esperá unos minutos.');
   readonly heavyAdmin = limiter(
     10 * 60_000,
     30,
