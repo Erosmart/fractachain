@@ -61,22 +61,22 @@ export default function AccountNotices() {
   };
 
   return (
-    <div className="border-t border-black/5">
+    <div className="border-t border-line/70 bg-butter-soft">
       {needsTwoFactor && (
         <div
-          className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 flex items-center gap-2 text-xs sm:text-sm bg-amber-50 text-amber-900"
+          className="mx-auto flex max-w-[1440px] items-center gap-2 px-4 py-2 text-xs text-ink sm:px-6 sm:text-sm lg:px-8"
           role="alert"
         >
           <ShieldAlert className="w-4 h-4 shrink-0" aria-hidden />
           <span className="flex-1">{notice?.message || t('verify.twoFaBanner')}</span>
-          <a href="/account/security" className="font-display font-bold underline whitespace-nowrap">
+          <a href="/account/security" className="whitespace-nowrap font-medium underline underline-offset-2">
             {t('verify.twoFaCta')}
           </a>
           <button
             type="button"
             onClick={() => sessionStore.dismissNotice()}
             aria-label={t('verify.dismiss')}
-            className="p-1"
+            className="rounded-md p-1 text-ink-2 hover:bg-ink/5 hover:text-ink"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -84,20 +84,20 @@ export default function AccountNotices() {
       )}
       {needsEmail && user && (
         <div
-          className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 flex flex-wrap items-center gap-2 text-xs sm:text-sm bg-amber-50 text-amber-900"
+          className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-2 px-4 py-2 text-xs text-ink sm:px-6 sm:text-sm lg:px-8"
           role="status"
         >
           <MailWarning className="w-4 h-4 shrink-0" aria-hidden />
           <span className="flex-1 min-w-0">
             {status === 'sent' ? t('verify.sent') : t('verify.bannerText', { email: user.email })}
           </span>
-          {error && <span className="text-red-700">{error}</span>}
+          {error && <span className="text-bad">{error}</span>}
           {status !== 'sent' && (
             <button
               type="button"
               onClick={() => void resend()}
               disabled={status === 'sending'}
-              className="font-display font-bold underline whitespace-nowrap disabled:opacity-50"
+              className="whitespace-nowrap font-medium underline underline-offset-2 disabled:opacity-50"
             >
               {status === 'sending' ? t('verify.sending') : t('verify.resend')}
             </button>
@@ -109,7 +109,7 @@ export default function AccountNotices() {
               setDismissedFor(user.id);
             }}
             aria-label={t('verify.dismiss')}
-            className="p-1"
+            className="rounded-md p-1 text-ink-2 hover:bg-ink/5 hover:text-ink"
           >
             <X className="w-3.5 h-3.5" />
           </button>

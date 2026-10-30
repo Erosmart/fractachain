@@ -1,225 +1,245 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  Activity,
-  Building2,
-  Coins,
+  ArrowLeftRight,
+  Briefcase,
+  ChevronDown,
+  Home,
   Layers,
   LogOut,
-  Menu,
-  ScrollText,
   ShieldCheck,
-  UserCheck,
+  SlidersHorizontal,
+  UserRound,
   Wallet,
-  X,
 } from 'lucide-react';
 import AccountNotices from '@/components/account/AccountNotices';
 import TwoFactorDialog from '@/components/auth/TwoFactorDialog';
 import { withIsland } from '@/components/island/withIsland';
 import BrandMark from '@/components/ui/BrandMark';
-import WalletAddress from '@/components/ui/WalletAddress';
+import { Avatar } from '@/components/ui/kit';
 import { formatAmount } from '@/core/format/number';
+import type { SessionUser } from '@/core/auth/SessionUser';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/hooks/useI18n';
+import { activeTab, APP_TABS, CONSOLE_TAB, PUBLIC_TABS, type TabKey } from './navigation';
 import { LangToggle, ThemeToggle } from './UiToggles';
 
 interface NavbarProps {
-  /** Request path, so the active link renders identically on server and client. */
+  /** Request path, so the active tab renders identically on server and client. */
   pathname: string;
 }
 
+const TAB_ICONS: Record<TabKey, typeof Home> = {
+  home: Home,
+  offerings: Layers,
+  markets: ArrowLeftRight,
+  portfolio: Briefcase,
+  account: UserRound,
+  console: SlidersHorizontal,
+};
+
+/** Account chip + menu (avatar, name, a one-line status under it). */
+function AccountMenu({ user, onLogout }: { user: SessionUser; onLogout: () => void }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (!root.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        button.current?.focus();
+      }
+    };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const subtitle = user.publicKey
+    ? `${t(`shell.kyc.${user.kycStatus}`)} · ${formatAmount(Number(user.xlmBalance || 0), 0)} XLM`
+    : t(`shell.kyc.${user.kycStatus}`);
+  const item =
+    'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-ink-2 hover:bg-ink/5 hover:text-ink';
+
+  return (
+    <div className="relative" ref={root}>
+      <button
+        ref={button}
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={t('shell.menu.open')}
+        className="flex h-10 items-center gap-2.5 rounded-xl border border-line bg-surface py-1 pl-1 pr-2 transition-colors hover:border-line-strong sm:pr-3"
+      >
+        <Avatar name={user.name || user.email} />
+        <span className="hidden min-w-0 text-left md:block">
+          <span className="block max-w-[10rem] truncate text-[13px] font-medium leading-tight text-ink">
+            {user.name || user.email}
+          </span>
+          <span className="block max-w-[10rem] truncate text-[11px] leading-tight text-muted">
+            {subtitle}
+          </span>
+        </span>
+        <ChevronDown className="hidden h-3.5 w-3.5 text-muted sm:block" aria-hidden="true" />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-12 z-50 w-64 rounded-2xl border border-line bg-surface p-1.5 shadow-lift animate-fade-up"
+        >
+          <div className="px-3 pb-2 pt-2">
+            <p className="truncate text-sm font-medium text-ink">{user.name || user.email}</p>
+            <p className="truncate text-xs text-muted">{user.email}</p>
+          </div>
+          <div className="my-1 h-px bg-line" />
+          <a role="menuitem" href="/account" className={item}>
+            <UserRound className="h-4 w-4" aria-hidden="true" />
+            {t('shell.tabs.account')}
+          </a>
+          <a role="menuitem" href="/wallet" className={item}>
+            <Wallet className="h-4 w-4" aria-hidden="true" />
+            {t('shell.menu.wallet')}
+          </a>
+          <a role="menuitem" href="/account/security" className={item}>
+            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+            {t('shell.menu.security')}
+          </a>
+          {user.isAdmin && (
+            <a role="menuitem" href={CONSOLE_TAB.href} className={item}>
+              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+              {t('shell.menu.console')}
+            </a>
+          )}
+          <div className="my-1 h-px bg-line" />
+          <button role="menuitem" type="button" onClick={onLogout} className={`${item} w-full`}>
+            <LogOut className="h-4 w-4" aria-hidden="true" />
+            {t('shell.menu.logout')}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Bottom tab bar for phones (signed-in): the five tabs with icons. */
+function MobileTabBar({ current, isAdmin }: { current?: TabKey; isAdmin: boolean }) {
+  const { t } = useI18n();
+  const tabs = isAdmin && current === 'console' ? [...APP_TABS.slice(0, 4), CONSOLE_TAB] : APP_TABS;
+  return (
+    <nav
+      aria-label={t('shell.tabs.primary')}
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
+    >
+      <ul className="mx-auto grid max-w-md grid-cols-5">
+        {tabs.map((tab) => {
+          const Icon = TAB_ICONS[tab.key];
+          const on = tab.key === current;
+          return (
+            <li key={tab.key}>
+              <a
+                href={tab.href}
+                aria-current={on ? 'page' : undefined}
+                className={`flex flex-col items-center gap-1 py-2 text-[10.5px] font-medium ${on ? 'text-ink' : 'text-muted'}`}
+              >
+                <span
+                  className={`grid h-7 w-11 place-items-center rounded-full ${on ? 'bg-navy text-navy-ink' : ''}`}
+                >
+                  <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+                </span>
+                {t(tab.label)}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
+
 function Navbar({ pathname }: NavbarProps) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, logout } = useAuth();
   const { t } = useI18n();
-
-  const primaryLinks = [
-    { href: '/market', label: t('nav.market'), icon: Layers },
-    { href: '/orderbook', label: t('nav.orderbook'), icon: Coins },
-    { href: '/dashboard', label: t('nav.portfolio'), icon: Building2 },
-  ];
-
-  const adminLinks = [
-    { href: '/admin/issuance', label: t('nav.issuance'), icon: Coins },
-    { href: '/admin/kyc', label: t('nav.kyc'), icon: UserCheck },
-    { href: '/admin/testnet', label: t('nav.testnet'), icon: Activity },
-    { href: '/admin/audit', label: t('admAudit.nav'), icon: ScrollText },
-  ];
-
-  const allLinks = user?.isAdmin ? [...primaryLinks, ...adminLinks] : primaryLinks;
-  const closeMenu = () => setMobileMenuOpen(false);
+  const current = activeTab(pathname);
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
-  const walletLabel = user?.publicKey
-    ? `${formatAmount(Number(user.xlmBalance || 0), 2)} XLM`
-    : t('nav.portfolio');
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-black/8">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 sm:gap-3 h-[3.75rem] sm:h-[4.25rem] min-w-0">
-            <BrandMark />
-
-            <div className="hidden xl:flex items-center gap-0.5 2xl:gap-1 flex-1 min-w-0">
-              {allLinks.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  aria-current={isActive(link.href) ? 'page' : undefined}
-                  className={`px-2 2xl:px-2.5 py-2 rounded-lg text-[12px] 2xl:text-[13px] font-display font-bold tracking-tight whitespace-nowrap transition-colors ${
-                    isActive(link.href)
-                      ? 'text-black bg-black/[0.05]'
-                      : 'text-neutral-500 hover:text-black hover:bg-black/[0.03]'
-                  }`}
-                >
-                  {link.label}
-                </a>
-              ))}
+      <header className="sticky top-0 z-50 border-b border-line/70 bg-canvas/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between gap-3 px-4 sm:px-6 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:px-8">
+          {/* Left: primary tabs (desktop) */}
+          <div className="flex min-w-0 items-center">
+            <div className="lg:hidden">
+              <BrandMark />
             </div>
-
-            <div className="flex items-center gap-1.5 ml-auto shrink-0">
-              <LangToggle />
-              <ThemeToggle />
-              <div className="hidden sm:flex items-center gap-2">
-                <a
-                  href="/dashboard"
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-black/10 bg-white/70 text-black text-xs font-display font-bold"
-                >
-                  <Wallet className="w-3.5 h-3.5 shrink-0" />
-                  <span className="whitespace-nowrap">{walletLabel}</span>
-                </a>
-                {user ? (
-                  <div className="flex items-center gap-1.5 pl-2 border-l border-black/10 min-w-0">
-                    <a
-                      href="/dashboard"
-                      className="text-xs font-display font-bold text-black max-w-[6.5rem] 2xl:max-w-[9rem] truncate"
-                    >
-                      {user.name}
-                    </a>
-                    <a
-                      href="/account/security"
-                      aria-label={t('sec.navLabel')}
-                      title={t('sec.navLabel')}
-                      aria-current={isActive('/account/security') ? 'page' : undefined}
-                      className="p-1.5 rounded-lg text-neutral-500 hover:text-black shrink-0"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                    </a>
-                    <button
-                      type="button"
-                      onClick={logout}
-                      className="p-1.5 rounded-lg text-neutral-500 hover:text-black shrink-0"
-                      aria-label={t('nav.logout')}
-                    >
-                      <LogOut className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ) : (
+            {user ? (
+              <nav aria-label={t('shell.tabs.primary')} className="pill-tabs hidden lg:inline-flex">
+                {APP_TABS.map((tab) => (
                   <a
-                    href="/login"
-                    className="px-3.5 py-1.5 rounded-xl bg-black text-white text-xs font-display font-bold shrink-0"
+                    key={tab.key}
+                    href={tab.href}
+                    className="pill-tab"
+                    aria-current={tab.key === current ? 'page' : undefined}
                   >
-                    {t('nav.login')}
+                    {t(tab.label)}
+                  </a>
+                ))}
+                {user.isAdmin && (
+                  <a
+                    href={CONSOLE_TAB.href}
+                    className="pill-tab"
+                    aria-current={current === 'console' ? 'page' : undefined}
+                  >
+                    {t(CONSOLE_TAB.label)}
                   </a>
                 )}
-              </div>
-              <a
-                href="/dashboard"
-                className="sm:hidden p-2 rounded-lg text-black"
-                aria-label={t('nav.portfolio')}
-              >
-                <Wallet className="w-5 h-5" />
+              </nav>
+            ) : (
+              <nav aria-label={t('shell.tabs.primary')} className="hidden items-center gap-1 lg:flex">
+                {PUBLIC_TABS.map((tab) => (
+                  <a
+                    key={tab.key}
+                    href={tab.href}
+                    className="pill-tab"
+                    aria-current={!tab.href.includes('#') && isActive(tab.href) ? 'page' : undefined}
+                  >
+                    {t(tab.label)}
+                  </a>
+                ))}
+              </nav>
+            )}
+          </div>
+
+          {/* Center: brand (desktop) */}
+          <div className="hidden justify-center lg:flex">
+            <BrandMark />
+          </div>
+
+          {/* Right: toggles + account */}
+          <div className="flex items-center justify-end gap-2">
+            <LangToggle />
+            <ThemeToggle />
+            {user ? (
+              <AccountMenu user={user} onLogout={logout} />
+            ) : (
+              <a href="/login" className="btn btn-primary">
+                {t('nav.login')}
               </a>
-              <button
-                type="button"
-                className="xl:hidden p-2 text-black"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                aria-label={mobileMenuOpen ? t('nav.closeMenu') : t('nav.openMenu')}
-                aria-expanded={mobileMenuOpen}
-              >
-                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
-            </div>
+            )}
           </div>
         </div>
-
-        {mobileMenuOpen && (
-          <div className="xl:hidden border-t border-black/10 px-3 sm:px-4 pt-2 pb-4 space-y-1 bg-white/95 max-h-[min(80vh,32rem)] overflow-y-auto">
-            {user?.publicKey && (
-              <div className="px-3 py-2">
-                <p className="text-[10px] uppercase text-neutral-500 mb-1">{t('nav.yourWallet')}</p>
-                <WalletAddress address={user.publicKey} compact />
-              </div>
-            )}
-            {allLinks.map((link) => {
-              const Icon = link.icon;
-              return (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  onClick={closeMenu}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-display font-bold ${
-                    isActive(link.href) ? 'bg-black text-white' : 'text-neutral-700 hover:bg-black/5'
-                  }`}
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  {link.label}
-                </a>
-              );
-            })}
-
-            <div className="pt-2 mt-2 border-t border-black/10 space-y-1 sm:hidden">
-              <a
-                href="/dashboard"
-                onClick={closeMenu}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-display font-bold text-neutral-700 hover:bg-black/5"
-              >
-                <Wallet className="w-4 h-4 shrink-0" />
-                {walletLabel}
-              </a>
-              {user ? (
-                <>
-                  <a
-                    href="/dashboard"
-                    onClick={closeMenu}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-display font-bold text-neutral-700 hover:bg-black/5 truncate"
-                  >
-                    {user.name}
-                  </a>
-                  <a
-                    href="/account/security"
-                    onClick={closeMenu}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-display font-bold text-neutral-700 hover:bg-black/5"
-                  >
-                    <ShieldCheck className="w-4 h-4 shrink-0" />
-                    {t('sec.navLabel')}
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      logout();
-                      closeMenu();
-                    }}
-                    className="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-display font-bold text-neutral-700 hover:bg-black/5"
-                  >
-                    <LogOut className="w-4 h-4 shrink-0" />
-                    {t('nav.logout')}
-                  </button>
-                </>
-              ) : (
-                <a
-                  href="/login"
-                  onClick={closeMenu}
-                  className="flex items-center justify-center gap-2 mx-3 mt-1 px-3 py-2.5 rounded-xl bg-black text-white text-sm font-display font-bold"
-                >
-                  {t('nav.login')}
-                </a>
-              )}
-            </div>
-          </div>
-        )}
         <AccountNotices />
-      </nav>
-      {/* Outside <nav>: its backdrop-filter would trap a `position: fixed` overlay. */}
+      </header>
+      {user && <MobileTabBar current={current} isAdmin={Boolean(user.isAdmin)} />}
+      {/* Outside <header>: its backdrop-filter would trap a `position: fixed` overlay. */}
       <TwoFactorDialog />
     </>
   );

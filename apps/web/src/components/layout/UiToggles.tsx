@@ -41,9 +41,13 @@ export function ThemeToggle() {
       type="button"
       onClick={() => toggleTheme(btnRef.current)}
       aria-label={dark ? t('ui.themeToLight') : t('ui.themeToDark')}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white/70 text-black shrink-0"
+      className="icon-btn"
     >
-      {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+      {dark ? (
+        <Sun className="h-4 w-4" aria-hidden="true" />
+      ) : (
+        <Moon className="h-4 w-4" aria-hidden="true" />
+      )}
     </button>
   );
 }
@@ -57,10 +61,10 @@ export function LangToggle() {
       type="button"
       onClick={toggleLocale}
       aria-label={es ? t('ui.langToEn') : t('ui.langToEs')}
-      className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-black/10 bg-white/70 pl-1.5 pr-2.5 shrink-0"
+      className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-line bg-surface px-2.5 text-ink-2 sm:pl-2 sm:pr-2.5 transition-colors hover:border-line-strong hover:text-ink"
     >
       {es ? <ArgentinaFlag className="h-3.5 w-5" /> : <UsFlag className="h-3.5 w-5" />}
-      <span className="text-[11px] font-display font-bold tracking-wide text-black">{es ? 'ES' : 'EN'}</span>
+      <span className="hidden text-[11px] font-semibold tracking-wide sm:inline">{es ? 'ES' : 'EN'}</span>
     </button>
   );
 }

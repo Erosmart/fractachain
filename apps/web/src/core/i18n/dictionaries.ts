@@ -3,11 +3,29 @@
  * `Messages` is derived from the Spanish dictionary, so a key missing in
  * English is a compile error.
  */
+import * as shell from './messages/shell';
+import * as landing from './messages/landing';
+import * as dashboard from './messages/dashboard';
+import * as offerings from './messages/offerings';
+import * as markets from './messages/markets';
+import * as account from './messages/account';
+import * as onboarding from './messages/onboarding';
+import * as admin from './messages/admin';
+
 export type Locale = 'es' | 'en';
 
 export type Messages = typeof es;
 
 const es = {
+  // Redesign copy, one module per area (see ./messages).
+  shell: shell.es,
+  landing: landing.es,
+  dashboard: dashboard.es,
+  offerings: offerings.es,
+  markets: markets.es,
+  account: account.es,
+  onboard: onboarding.es,
+  admin: admin.es,
   nav: {
     market: 'Licitaciones',
     stocks: 'Merval',
@@ -1040,6 +1058,14 @@ const es = {
 };
 
 const en: Messages = {
+  shell: shell.en,
+  landing: landing.en,
+  dashboard: dashboard.en,
+  offerings: offerings.en,
+  markets: markets.en,
+  account: account.en,
+  onboard: onboarding.en,
+  admin: admin.en,
   nav: {
     market: 'Offerings',
     stocks: 'Merval',
