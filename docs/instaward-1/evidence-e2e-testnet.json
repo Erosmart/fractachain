@@ -1,0 +1,154 @@
+{
+  "network": "testnet",
+  "api": "http://localhost:4603",
+  "started": "2026-10-30T11:38:09.930Z",
+  "finished": "2026-10-30T11:50:24.891Z",
+  "investor": "GAUGBIUNSCRO3X6ZIICJXKZ4QQV7HLL6ZDQLKGOSOYEL4QO2IASTPASC",
+  "trustee": "GAKL5UNFMDOHFJDMSYJGREDIJQ43UWWGR7L5GJ4SRIZBI4WAVHLR6B26",
+  "usdc": {
+    "mode": "circle",
+    "code": "USDC",
+    "issuer": "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+    "sac": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+    "decimals": 7,
+    "explorer": "https://stellar.expert/explorer/testnet/contract/CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"
+  },
+  "factory": "CCMSHEC5YSLZ4PIWPP63TWMOEPNEPYHVC2O2INHACV7FWTB5G27R5I4B",
+  "tenders": {
+    "success": {
+      "listing": "IPO-EE92783-mvuwey1o",
+      "contract": "CAFGRYWYCDZJYEIXOD4ZU47D55MXGSRFN6DVGSPEGQHM3MGC7CXMTO6V",
+      "explorer": "https://stellar.expert/explorer/testnet/contract/CAFGRYWYCDZJYEIXOD4ZU47D55MXGSRFN6DVGSPEGQHM3MGC7CXMTO6V"
+    },
+    "refund": {
+      "listing": "IPO-ER92783-mvuwgq91",
+      "contract": "CC347DKS4FWI6N4ZFTY2F7HROOJ5O5E35H3OI5V7T4IRQIASLOYIG7B4",
+      "explorer": "https://stellar.expert/explorer/testnet/contract/CC347DKS4FWI6N4ZFTY2F7HROOJ5O5E35H3OI5V7T4IRQIASLOYIG7B4"
+    }
+  },
+  "transactions": [
+    {
+      "step": "trustline USDC",
+      "hash": "b20bd716b4d3218c6a4fcc127e254c05fa438d50f06764f54586a8f10818aee5",
+      "explorer": "https://stellar.expert/explorer/testnet/tx/b20bd716b4d3218c6a4fcc127e254c05fa438d50f06764f54586a8f10818aee5",
+      "signer": "GAUGBIUNSCRO3X6ZIICJXKZ4QQV7HLL6ZDQLKGOSOYEL4QO2IASTPASC"
+    },
+    {
+      "step": "contribute 20 USDC (licitación éxito)",
+      "hash": "02de1a44076b920b85f4919e9869b9b0aabd6584e0d36df0c8915b558eb8d115",
+      "explorer": "https://stellar.expert/explorer/testnet/tx/02de1a44076b920b85f4919e9869b9b0aabd6584e0d36df0c8915b558eb8d115",
+      "signer": "GAUGBIUNSCRO3X6ZIICJXKZ4QQV7HLL6ZDQLKGOSOYEL4QO2IASTPASC"
+    },
+    {
+      "step": "contribute 20 USDC (licitación reembolso)",
+      "hash": "9c6ad572e34b1e9866355a4f8f3bf4311663dabd0383daa731835d9fea451669",
+      "explorer": "https://stellar.expert/explorer/testnet/tx/9c6ad572e34b1e9866355a4f8f3bf4311663dabd0383daa731835d9fea451669",
+      "signer": "GAUGBIUNSCRO3X6ZIICJXKZ4QQV7HLL6ZDQLKGOSOYEL4QO2IASTPASC"
+    },
+    {
+      "step": "finalize (mínimo alcanzado → USDC al fiduciario)",
+      "hash": "c58843cb2d404156e18df5e4a7bdd20a7c8d1aeaa39622af89d2228d1d17c802",
+      "explorer": "https://stellar.expert/explorer/testnet/tx/c58843cb2d404156e18df5e4a7bdd20a7c8d1aeaa39622af89d2228d1d17c802",
+      "signer": "GAUGBIUNSCRO3X6ZIICJXKZ4QQV7HLL6ZDQLKGOSOYEL4QO2IASTPASC"
+    },
+    {
+      "step": "finalize (no alcanzó el mínimo → Failed)",
+      "hash": "d2e70b2f103432d2c4e3a8374684752b7c192b3c76d7f9e7c56bc0b4447f2f4c",
+      "explorer": "https://stellar.expert/explorer/testnet/tx/d2e70b2f103432d2c4e3a8374684752b7c192b3c76d7f9e7c56bc0b4447f2f4c",
+      "signer": "GAUGBIUNSCRO3X6ZIICJXKZ4QQV7HLL6ZDQLKGOSOYEL4QO2IASTPASC"
+    },
+    {
+      "step": "refund 20 USDC",
+      "hash": "aff8e733c52e760270b5372aec08b6fbfc7bc3cdc94b28cb08f501b335eb26b0",
+      "explorer": "https://stellar.expert/explorer/testnet/tx/aff8e733c52e760270b5372aec08b6fbfc7bc3cdc94b28cb08f501b335eb26b0",
+      "signer": "GAUGBIUNSCRO3X6ZIICJXKZ4QQV7HLL6ZDQLKGOSOYEL4QO2IASTPASC"
+    }
+  ],
+  "checks": [
+    {
+      "name": "GET /api/chain/network expone la red y el USDC",
+      "ok": true,
+      "detail": "Test SDF Network ; September 2015 · CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"
+    },
+    {
+      "name": "login con firma SEP-53 de la wallet",
+      "ok": true,
+      "detail": "GAUGBIUNSCRO3X6ZIICJXKZ4QQV7HLL6ZDQLKGOSOYEL4QO2IASTPASC"
+    },
+    {
+      "name": "KYC aprobado",
+      "ok": true,
+      "detail": "APPROVED"
+    },
+    {
+      "name": "trustline USDC (firmada por el inversor)",
+      "ok": true,
+      "detail": "b20bd716b4d3218c6a4fcc127e254c05fa438d50f06764f54586a8f10818aee5"
+    },
+    {
+      "name": "USDC de prueba desde el pool (no faucet)",
+      "ok": true,
+      "detail": "100 USDC"
+    },
+    {
+      "name": "contribute 20 USDC (licitación éxito) (firmada por el inversor)",
+      "ok": true,
+      "detail": "02de1a44076b920b85f4919e9869b9b0aabd6584e0d36df0c8915b558eb8d115"
+    },
+    {
+      "name": "contribute 20 USDC (licitación reembolso) (firmada por el inversor)",
+      "ok": true,
+      "detail": "9c6ad572e34b1e9866355a4f8f3bf4311663dabd0383daa731835d9fea451669"
+    },
+    {
+      "name": "GET /api/chain/tenders: posición y recaudado leídos del contrato, en USDC",
+      "ok": true,
+      "detail": "rwa=2 raised=20 USDC CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"
+    },
+    {
+      "name": "XDR distinto del construido (monto alterado)",
+      "ok": true,
+      "detail": "422 TX_MISMATCH"
+    },
+    {
+      "name": "firma para otra red (passphrase de mainnet)",
+      "ok": true,
+      "detail": "422 TX_BAD_SIGNATURE"
+    },
+    {
+      "name": "reenvío de una transacción ya enviada",
+      "ok": true,
+      "detail": "409 TX_ALREADY_SUBMITTED"
+    },
+    {
+      "name": "finalize (mínimo alcanzado → USDC al fiduciario) (firmada por el inversor)",
+      "ok": true,
+      "detail": "c58843cb2d404156e18df5e4a7bdd20a7c8d1aeaa39622af89d2228d1d17c802"
+    },
+    {
+      "name": "licitación Successful y 20 USDC en la cuenta del fiduciario",
+      "ok": true,
+      "detail": "Successful · fiduciario +20.00 USDC"
+    },
+    {
+      "name": "finalize (no alcanzó el mínimo → Failed) (firmada por el inversor)",
+      "ok": true,
+      "detail": "d2e70b2f103432d2c4e3a8374684752b7c192b3c76d7f9e7c56bc0b4447f2f4c"
+    },
+    {
+      "name": "licitación Failed",
+      "ok": true,
+      "detail": "Failed"
+    },
+    {
+      "name": "refund 20 USDC (firmada por el inversor)",
+      "ok": true,
+      "detail": "aff8e733c52e760270b5372aec08b6fbfc7bc3cdc94b28cb08f501b335eb26b0"
+    },
+    {
+      "name": "reembolso: 20 USDC de vuelta y posición en cero",
+      "ok": true,
+      "detail": "+20.00 USDC · rwa=0"
+    }
+  ]
+}

@@ -16,7 +16,11 @@
     "init:forward-warrant": "tsx src/cli/init-forward-warrant.ts",
     "testnet:clone-factory": "tsx src/cli/clone-factory.ts",
     "testnet:setup-usdc": "tsx src/cli/setup-usdc.ts",
-    "testnet:upload-wasm": "tsx src/cli/upload-wasm.ts"
+    "testnet:upload-wasm": "tsx src/cli/upload-wasm.ts",
+    "stellar:deploy": "tsx src/cli/stellar-deploy.ts",
+    "stellar:fund-pool": "tsx src/cli/stellar-fund-pool.ts",
+    "stellar:fund": "tsx src/cli/stellar-fund.ts",
+    "stellar:e2e": "tsx src/cli/stellar-e2e.ts"
   },
   "dependencies": {
     "@stellar/stellar-sdk": "^17.4.0",

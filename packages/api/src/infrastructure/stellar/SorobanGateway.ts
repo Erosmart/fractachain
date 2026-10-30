@@ -1,3 +1,4 @@
+import { KeyedMutex } from '../../shared/KeyedMutex';
 import { createHash } from 'crypto';
 import {
   Account,
@@ -131,6 +132,14 @@ export function mapSorobanError(err: unknown): AppError {
  * deploys, and relaying invocations signed by an investor's wallet.
  */
 export class SorobanGateway {
+  /**
+   * One in-flight transaction per platform source account: two concurrent
+   * submissions from the same key (e.g. a KYC approval whitelisting on every
+   * live tender while a build whitelists the investor) would read the same
+   * sequence number and one would fail with tx_bad_seq.
+   */
+  private readonly sources = new KeyedMutex();
+
   /** WASM hash → exported function names (WASMs are immutable, so this never goes stale). */
   private readonly specCache = new Map<string, Promise<ReadonlySet<string>>>();
   /** Token contract → identity and decimals (a SAC's never change). */
@@ -193,6 +202,16 @@ export class SorobanGateway {
     method: string,
     args: Record<string, unknown> = {},
     extraSigners: Keypair[] = [],
+  ): Promise<InvokeResult> {
+    const source = (client as { options?: { publicKey?: string } }).options?.publicKey ?? '';
+    return this.sources.run(source, () => this.invokeNow(client, method, args, extraSigners));
+  }
+
+  private async invokeNow(
+    client: AnyClient,
+    method: string,
+    args: Record<string, unknown>,
+    extraSigners: Keypair[],
   ): Promise<InvokeResult> {
     try {
       const fn = client[method];
@@ -481,6 +500,18 @@ export class SorobanGateway {
     source: Keypair,
     cosigners: Keypair[] = [],
   ): Promise<InvokeResult> {
+    return this.sources.run(source.publicKey(), () =>
+      this.invokeWithCosignersNow(contractId, method, args, source, cosigners),
+    );
+  }
+
+  private async invokeWithCosignersNow(
+    contractId: string,
+    method: string,
+    args: Record<string, unknown>,
+    source: Keypair,
+    cosigners: Keypair[],
+  ): Promise<InvokeResult> {
     const srv = this.clients.rpc();
     const passphrase = this.clients.networkPassphrase();
     try {
@@ -529,11 +560,22 @@ export class SorobanGateway {
     }
   }
 
-  private async deploy(
+  private deploy(
     wasmHash: Buffer | string,
     deployer: Keypair,
     args: Record<string, unknown> | null,
     extraSigners: Keypair[] = [],
+  ): Promise<{ contractId: string; hash: string | null }> {
+    return this.sources.run(deployer.publicKey(), () =>
+      this.deployNow(wasmHash, deployer, args, extraSigners),
+    );
+  }
+
+  private async deployNow(
+    wasmHash: Buffer | string,
+    deployer: Keypair,
+    args: Record<string, unknown> | null,
+    extraSigners: Keypair[],
   ): Promise<{ contractId: string; hash: string | null }> {
     const assembled = await contract.Client.deploy(args, {
       ...this.options(deployer),
@@ -602,6 +644,13 @@ export class SorobanGateway {
    * host-function operation (WASM upload, Stellar Asset Contract deploy…).
    */
   async submitHostFunction(
+    op: xdr.Operation,
+    signer: Keypair,
+  ): Promise<{ hash: string; returnValue?: xdr.ScVal }> {
+    return this.sources.run(signer.publicKey(), () => this.submitHostFunctionNow(op, signer));
+  }
+
+  private async submitHostFunctionNow(
     op: xdr.Operation,
     signer: Keypair,
   ): Promise<{ hash: string; returnValue?: xdr.ScVal }> {

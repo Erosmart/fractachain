@@ -60,3 +60,84 @@ jobs:
         env:
           SOROBAN_SDK_BUILD_SYSTEM_SUPPORTS_SPEC_SHAKING_V2: '1'
       - run: cargo test --manifest-path contracts/Cargo.toml --locked
+
+  e2e-local:
+    name: E2E on a local Stellar network (build → sign → submit, USDC)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      API_PORT: '4603'
+      # Secrets and data of this throwaway network stay outside the checkout.
+      E2E_DIR: /tmp/fractachain-e2e
+    steps:
+      - uses: actions/checkout@v4
+      # Local network: stellar-core + Horizon + Stellar RPC + Friendbot on :8000.
+      - name: Start stellar/quickstart --local
+        run: |
+          docker run -d --name stellar -p 8000:8000 stellar/quickstart:latest \
+            --local --enable core,horizon,rpc --limits unlimited
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts
+      - run: npm ci --no-audit --no-fund
+      - name: Build WASM
+        working-directory: contracts
+        run: cargo build --locked --release --target wasm32v1-none
+        env:
+          SOROBAN_SDK_BUILD_SYSTEM_SUPPORTS_SPEC_SHAKING_V2: '1'
+      - run: npm run build -w @fractachain/api
+      - name: Wait for the local network (RPC healthy, Friendbot up)
+        run: |
+          for i in $(seq 1 90); do
+            status=$(curl -s -X POST http://localhost:8000/rpc -H 'content-type: application/json' \
+              -d '{"jsonrpc":"2.0","id":1,"method":"getHealth"}' | node -pe 'JSON.parse(require("fs").readFileSync(0)).result?.status' 2>/dev/null || true)
+            if [ "$status" = "healthy" ]; then break; fi
+            sleep 5
+          done
+          [ "$status" = "healthy" ] || { docker logs stellar | tail -100; exit 1; }
+          probe=$(cd packages/api && node -e "console.log(require('@stellar/stellar-sdk').Keypair.random().publicKey())")
+          for i in $(seq 1 60); do
+            curl -sf "http://localhost:8000/friendbot?addr=$probe" > /dev/null && exit 0
+            sleep 5
+          done
+          docker logs stellar | tail -100; exit 1
+      - name: Deploy contracts, team USDC and test instances (one command)
+        run: npm run stellar:deploy -- --network local --no-build --refund-minutes 30 --out "$E2E_DIR/deployment.json" --env-out "$E2E_DIR/.env"
+      - name: Start the API against the local network
+        run: |
+          set -a; source "$E2E_DIR/.env"; set +a
+          export NODE_ENV=development PORT=$API_PORT DATA_DIR="$E2E_DIR/data" SETTLEMENT_SWEEP_MS=0 \
+            AUTH_SECRET=$(openssl rand -hex 32) WALLET_PEPPER=$(openssl rand -hex 32) \
+            ADMIN_EMAILS=admin@e2e.local ADMIN_BOOTSTRAP_PASSWORD=e2e-admin-pass-123 \
+            HACKATHON_DEMO=true KYC_AUTO_APPROVE=true DEMO_SEED_ACCOUNTS=false
+          nohup node packages/api/dist/main.js > "$E2E_DIR/api.log" 2>&1 &
+          for i in $(seq 1 60); do curl -sf "http://localhost:$API_PORT/health" > /dev/null && exit 0; sleep 2; done
+          tail -100 "$E2E_DIR/api.log"; exit 1
+      - name: E2E (contribute / finalize / refund in USDC, security refusals)
+        run: |
+          set -a; source "$E2E_DIR/.env"; set +a
+          ADMIN_EMAIL=admin@e2e.local ADMIN_PASSWORD=e2e-admin-pass-123 \
+            npm run stellar:e2e -- --network local --api "http://localhost:$API_PORT" \
+              --out "$E2E_DIR/deployment.json" --env-out "$E2E_DIR/.env" \
+              --deadline-minutes 4 --evidence "$E2E_DIR/evidence-local.md"
+      - name: Logs on failure
+        if: failure()
+        run: |
+          tail -200 "$E2E_DIR/api.log" || true
+          docker logs stellar | tail -100 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-local-evidence
+          path: |
+            /tmp/fractachain-e2e/evidence-local.*
+            /tmp/fractachain-e2e/deployment.json
+            /tmp/fractachain-e2e/api.log
+          if-no-files-found: ignore
