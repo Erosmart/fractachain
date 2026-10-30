@@ -80,7 +80,7 @@ export class OfferingService {
   private requireOnChain(listingId: string): Listing {
     const listing = this.listings.require(listingId);
     if (!this.listings.isOnChain(listing)) {
-      throw new DomainError('Esta operación on-chain solo existe en licitaciones con contrato Soroban');
+      throw new DomainError('La licitación todavía no está desplegada en la red');
     }
     return listing;
   }
@@ -111,7 +111,7 @@ export class OfferingService {
     return { ...this.listings.require(listingId), onChain: { ...onChain, autoFinalized: Boolean(closed) } };
   }
 
-  /** Custodial or sandbox subscription. */
+  /** Custodial subscription (the server signs with the investor's custodial key; Freighter is the default). */
   contribute(listingId: string, accountId: string, amount: number) {
     return this.fresh(
       listingId,
@@ -122,29 +122,31 @@ export class OfferingService {
   }
 
   private async contributeUnlocked(listingId: string, accountId: string, amount: number) {
-    const listing = this.listings.require(listingId);
     if (!(amount > 0)) throw new ValidationError('Monto inválido');
-    if (this.listings.isOnChain(listing)) {
-      const account = this.accounts.require(accountId);
-      if (account.custodyMode !== 'CUSTODIAL' || !account.publicKey) {
-        throw new DomainError('Wallet propia: firmá el aporte con Freighter desde la ficha de la licitación');
-      }
-      const chain = await this.licitacion.contribute(listing, this.custody.keypairFor(accountId), amount);
-      this.listings.recordOnChainContribution(listing.id, accountId, {
-        amount: chain.amount,
-        tokens: chain.tokens,
-        raised: chain.raised,
-      });
-      return this.afterContribution(listing.id, accountId, chain.hash);
+    // Tenders settle on-chain only (Instaward 1): there is no sandbox ledger to book into.
+    const listing = this.requireOnChain(listingId);
+    const account = this.accounts.require(accountId);
+    if (account.custodyMode !== 'CUSTODIAL' || !account.publicKey) {
+      throw new DomainError('Wallet propia: firmá el aporte con Freighter desde la ficha de la licitación');
     }
-    this.listings.contributeSandbox(listing.id, amount, accountId);
-    return this.afterContribution(listing.id, accountId);
+    const chain = await this.licitacion.contribute(listing, this.custody.keypairFor(accountId), amount);
+    this.listings.recordOnChainContribution(listing.id, accountId, {
+      amount: chain.amount,
+      tokens: chain.tokens,
+      raised: chain.raised,
+    });
+    return this.afterContribution(listing.id, accountId, chain.hash);
   }
 
-  prepareContribute(listingId: string, accountId: string, amount: number) {
+  prepareContribute(listingId: string, accountId: string, amount: number, timeoutInSeconds?: number) {
     if (!(amount > 0)) throw new ValidationError('Monto inválido');
     const listing = this.requireOnChain(listingId);
-    return this.licitacion.prepareContributeXdr(listing, this.selfCustodyWallet(accountId), amount);
+    return this.licitacion.prepareContributeXdr(
+      listing,
+      this.selfCustodyWallet(accountId),
+      amount,
+      timeoutInSeconds,
+    );
   }
 
   /** Relays the Freighter-signed contribution; the booked amount is read from the contract. */
@@ -200,11 +202,49 @@ export class OfferingService {
     };
   }
 
-  async prepareRefund(listingId: string, accountId: string) {
+  async prepareRefund(listingId: string, accountId: string, timeoutInSeconds?: number) {
     const listing = this.requireOnChain(listingId);
     const account = this.accounts.require(accountId);
     await this.requireFailed(listing, account.publicKey);
-    return this.licitacion.prepareRefundXdr(listing, this.selfCustodyWallet(accountId));
+    return this.licitacion.prepareRefundXdr(listing, this.selfCustodyWallet(accountId), timeoutInSeconds);
+  }
+
+  /**
+   * Permissionless `finalize()` for the investor's own wallet to sign, built
+   * only when the contract would accept it (hard cap reached or deadline due).
+   */
+  async prepareFinalize(listingId: string, accountId: string, timeoutInSeconds?: number) {
+    const listing = this.requireOnChain(listingId);
+    const wallet = this.selfCustodyWallet(accountId);
+    this.snapshots.forget(listing.id);
+    const live = await this.licitacion.snapshot(listing);
+    if (alreadyClosedOnChain(live)) throw new DomainError('La licitación ya cerró en la red');
+    if (!live.canFinalize) {
+      throw new DomainError('Todavía no se puede cerrar: hace falta llegar al tope o que venza el plazo');
+    }
+    return {
+      xdr: await this.licitacion.prepareFinalizeXdr(listing, wallet, timeoutInSeconds),
+      publicKey: wallet,
+    };
+  }
+
+  /**
+   * Books a `finalize()` an investor signed and the network executed: the
+   * listing takes the state the contract settled in, with that transaction
+   * as its finalize hash, and holders are settled.
+   */
+  async recordFinalize(listingId: string, hash: string) {
+    const listing = this.listings.require(listingId);
+    this.snapshots.forget(listing.id);
+    const live = await this.licitacion.snapshot(listing);
+    const status = this.licitacion.closeStatusFromChain(live, listing);
+    if (!status || listing.status !== 'LISTED') return this.listings.require(listingId);
+    const updated = this.listings.markClosed(listing.id, status, live.raised, {
+      finalizeHash: hash,
+      proceedsPaidTo: live.fiduciary,
+    });
+    await this.settlement.settleHolders(updated).catch(() => []);
+    return this.listings.require(listingId);
   }
 
   submitRefund(listingId: string, accountId: string, signedXdr: string) {
@@ -240,7 +280,7 @@ export class OfferingService {
   finalizeByInvestor(listingId: string) {
     const listing = this.listings.require(listingId);
     if (!this.listings.isOnChain(listing))
-      throw new DomainError('Esta licitación sandbox cierra con el endpoint admin /close');
+      throw new DomainError('La licitación todavía no está desplegada en la red');
     return this.fresh(listing.id, this.settlement.finalize(listing.id));
   }
 

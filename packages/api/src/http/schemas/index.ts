@@ -240,3 +240,22 @@ export const NetworkSettingsBody = z.object({
   settlePolicy: settlePolicy.optional(),
   settleAt: optStr(40),
 });
+
+/* ------------------------- non-custodial transactions ------------------------- */
+
+const listingIdField = z.string().regex(/^[A-Za-z0-9_.:-]{1,120}$/, 'Id inválido');
+
+/** `POST /api/tx/build` (Instaward 1, Deliverable 2). */
+export const TxBuildBody = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('contribute'), listingId: listingIdField, amount: positive }),
+  z.object({ action: z.literal('refund'), listingId: listingIdField }),
+  z.object({ action: z.literal('finalize'), listingId: listingIdField }),
+  z.object({ action: z.literal('usdc_trustline') }),
+]);
+
+export const TxSubmitBody = z.object({
+  buildId: z.string().regex(/^txb_[a-f0-9]{24}$/, 'buildId inválido'),
+  signedXdr: xdr,
+});
+
+export const TxHashParam = z.object({ hash: z.string().regex(/^[a-f0-9]{64}$/, 'Hash inválido') });

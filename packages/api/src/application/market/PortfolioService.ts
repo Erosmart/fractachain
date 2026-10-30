@@ -242,7 +242,6 @@ export class PortfolioService {
     const pendingDividends = positions.reduce((s, p) => s + p.pendingDividendUsdc, 0);
     const pnl = round6(marketValue - costBasis);
     return {
-      cashUsdc: account.cashUsdc,
       usdcOnChain,
       xlmOnChain,
       proceeds,

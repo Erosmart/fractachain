@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import {
+  Account,
   Keypair,
   Operation,
   Transaction,
@@ -11,6 +12,7 @@ import {
   scValToNative,
   type xdr,
 } from '@stellar/stellar-sdk';
+import { SAC_DECIMALS } from '../../domain/stellar/Amounts';
 import { isContractId } from '../../domain/stellar/StellarAddress';
 import {
   AppError,
@@ -24,6 +26,49 @@ import type { StellarClients } from './StellarClients';
 
 export const SOROBAN_FEE = '1000000';
 export const SOROBAN_TIMEOUT = 60;
+/** Validity window of a transaction handed to the investor's wallet to sign. */
+export const WALLET_SIGN_TIMEOUT = 300;
+/** Source used for read-only simulations (never signs, never needs to exist). */
+const SIMULATION_SOURCE = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
+
+/** A token contract as the platform shows it: identity + `decimals()`. */
+export interface TokenInfo {
+  contractId: string;
+  /** Asset code ("XLM" for the native SAC). */
+  code: string;
+  /** Classic issuer, null for native. */
+  issuer: string | null;
+  decimals: number;
+}
+
+export type ChainTxStatus = 'SUCCESS' | 'FAILED' | 'PENDING' | 'NOT_FOUND';
+
+export interface SubmittedTx {
+  hash: string;
+  status: ChainTxStatus;
+  ledger?: number;
+}
+
+/** The network executed the transaction and it failed (contract trap, bad auth…). */
+export class TxFailedError extends AppError {
+  constructor(message: string, hash: string | null) {
+    super(message, 422, 'TX_FAILED', hash ? { hash } : undefined);
+  }
+}
+
+/** Human-readable strings out of a failed transaction's diagnostic events. */
+function diagnosticText(events: (string | xdr.DiagnosticEvent)[] | undefined): string {
+  return (events || [])
+    .map((e) =>
+      (typeof e === 'string' ? Buffer.from(e, 'base64') : e.toXDR())
+        .toString('latin1')
+        .replace(/[^\x20-\x7e]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim(),
+    )
+    .filter((text) => text.length > 10)
+    .join(' | ');
+}
 
 /** Contract client with dynamic method access (bindings are generated at runtime from the WASM spec). */
 export type AnyClient = contract.Client & {
@@ -88,6 +133,8 @@ export function mapSorobanError(err: unknown): AppError {
 export class SorobanGateway {
   /** WASM hash → exported function names (WASMs are immutable, so this never goes stale). */
   private readonly specCache = new Map<string, Promise<ReadonlySet<string>>>();
+  /** Token contract → identity and decimals (a SAC's never change). */
+  private readonly tokenCache = new Map<string, Promise<TokenInfo>>();
 
   constructor(
     private readonly clients: StellarClients,
@@ -213,14 +260,13 @@ export class SorobanGateway {
     invoker: string,
     method: string,
     args: Record<string, unknown> = {},
+    timeoutInSeconds: number = SOROBAN_TIMEOUT,
   ): Promise<string> {
     try {
       const client = (await contract.Client.from(this.options(undefined, contractId, invoker))) as AnyClient;
       const fn = client[method];
-      const tx =
-        Object.keys(args).length === 0
-          ? await fn(SorobanGateway.methodOpts())
-          : await fn(args, SorobanGateway.methodOpts());
+      const opts = { ...SorobanGateway.methodOpts(), timeoutInSeconds };
+      const tx = Object.keys(args).length === 0 ? await fn(opts) : await fn(args, opts);
       const pending = tx.needsNonInvokerSigningBy();
       if (pending.length) throw new DomainError(`La transacción necesita la firma de ${pending.join(', ')}`);
       return tx.toXDR();
@@ -241,17 +287,125 @@ export class SorobanGateway {
 
   /** Relays a Soroban transaction already signed by the investor and waits for it to settle. */
   async submitSigned(tx: Transaction): Promise<string> {
+    const sent = await this.submitSignedDetailed(tx);
+    if (sent.status !== 'SUCCESS') {
+      throw new UpstreamError(
+        'La transacción sigue pendiente en la red: consultá su estado en unos segundos',
+        {
+          hash: sent.hash,
+        },
+      );
+    }
+    return sent.hash;
+  }
+
+  /**
+   * `sendTransaction` + `getTransaction` polling. A transaction the network
+   * executed and failed throws `TxFailedError` (with its hash); one that is
+   * still pending after ~30 s comes back as `PENDING`.
+   */
+  async submitSignedDetailed(tx: Transaction): Promise<SubmittedTx> {
     const srv = this.clients.rpc();
+    let sent: rpc.Api.SendTransactionResponse;
     try {
-      const sent = await srv.sendTransaction(tx);
-      if (sent.status === 'ERROR') {
-        throw new Error(`La red rechazó la transacción: ${JSON.stringify(sent.errorResult)}`);
-      }
-      const settled = await srv.pollTransaction(sent.hash, { attempts: 30, sleepStrategy: () => 1000 });
-      if (settled.status !== 'SUCCESS') throw new Error(`La transacción terminó en ${settled.status}`);
-      return sent.hash;
+      sent = await srv.sendTransaction(tx);
     } catch (err) {
       throw mapSorobanError(err);
+    }
+    if (sent.status === 'ERROR') {
+      const code = sent.errorResult?.result.type ?? 'error';
+      throw new TxFailedError(`La red rechazó la transacción (${code})`, null);
+    }
+    if (sent.status === 'TRY_AGAIN_LATER') {
+      throw new UpstreamError('La red está congestionada: probá de nuevo en unos segundos');
+    }
+    let settled: rpc.Api.GetTransactionResponse;
+    try {
+      settled = await srv.pollTransaction(sent.hash, { attempts: 30, sleepStrategy: () => 1000 });
+    } catch (err) {
+      throw mapSorobanError(err);
+    }
+    if (settled.status === 'SUCCESS') return { hash: sent.hash, status: 'SUCCESS', ledger: settled.ledger };
+    if (settled.status === 'FAILED') {
+      const diag = diagnosticText(settled.diagnosticEventsXdr);
+      const friendly = mapSorobanError(new Error(diag || 'La transacción falló en la red'));
+      throw new TxFailedError(friendly.message, sent.hash);
+    }
+    return { hash: sent.hash, status: 'PENDING' };
+  }
+
+  /** Status of any transaction the RPC still retains. */
+  async transactionStatus(hash: string): Promise<SubmittedTx> {
+    try {
+      const got = await this.clients.rpc().getTransaction(hash);
+      if (got.status === 'SUCCESS' || got.status === 'FAILED') {
+        return { hash, status: got.status, ledger: got.ledger };
+      }
+      return { hash, status: 'NOT_FOUND' };
+    } catch (err) {
+      throw mapSorobanError(err);
+    }
+  }
+
+  /**
+   * Read-only call by raw XDR arguments, for contracts without a WASM spec to
+   * build a client from (Stellar Asset Contracts). Simulation only.
+   */
+  async simulateCall(contractId: string, method: string, args: xdr.ScVal[] = []): Promise<unknown> {
+    if (!isContractId(contractId)) throw new ValidationError(`ID de contrato inválido: ${contractId}`);
+    const tx = new TransactionBuilder(new Account(SIMULATION_SOURCE, '0'), {
+      fee: '100',
+      networkPassphrase: this.clients.networkPassphrase(),
+    })
+      .addOperation(Operation.invokeContractFunction({ contract: contractId, function: method, args }))
+      .setTimeout(30)
+      .build();
+    try {
+      const sim = await this.clients.rpc().simulateTransaction(tx);
+      if (rpc.Api.isSimulationError(sim)) throw new Error(sim.error);
+      return sim.result ? scValToNative(sim.result.retval) : undefined;
+    } catch (err) {
+      throw mapSorobanError(err);
+    }
+  }
+
+  /**
+   * Identity and `decimals()` of a token contract. A failed read is not
+   * cached; the decimals fall back to the SAC's 7 only for the caller that
+   * asked, and say so in the logs of whoever handles the error.
+   */
+  tokenInfo(contractId: string): Promise<TokenInfo> {
+    let cached = this.tokenCache.get(contractId);
+    if (!cached) {
+      cached = (async () => {
+        const [decimals, name] = await Promise.all([
+          this.simulateCall(contractId, 'decimals'),
+          this.simulateCall(contractId, 'name').catch(() => ''),
+        ]);
+        const label = String(name ?? '');
+        const [code, issuer] = label === 'native' ? ['XLM', null] : label.split(':');
+        return {
+          contractId,
+          code: code || 'TOKEN',
+          issuer: issuer || null,
+          decimals: Number(decimals),
+        };
+      })();
+      this.tokenCache.set(contractId, cached);
+      cached.catch(() => this.tokenCache.delete(contractId));
+    }
+    return cached;
+  }
+
+  /** `decimals()` of a token contract, defaulting to the SAC's 7 when it can't be read. */
+  async tokenDecimals(contractId: string, onFallback?: (err: unknown) => void): Promise<number> {
+    try {
+      const { decimals } = await this.tokenInfo(contractId);
+      if (Number.isInteger(decimals) && decimals >= 0 && decimals <= 18) return decimals;
+      throw new Error(`decimals() devolvió ${decimals}`);
+    } catch (err) {
+      onFallback?.(err);
+      return SAC_DECIMALS;
     }
   }
 

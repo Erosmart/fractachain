@@ -13,6 +13,8 @@ export const SECRET = {
   usdcIssuerPublic: 'STELLAR_USDC_ISSUER',
   licitacionAdmin: 'STELLAR_LICITACION_ADMIN_SECRET',
   porOracle: 'STELLAR_POR_ORACLE_SECRET',
+  /** Demo pool holding Circle's testnet USDC (reviewers are funded from it). */
+  usdcPool: 'STELLAR_USDC_POOL_SECRET',
 } as const;
 
 /**
@@ -123,6 +125,21 @@ export class PlatformKeyring {
     const kp = await this.provision(SECRET.usdcIssuer, 'emisor USDC de testnet');
     this.secrets.set(SECRET.usdcIssuerPublic, kp.publicKey());
     return kp;
+  }
+
+  /** The configured USDC issuer's key, if this machine has it (team-issued test USDC). */
+  hasUsdcIssuerSecret(): boolean {
+    return this.keypairFrom(SECRET.usdcIssuer) !== null;
+  }
+
+  /** Demo USDC pool (Circle mode): public key from the secret, else from the deployment file. */
+  usdcPoolPublicKey(): string | null {
+    return this.keypairFrom(SECRET.usdcPool)?.publicKey() ?? this.deployments.load()?.usdcPool ?? null;
+  }
+
+  /** Signer of the demo USDC pool. Never provisioned: it only holds what was put in it. */
+  usdcPool(): Keypair {
+    return this.requireKeypair(SECRET.usdcPool, this.deployments.load()?.usdcPool);
   }
 
   /** PoR oracle for per-listing vaults; must differ from the vault admin. */

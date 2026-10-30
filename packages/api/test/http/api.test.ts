@@ -288,15 +288,24 @@ describe('offering activity', () => {
     stored.tokensMinted = 4000;
     listings.markOpen(listing.id);
 
+    let raised = 0;
     for (const email of ['ivy@example.com', 'jon@example.com']) {
-      const { user } = await register(email);
+      const { user, token } = await register(email);
       const account = accounts.require(user.id);
       account.kycStatus = 'APPROVED';
       account.custodyMode = 'CUSTODIAL';
       account.publicKey = 'GDUA6DQZJXBPTAQANQXEKXV3VXCPUIP5XQEHDAKJLRAVTXK35ZX2YORW';
       accounts.save(account);
-      accounts.creditCash(user.id, 1000);
-      listings.contributeSandbox(listing.id, 100, user.id);
+      // Tenders settle on-chain only: a listing without a contract refuses the money…
+      const refused = await api()
+        .post(`/api/listings/${listing.id}/contribute`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ usdcAmount: 100 });
+      expect(refused.status).toBe(400);
+      expect(refused.body.message).toBe('La licitación todavía no está desplegada en la red');
+      // …and what the chain settled is what gets logged.
+      raised += 100;
+      listings.recordOnChainContribution(listing.id, user.id, { amount: 100, tokens: 10, raised });
     }
 
     const res = await api().get(`/api/listings/${listing.id}/activity`);

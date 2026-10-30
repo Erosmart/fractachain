@@ -9,7 +9,7 @@ import {
 } from '../../domain/licitacion/LicitacionState';
 import type { LicitacionReads, LicitacionSnapshot } from '../../domain/licitacion/LicitacionSnapshot';
 import { paymentUnit, type Listing } from '../../domain/listing/Listing';
-import { fromStroops, toStroops } from '../../domain/stellar/Amounts';
+import { fromUnits, toUnits } from '../../domain/stellar/Amounts';
 import { isContractId, isStellarPublicKey, normalizeAddress } from '../../domain/stellar/StellarAddress';
 import { DomainError, NotConfiguredError, errorMessage } from '../../shared/errors';
 import type { ILogger } from '../../shared/logger';
@@ -17,13 +17,15 @@ import { planDeploy } from './ContractDeployPlan';
 import type { HorizonAccounts } from './HorizonAccounts';
 import type { PlatformKeyring } from './PlatformKeyring';
 import { SignedTransactionPolicy } from './SignedTransactionPolicy';
-import type { AnyClient, SorobanGateway } from './SorobanGateway';
+import { WALLET_SIGN_TIMEOUT, type AnyClient, type SorobanGateway, type TokenInfo } from './SorobanGateway';
 import type { DeploymentRegistryLike } from './types';
 import type { UsdcFaucet } from './UsdcFaucet';
 
 const ARGENTINA = 32;
 const INVESTOR_NATIONAL = 0;
 const YEAR_SECS = 365 * 24 * 3600;
+/** How long a tender's payment token is trusted from cache (it can only change before funding). */
+const PAYMENT_TOKEN_TTL_MS = 5 * 60_000;
 
 export interface ContributionReceipt {
   hash: string;
@@ -45,6 +47,8 @@ export interface ContributionReceipt {
  * (custodial) or wallet address (self-custody).
  */
 export class LicitacionContract {
+  private readonly paymentTokens = new Map<string, { at: number; token: Promise<string> }>();
+
   constructor(
     private readonly soroban: SorobanGateway,
     private readonly keyring: PlatformKeyring,
@@ -56,6 +60,66 @@ export class LicitacionContract {
 
   isLive(listing: Listing): boolean {
     return isContractId(listing.licitacionContract);
+  }
+
+  /** SAC a new tender for this listing settles in: Circle/team USDC, or XLM's SAC. */
+  paymentTokenForNew(listing: Listing): string {
+    const token = paymentUnit(listing) === 'XLM' ? this.soroban.xlmSac() : this.usdc.sac();
+    if (!isContractId(token))
+      throw new NotConfiguredError('Falta el SAC de USDC en el deployment (usdc.sac / usdcSac)');
+    return token;
+  }
+
+  /**
+   * The token a live tender actually settles in (`get_payment_token`), cached
+   * briefly; falls back to the configured asset when the contract can't be read.
+   */
+  async paymentToken(listing: Listing): Promise<string> {
+    const id = this.contractId(listing);
+    const hit = this.paymentTokens.get(id);
+    if (hit && Date.now() - hit.at < PAYMENT_TOKEN_TTL_MS) return hit.token;
+    const token = (async () => {
+      const client = await this.soroban.client(id);
+      return String(await this.soroban.read<string>(client, 'get_payment_token'));
+    })();
+    this.paymentTokens.set(id, { at: Date.now(), token });
+    try {
+      return await token;
+    } catch (err) {
+      this.paymentTokens.delete(id);
+      this.logger.warn('get_payment_token falló; se usa el asset configurado', {
+        id,
+        err: errorMessage(err),
+      });
+      return this.paymentTokenForNew(listing);
+    }
+  }
+
+  /** Identity + decimals of the tender's payment token, as shown to investors. */
+  async paymentAsset(listing: Listing): Promise<TokenInfo> {
+    const token = await this.paymentToken(listing);
+    try {
+      return await this.soroban.tokenInfo(token);
+    } catch {
+      const unit = paymentUnit(listing);
+      return {
+        contractId: token,
+        code: unit,
+        issuer: unit === 'XLM' ? null : this.usdc.issuerPublicKey(),
+        decimals: await this.decimalsOf(token),
+      };
+    }
+  }
+
+  /** `decimals()` of a token (7 for every SAC); a failed read is logged and defaults to 7. */
+  private decimalsOf(token: string): Promise<number> {
+    return this.soroban.tokenDecimals(token, (err) =>
+      this.logger.warn('decimals() del token falló; se asumen 7', { token, err: errorMessage(err) }),
+    );
+  }
+
+  private async liveDecimals(listing: Listing): Promise<number> {
+    return this.decimalsOf(await this.paymentToken(listing));
   }
 
   private contractId(listing: Listing): string {
@@ -147,18 +211,18 @@ export class LicitacionContract {
     if (!wasmHash) throw new NotConfiguredError('deployments/testnet.json no tiene el WASM de la licitación');
 
     const isXlm = d.paymentKind === 'XLM';
-    const paymentToken = isXlm ? this.soroban.xlmSac() : deployment?.usdcSac;
-    if (!isContractId(paymentToken))
-      throw new NotConfiguredError('Falta usdcSac en deployments/testnet.json');
+    const paymentToken = this.paymentTokenForNew(listing);
+    // Amounts in the token's own base units: `decimals()` is read, not assumed.
+    const decimals = await this.decimalsOf(paymentToken);
 
     const admin = await this.keyring.licitacionAdmin();
-    const price = toStroops(d.pricePerShareUsdc);
+    const price = toUnits(d.pricePerShareUsdc, decimals);
     const terms = {
       admin: admin.publicKey(),
       fiduciary,
       payment_token: paymentToken,
-      soft_cap: toStroops(d.offeringSoftCapUsdc),
-      hard_cap: toStroops(d.offeringHardCapUsdc),
+      soft_cap: toUnits(d.offeringSoftCapUsdc, decimals),
+      hard_cap: toUnits(d.offeringHardCapUsdc, decimals),
       deadline: BigInt(Math.floor(deadlineMs / 1000)),
       price_per_unit: price,
       legal_info: {
@@ -243,7 +307,7 @@ export class LicitacionContract {
       this.soroban.read<bigint>(client, 'get_total_raised').catch(() => 0n),
     ]);
     if (current && String(current) === wallet) return { hash: null, fiduciary: wallet };
-    if (fromStroops(raised) > 0) {
+    if (BigInt(raised) > 0n) {
       throw new DomainError(
         `La licitación ya recibió aportes: el contrato paga a ${current} y no se puede repuntar a ${wallet}`,
       );
@@ -259,10 +323,11 @@ export class LicitacionContract {
   async contribute(listing: Listing, buyer: Keypair, amount: number): Promise<ContributionReceipt> {
     await this.assertBuyerFunds(buyer.publicKey(), listing, amount);
     await this.verifyInvestor(listing, buyer.publicKey());
+    const decimals = await this.liveDecimals(listing);
     const client = await this.soroban.client(this.contractId(listing), buyer);
     const { hash } = await this.soroban.invoke(client, 'contribute', {
       buyer: buyer.publicKey(),
-      payment_amount: toStroops(amount),
+      payment_amount: toUnits(amount, decimals),
     });
     if (!hash) throw new DomainError('El aporte se envió pero no volvió hash de transacción');
     const [raised, rwa] = await Promise.all([
@@ -271,7 +336,7 @@ export class LicitacionContract {
     ]);
     return {
       hash,
-      raised: fromStroops(raised),
+      raised: fromUnits(raised, decimals),
       tokens: Number(rwa),
       amount,
       licitacion: listing.licitacionContract,
@@ -283,14 +348,19 @@ export class LicitacionContract {
     listing: Listing,
     wallet: string,
     amount: number,
-  ): Promise<{ xdr: string; publicKey: string; verifyHash: string | null }> {
+    timeoutInSeconds?: number,
+  ): Promise<{ xdr: string; publicKey: string; verifyHash: string | null; paymentAmount: bigint }> {
     await this.assertBuyerFunds(wallet, listing, amount);
     const verifyHash = await this.verifyInvestor(listing, wallet);
-    const xdr = await this.soroban.unsignedInvocationXdr(this.contractId(listing), wallet, 'contribute', {
-      buyer: wallet,
-      payment_amount: toStroops(amount),
-    });
-    return { xdr, publicKey: wallet, verifyHash };
+    const paymentAmount = toUnits(amount, await this.liveDecimals(listing));
+    const xdr = await this.soroban.unsignedInvocationXdr(
+      this.contractId(listing),
+      wallet,
+      'contribute',
+      { buyer: wallet, payment_amount: paymentAmount },
+      timeoutInSeconds,
+    );
+    return { xdr, publicKey: wallet, verifyHash, paymentAmount };
   }
 
   /**
@@ -310,25 +380,52 @@ export class LicitacionContract {
       this.soroban.read<bigint>(client, 'get_price_per_unit'),
     ]);
     const hash = await this.soroban.submitSigned(tx);
-    const [raised, after] = await Promise.all([
+    const [raised, after, decimals] = await Promise.all([
       this.soroban.read<bigint>(client, 'get_total_raised'),
       this.soroban.read<bigint>(client, 'get_rwa_balance', { user: wallet }),
+      this.liveDecimals(listing),
     ]);
     const units = BigInt(after) - BigInt(before);
     return {
       hash,
-      raised: fromStroops(raised),
+      raised: fromUnits(raised, decimals),
       tokens: Number(after),
-      amount: units > 0n ? fromStroops(units * BigInt(price)) : 0,
+      amount: units > 0n ? fromUnits(units * BigInt(price), decimals) : 0,
       licitacion: listing.licitacionContract,
     };
   }
 
-  async prepareRefundXdr(listing: Listing, wallet: string): Promise<{ xdr: string; publicKey: string }> {
-    const xdr = await this.soroban.unsignedInvocationXdr(this.contractId(listing), wallet, 'refund', {
-      contributor: wallet,
-    });
+  async prepareRefundXdr(
+    listing: Listing,
+    wallet: string,
+    timeoutInSeconds?: number,
+  ): Promise<{ xdr: string; publicKey: string }> {
+    const xdr = await this.soroban.unsignedInvocationXdr(
+      this.contractId(listing),
+      wallet,
+      'refund',
+      { contributor: wallet },
+      timeoutInSeconds,
+    );
     return { xdr, publicKey: wallet };
+  }
+
+  /**
+   * Permissionless `finalize()` sourced by the investor's wallet (anyone may
+   * close a tender the contract considers due). Valid for a wallet to sign.
+   */
+  async prepareFinalizeXdr(
+    listing: Listing,
+    wallet: string,
+    timeoutInSeconds = WALLET_SIGN_TIMEOUT,
+  ): Promise<string> {
+    return this.soroban.unsignedInvocationXdr(
+      this.contractId(listing),
+      wallet,
+      'finalize',
+      {},
+      timeoutInSeconds,
+    );
   }
 
   async submitRefund(
@@ -350,9 +447,10 @@ export class LicitacionContract {
       .read<bigint>(client, 'get_rwa_balance', { user: wallet })
       .catch(() => 0n);
     const units = Number(before);
+    const decimals = await this.liveDecimals(listing);
     return {
       hash,
-      refunded: price && units > 0 ? fromStroops(BigInt(units) * BigInt(price)) : 0,
+      refunded: price && units > 0 ? fromUnits(BigInt(units) * BigInt(price), decimals) : 0,
       rwa: Number(after),
     };
   }
@@ -372,9 +470,10 @@ export class LicitacionContract {
       .read<bigint>(client, 'get_rwa_balance', { user: contributor.publicKey() })
       .catch(() => 0n);
     const units = Number(before);
+    const decimals = await this.liveDecimals(listing);
     return {
       hash,
-      refunded: price && units > 0 ? fromStroops(BigInt(units) * BigInt(price)) : 0,
+      refunded: price && units > 0 ? fromUnits(BigInt(units) * BigInt(price), decimals) : 0,
       rwa: Number(after),
     };
   }
@@ -405,19 +504,20 @@ export class LicitacionContract {
     });
     const amount =
       typeof result === 'bigint' || typeof result === 'number' || typeof result === 'string'
-        ? fromStroops(result)
+        ? fromUnits(result, await this.liveDecimals(listing))
         : 0;
     return { hash, amount };
   }
 
   async read(listing: Listing, investor?: string): Promise<LicitacionReads> {
     const client = await this.soroban.client(this.contractId(listing));
-    const [stateRaw, raised, price, withdrawn, fiduciary] = await Promise.all([
+    const [stateRaw, raised, price, withdrawn, fiduciary, decimals] = await Promise.all([
       this.soroban.read<unknown>(client, 'get_state'),
       this.soroban.read<bigint>(client, 'get_total_raised'),
       this.soroban.read<bigint>(client, 'get_price_per_unit'),
       this.soroban.read<boolean>(client, 'proceeds_withdrawn').catch(() => false),
       this.soroban.read<string>(client, 'get_fiduciary').catch(() => null),
+      this.liveDecimals(listing),
     ]);
     let investorRwa: number | null = null;
     if (investor) {
@@ -429,8 +529,8 @@ export class LicitacionContract {
     }
     return {
       state: parseLicitacionState(stateRaw),
-      raised: fromStroops(raised),
-      price: fromStroops(price),
+      raised: fromUnits(raised, decimals),
+      price: fromUnits(price, decimals),
       proceedsWithdrawn: Boolean(withdrawn),
       fiduciary: fiduciary ? String(fiduciary) : null,
       investorRwa,

@@ -63,7 +63,6 @@ export class AccountService {
       cuit: a.cuit,
       selfieUrl: a.selfiePath ? `/api/kyc/selfie/${a.id}` : undefined,
       holdings: a.holdings || [],
-      cashUsdc: a.cashUsdc ?? 0,
       trustlines: a.trustlines || [],
       xlmBalance: a.xlmBalance ?? 0,
       faucetFunded: Boolean(a.faucetFundedAt),

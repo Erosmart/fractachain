@@ -92,6 +92,15 @@ const EnvSchema = z.object({
   STELLAR_XLM_TOPUP: z.coerce.number().min(0).default(50),
   STELLAR_USDC_GRANT: z.coerce.number().min(1).default(10_000),
   STELLAR_USDC_CODE: z.string().min(1).max(12).default('USDC'),
+  /**
+   * Instaward 1: `circle` = Circle's testnet USDC paid from the demo pool
+   * (STELLAR_USDC_POOL_SECRET); `team` = test USDC issued by the platform.
+   * Unset: the deployment file's `usdc.mode`, else team when this machine has
+   * STELLAR_USDC_ISSUER_SECRET, else circle on testnet.
+   */
+  USDC_MODE: z.enum(['circle', 'team']).optional(),
+  /** Largest grant out of the Circle demo pool (it is finite). */
+  STELLAR_USDC_POOL_GRANT: z.coerce.number().min(1).max(10_000).default(100),
 
   SETTLEMENT_SWEEP_MS: z.coerce.number().int().min(0).default(60_000),
 });
@@ -148,6 +157,8 @@ export interface AppConfig {
     xlmTopUp: number;
     usdcGrant: number;
     usdcCode: string;
+    usdcMode?: 'circle' | 'team';
+    usdcPoolGrant: number;
     isTestnet: boolean;
   };
   jobs: { settlementSweepMs: number };
@@ -300,6 +311,8 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
       xlmTopUp: Math.max(e.STELLAR_XLM_FLOOR, e.STELLAR_XLM_TOPUP),
       usdcGrant: e.STELLAR_USDC_GRANT,
       usdcCode: e.STELLAR_USDC_CODE,
+      usdcMode: e.USDC_MODE,
+      usdcPoolGrant: e.STELLAR_USDC_POOL_GRANT,
       isTestnet,
     },
     jobs: { settlementSweepMs: e.SETTLEMENT_SWEEP_MS },

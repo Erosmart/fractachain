@@ -21,6 +21,7 @@ import { DemoDossierService } from './application/demo/DemoDossierService';
 import { IssuanceProductService } from './application/issuance/IssuanceProductService';
 import { createChainModule } from './modules/chain';
 import { createTxModule } from './modules/tx';
+import { TX_BUILDS_KEY } from './application/tx/TxBuildStore';
 import type { ModuleDeps } from './modules/types';
 import { IdentityVerificationService } from './application/kyc/IdentityVerificationService';
 import { KycService } from './application/kyc/KycService';
@@ -135,6 +136,7 @@ export const PERSISTED_DOCUMENTS: ReadonlySet<string> = new Set([
   KYC_KEY,
   AUDIT_KEY,
   CONTRIBUTIONS_KEY,
+  TX_BUILDS_KEY,
   'revoked-sessions.json',
 ]);
 
@@ -236,6 +238,12 @@ export async function buildContainer(
     friendbot,
     deployments,
     explorer,
+    {
+      mode: config.stellar.usdcMode,
+      isTestnet: config.stellar.isTestnet,
+      networkPassphrase: config.stellar.networkPassphrase,
+      poolGrant: config.stellar.usdcPoolGrant,
+    },
   );
   const licitacion = new LicitacionContract(
     soroban,

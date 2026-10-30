@@ -1028,6 +1028,18 @@ impl FractachainLicitacionContract {
         env.storage().persistent().get(&DataKey::LegalInfo).unwrap()
     }
 
+    /// (soft cap, hard cap) in payment-token base units — what `finalize` compares against.
+    pub fn get_caps(env: Env) -> (i128, i128) {
+        let soft: i128 = env.storage().persistent().get(&DataKey::SoftCap).unwrap();
+        let hard: i128 = env.storage().persistent().get(&DataKey::HardCap).unwrap();
+        (soft, hard)
+    }
+
+    /// Closing time (unix seconds): `finalize` is allowed from here on.
+    pub fn get_deadline(env: Env) -> u64 {
+        env.storage().persistent().get(&DataKey::Deadline).unwrap()
+    }
+
     /// RWA locked in the holder's open sale orders.
     pub fn get_order_escrow(env: Env, user: Address) -> i128 {
         order_escrow(&env, &user)
@@ -1055,3 +1067,5 @@ impl FractachainLicitacionContract {
 
 #[cfg(test)]
 mod test;
+#[cfg(test)]
+mod test_usdc;

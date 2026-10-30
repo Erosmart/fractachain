@@ -43,7 +43,8 @@ export class AccountBootstrapper {
     if (this.options.seedDemoAccounts) await this.seedDemoAccount();
 
     for (const account of this.repo.list()) {
-      // Sandbox cash is play money for the demo market: keep every account able to trade.
+      // Demo order-book cash (the sandbox secondary market, Instaward 2 scope). It is
+      // never shown as a balance and tenders never touch it: they settle on-chain.
       if (typeof account.cashUsdc !== 'number' || account.cashUsdc < 15_000) account.cashUsdc = 50_000;
       if (
         this.options.hackathon &&

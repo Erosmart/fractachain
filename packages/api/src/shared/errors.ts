@@ -19,6 +19,16 @@ export type ErrorCode =
   | 'CSRF'
   | 'TWO_FACTOR_REQUIRED'
   | 'EMAIL_NOT_VERIFIED'
+  /** A built transaction outlived its time bounds (build again). */
+  | 'TX_EXPIRED'
+  /** The signed transaction is not the one the API built. */
+  | 'TX_MISMATCH'
+  /** That build (or that exact transaction) was already submitted. */
+  | 'TX_ALREADY_SUBMITTED'
+  /** No valid signature of the investor's key for this network. */
+  | 'TX_BAD_SIGNATURE'
+  /** The network executed the transaction and it failed. */
+  | 'TX_FAILED'
   | 'INTERNAL';
 
 export class AppError extends Error {

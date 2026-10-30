@@ -1,5 +1,4 @@
 import crypto from 'crypto';
-import { TraderPolicy } from '../../domain/account/Account';
 import {
   DossierValidator,
   assertListed,
@@ -17,7 +16,6 @@ import type { IListingRepository } from '../../domain/listing/ListingRepository'
 import { isStellarPublicKey, normalizeAddress } from '../../domain/stellar/StellarAddress';
 import type { INetworkSettingsProvider } from '../../domain/testnet/NetworkSettings';
 import { ConflictError, DomainError, NotFoundError, ValidationError } from '../../shared/errors';
-import { EPSILON } from '../../shared/numbers';
 import type { AccountService } from '../account/AccountService';
 
 /** Platform-ledger view of a listing's contract addresses (no RPC). */
@@ -266,43 +264,6 @@ export class ListingLedger {
     if (usdc > 0) this.contributions?.append({ listingId, at: new Date().toISOString(), usdc });
   }
 
-  /** Sandbox primary: debits sandbox cash and books the units as owed. */
-  contributeSandbox(id: string, usdcAmount: number, accountId: string): Listing {
-    const investor = this.accounts.require(accountId);
-    TraderPolicy.assertCanTrade(investor);
-    const listing = this.require(id);
-    assertListed(listing);
-    const amount = Number(usdcAmount);
-    if (!Number.isFinite(amount) || amount <= 0) throw new ValidationError('Monto inválido');
-    const price = listing.dossier.pricePerShareUsdc;
-    if (price <= 0) throw new DomainError('Precio por acción inválido');
-    const remaining = Math.min(
-      listing.dossier.offeringHardCapUsdc - listing.raisedUsdc,
-      listing.tokensMinted * price - listing.raisedUsdc,
-    );
-    if (remaining <= 0) throw new DomainError('No queda cupo en esta licitación');
-    if (amount > remaining + EPSILON)
-      throw new DomainError(`Solo quedan ${remaining.toLocaleString('es-AR')} USDC de cupo`);
-    const ticket = listing.dossier.minInvestmentUsdc || price;
-    const minNow = remaining < ticket ? price : ticket;
-    if (amount + EPSILON < minNow)
-      throw new DomainError(`El aporte mínimo ahora es ${minNow.toLocaleString('es-AR')} USDC`);
-
-    this.accounts.debitCash(accountId, amount);
-    listing.raisedUsdc += amount;
-    this.accounts.addHolding(accountId, {
-      listingId: listing.id,
-      tokenTicker: listing.dossier.tokenTicker,
-      usdcAmount: amount,
-      tokens: 0,
-      tokensOwed: amount / price,
-    });
-    this.logContribution(listing.id, amount);
-    this.applyDueClose(listing);
-    this.repo.save(listing);
-    return this.require(id);
-  }
-
   /** Books a contribution that already settled on-chain. `amount` must come from the chain. */
   recordOnChainContribution(
     id: string,
@@ -400,9 +361,9 @@ export class ListingLedger {
   }
 
   /**
-   * Records the payout to the company wallet when an offering closes. For
-   * sandbox offerings whose wallet belongs to a platform account, the raise is
-   * also credited as sandbox cash; on-chain, `finalize()` already moved it.
+   * Records the payout to the company wallet when an offering closes: the
+   * contract's `finalize()` already moved the money on-chain. There is no
+   * off-chain (sandbox) payout any more — tenders only settle on-chain.
    */
   private payProceeds(listing: Listing): void {
     if (listing.proceedsPaidAt || listing.status !== 'CLOSED_SUCCESS') return;
@@ -410,9 +371,6 @@ export class ListingLedger {
     if (!isStellarPublicKey(wallet)) return;
     listing.proceedsPaidTo = wallet;
     listing.proceedsPaidAt = new Date().toISOString();
-    if (this.isOnChain(listing)) return;
-    const company = this.accounts.findByPublicKey(wallet);
-    if (company && listing.raisedUsdc > 0) this.accounts.creditCash(company.id, listing.raisedUsdc);
   }
 
   /** Placeholder id for sandbox listings (never a valid StrKey checksum). */
