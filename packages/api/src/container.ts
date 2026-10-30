@@ -19,6 +19,9 @@ import { ComplianceService } from './application/compliance/ComplianceService';
 import { StockCatalogService } from './application/custody/StockCatalogService';
 import { DemoDossierService } from './application/demo/DemoDossierService';
 import { IssuanceProductService } from './application/issuance/IssuanceProductService';
+import { createChainModule } from './modules/chain';
+import { createTxModule } from './modules/tx';
+import type { ModuleDeps } from './modules/types';
 import { IdentityVerificationService } from './application/kyc/IdentityVerificationService';
 import { KycService } from './application/kyc/KycService';
 import { DiditClient, DiditWebhookAuthenticator } from './infrastructure/kyc/DiditClient';
@@ -442,6 +445,30 @@ export async function buildContainer(
   const cookie = new SessionCookie(config.auth.cookie);
   const guard = new AuthMiddleware(auth, accounts, cookie, { adminRequire2fa: config.auth.adminRequire2fa });
   const auditRoutes = new AuditMiddleware(audit);
+  const moduleDeps: ModuleDeps = {
+    config,
+    logger,
+    store,
+    clock,
+    deployments,
+    clients,
+    keyring,
+    explorer,
+    horizon,
+    soroban,
+    usdc,
+    licitacion,
+    stockVault,
+    accounts,
+    listings,
+    offerings,
+    settlement,
+    audit,
+    guard,
+    limits,
+    auditRoutes,
+  };
+  const featureModules = [createTxModule(moduleDeps), createChainModule(moduleDeps)];
   const app = createApp({
     config,
     logger: logger.child({ component: 'http' }),
@@ -478,6 +505,7 @@ export async function buildContainer(
       ),
       new MarketController(sandbox, sdexMarket, portfolio, wallets, chainStatus, guard),
       new AdminOpsController(network, compliance, guard, limits, auditRoutes, audit),
+      ...featureModules.flatMap((m) => m.controllers),
     ],
   });
 

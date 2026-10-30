@@ -239,3 +239,174 @@ export interface Listing {
   finalizeHash?: string;
   finalizeAt?: string;
 }
+
+/* ------------------------------------------------------------------ *
+ * Instaward 1: non-custodial transactions and chain reads
+ * (docs/instaward-1/plan.md)
+ * ------------------------------------------------------------------ */
+
+/** A payment asset as the contracts see it (Stellar Asset Contract). */
+export interface ChainAsset {
+  code: string;
+  /** Classic issuer (G…); null for native XLM. */
+  issuer: string | null;
+  /** SAC contract ID (C…). */
+  contractId: string;
+  /** Read from the token's `decimals()`. */
+  decimals: number;
+  explorer: string;
+}
+
+export type TxAction = 'contribute' | 'refund' | 'finalize' | 'usdc_trustline';
+
+export type TxBuildRequest =
+  | { action: 'contribute'; listingId: string; amount: number }
+  | { action: 'refund'; listingId: string }
+  | { action: 'finalize'; listingId: string }
+  | { action: 'usdc_trustline' };
+
+export interface TxBuildResult {
+  buildId: string;
+  /** Unsigned, simulated and prepared transaction (base64 envelope). */
+  xdr: string;
+  action: TxAction;
+  network: string;
+  networkPassphrase: string;
+  /** The investor's own account: the only signer. */
+  source: string;
+  contractId?: string;
+  function?: string;
+  args?: { name: string; value: string }[];
+  asset?: ChainAsset;
+  /** Total fee in stroops. */
+  fee: string;
+  expiresAt: string;
+}
+
+export interface TxSubmitRequest {
+  buildId: string;
+  signedXdr: string;
+}
+
+export type TxStatus = 'PENDING' | 'SUCCESS' | 'FAILED' | 'NOT_FOUND';
+
+export interface TxSubmitResult {
+  hash: string;
+  status: TxStatus;
+  ledger?: number;
+  explorer: string;
+  action: TxAction;
+  /** Refreshed listing when the action changed one. */
+  listing?: unknown;
+}
+
+export interface TxStatusResult {
+  hash: string;
+  status: TxStatus;
+  ledger?: number;
+  explorer: string;
+}
+
+/** A contract reference shown next to every chain-read value. */
+export interface ChainRef {
+  contractId: string;
+  explorer: string;
+}
+
+export interface ChainNetwork {
+  network: string;
+  networkPassphrase: string;
+  rpcUrl: string;
+  horizonUrl: string;
+  explorerUrl: string;
+  usdc: ChainAsset | null;
+  contracts: {
+    factory: ChainRef | null;
+    stockVaults: ChainRef[];
+    tenders: ChainRef[];
+    forwards: ChainRef[];
+    warrants: ChainRef[];
+  };
+}
+
+export type TenderStateName = 'Open' | 'Successful' | 'Failed' | 'Terminated';
+
+export interface ChainTender extends ChainRef {
+  readAt: string;
+  /** Contract functions this payload was read from. */
+  reads: string[];
+  state: { code: number; name: TenderStateName };
+  totalRaised: number;
+  pricePerUnit: number;
+  /** null on tenders deployed before the getters existed. */
+  softCap: number | null;
+  hardCap: number | null;
+  deadline: string | null;
+  paymentToken: ChainAsset;
+  fiduciary: string | null;
+  proceedsWithdrawn: boolean;
+  legalInfo: { cnvRecordId: string; legalTermsUri: string; fideicomisoHash: string } | null;
+  holder?: { address: string; rwaBalance: number; paymentBalance: number };
+}
+
+export interface ChainPortfolio {
+  address: string;
+  readAt: string;
+  xlm: number;
+  usdc: { asset: ChainAsset; balance: number; trustline: boolean } | null;
+  positions: {
+    tender: ChainRef;
+    listingId: string | null;
+    title: string | null;
+    state: TenderStateName;
+    rwaBalance: number;
+    pricePerUnit: number;
+    paymentToken: ChainAsset;
+  }[];
+}
+
+export interface ChainForward extends ChainRef {
+  readAt: string;
+  reads: string[];
+  state: string;
+  cropName: string;
+  totalKilos: number;
+  parties: { producer: string; buyer: string } | null;
+  arbiter: string | null;
+  position: {
+    delivered: boolean;
+    deliveredAt: string | null;
+    disputed: boolean;
+    rollovers: number;
+    escrow: number;
+  } | null;
+  paymentToken: ChainAsset;
+}
+
+export interface ChainWarrant extends ChainRef {
+  readAt: string;
+  reads: string[];
+  status: string;
+  loanAmount: number;
+  producer: string | null;
+  terms: {
+    inventoryValue: number;
+    ltvBps: number;
+    interestRateBps: number;
+    fundedAt: string | null;
+    dueAt: string | null;
+    graceSeconds: number;
+  } | null;
+  paymentToken: ChainAsset;
+}
+
+export interface ChainStockVault extends ChainRef {
+  readAt: string;
+  reads: string[];
+  metadata: Record<string, string | number | boolean | null>;
+  unclaimedPool: number;
+  mintPaused: boolean;
+  lastProof: Record<string, string | number | null> | null;
+  paymentToken: ChainAsset;
+  holder?: { address: string; balance: number; claimable: number };
+}

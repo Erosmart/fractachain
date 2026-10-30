@@ -33,6 +33,16 @@ export interface TestnetDeployment {
   /** Factory WASM for `testnet:clone-factory` (set by `testnet:upload-wasm factory=…`). */
   factoryWasmHash?: string;
   usdcClassic?: { code: string; issuer: string };
+  /**
+   * Instaward 1: the payment asset the tenders settle in. `circle` = Circle's
+   * testnet USDC (only transferable from the demo pool); `team` = a test asset
+   * the platform issues (local network, or fallback).
+   */
+  usdc?: { mode: 'circle' | 'team'; code: string; issuer: string; sac: string; decimals: number };
+  /** Public key of the demo USDC pool that funds reviewers. */
+  usdcPool?: string;
+  /** Test instances seeded by `npm run stellar:deploy` (read-only views read these). */
+  seeded?: { tenders?: string[]; forwards?: string[]; warrants?: string[]; stockVaults?: string[] };
 }
 
 export interface IDeploymentRegistry {

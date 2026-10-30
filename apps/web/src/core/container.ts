@@ -5,6 +5,8 @@
  */
 import { AccountSecurityService } from './account/AccountSecurityService';
 import { AdminApi } from './api/AdminApi';
+import { ChainApi } from './api/ChainApi';
+import { TxApi } from './api/TxApi';
 import { AuthApi } from './api/AuthApi';
 import { CustodyApi } from './api/CustodyApi';
 import { KycApi } from './api/KycApi';
@@ -65,6 +67,8 @@ const api = Object.freeze({
   custody: new CustodyApi(http),
   onChain: new OnChainApi(http),
   admin: new AdminApi(http),
+  tx: new TxApi(http),
+  chain: new ChainApi(http),
 });
 
 const walletSigner = new FreighterWalletSigner(config.networkPassphrase, t);
