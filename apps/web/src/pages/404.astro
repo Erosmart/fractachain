@@ -1,18 +1,31 @@
 ---
+import { Compass } from 'lucide-react';
 import BaseLayout from '@/layouts/BaseLayout.astro';
-import { translatorFor } from '@/core/i18n/translate';
+import { messagesFor, translatorFor } from '@/core/i18n/translate';
 
-const t = translatorFor(Astro.locals.locale);
+const locale = Astro.locals.locale;
+const t = translatorFor(locale);
+const nf = messagesFor(locale).landing.notFound;
 Astro.response.status = 404;
 ---
 
-<BaseLayout title={t('misc.notFoundTitle')}>
-  <div class="max-w-lg mx-auto py-20 text-center space-y-5">
-    <p class="font-lcd text-[11px] uppercase tracking-[0.22em] text-neutral-500">404</p>
-    <h1 class="text-3xl font-extrabold font-display">{t('misc.notFoundTitle')}</h1>
-    <p class="text-neutral-600">{t('misc.notFoundBody')}</p>
-    <a href="/" class="inline-flex px-6 py-3 rounded-2xl bg-black text-white font-display font-bold">
-      {t('misc.goHome')}
-    </a>
+<BaseLayout title={t('misc.notFoundTitle')} bare>
+  <div class="mx-auto flex max-w-md flex-col items-center py-16 text-center sm:py-24">
+    <span class="grid h-12 w-12 place-items-center rounded-2xl bg-sky-soft text-ink-2" aria-hidden="true">
+      <Compass className="h-5 w-5" />
+    </span>
+    <p class="eyebrow mt-6">{nf.code}</p>
+    <h1 class="mt-2 text-[28px] font-normal leading-tight tracking-[-0.025em] text-ink sm:text-[34px]">
+      {t('misc.notFoundTitle')}
+    </h1>
+    <p class="mt-2 text-[15px] text-ink-2">{t('misc.notFoundBody')}</p>
+    <div class="mt-8 flex flex-col gap-2.5 sm:flex-row">
+      <a href="/" class="btn btn-primary btn-lg">
+        {t('misc.goHome')}
+      </a>
+      <a href="/market" class="btn btn-secondary btn-lg">
+        {nf.secondary}
+      </a>
+    </div>
   </div>
 </BaseLayout>

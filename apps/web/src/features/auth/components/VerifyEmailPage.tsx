@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { MailCheck, MailX } from 'lucide-react';
 import { withIsland } from '@/components/island/withIsland';
+import { Notice } from '@/components/ui/kit';
 import { container } from '@/core/container';
 import { errorMessage } from '@/core/errors';
 import { consumeUrlToken } from '@/core/security/otpauth';
 import { useI18n } from '@/hooks/useI18n';
 import { useSession } from '@/hooks/useSession';
+import AuthShell from './AuthShell';
 
 const { security } = container.services;
 
@@ -34,29 +36,27 @@ function VerifyEmailPage() {
   }, [t]);
 
   return (
-    <div className="max-w-md mx-auto py-16 text-center space-y-5">
-      {state.kind === 'fail' ? (
-        <MailX className="w-10 h-10 mx-auto" aria-hidden />
-      ) : (
-        <MailCheck className="w-10 h-10 mx-auto" aria-hidden />
-      )}
-      <h1 className="text-3xl font-extrabold font-display">{t('verify.title')}</h1>
-      <p className="text-neutral-600" role={state.kind === 'fail' ? 'alert' : 'status'}>
-        {state.kind === 'working'
-          ? t('verify.working')
-          : state.kind === 'ok'
-            ? t('verify.ok')
-            : state.message}
-      </p>
-      {state.kind !== 'working' && (
-        <a
-          href={user ? '/dashboard' : '/login'}
-          className="inline-block px-6 py-3 rounded-2xl bg-black text-white font-display font-bold"
-        >
-          {user ? t('verify.goDashboard') : t('verify.goLogin')}
-        </a>
-      )}
-    </div>
+    <AuthShell
+      icon={state.kind === 'fail' ? <MailX className="h-5 w-5" /> : <MailCheck className="h-5 w-5" />}
+      title={t('verify.title')}
+    >
+      <div className="space-y-5">
+        {state.kind === 'working' ? (
+          <p className="text-sm text-ink-2" role="status" aria-live="polite">
+            {t('verify.working')}
+          </p>
+        ) : state.kind === 'ok' ? (
+          <Notice tone="good">{t('verify.ok')}</Notice>
+        ) : (
+          <Notice tone="bad">{state.message}</Notice>
+        )}
+        {state.kind !== 'working' && (
+          <a href={user ? '/dashboard' : '/login'} className="btn btn-primary btn-lg w-full">
+            {user ? t('landing.auth.goHome') : t('verify.goLogin')}
+          </a>
+        )}
+      </div>
+    </AuthShell>
   );
 }
 

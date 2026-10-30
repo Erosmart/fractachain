@@ -1,0 +1,35 @@
+---
+import { messagesFor } from '@/core/i18n/translate';
+import SectionHeading from './SectionHeading.astro';
+
+const { landing } = messagesFor(Astro.locals.locale);
+const e = landing.ecosystem;
+const LOGOS = [
+  { slug: 'stellar', name: 'Stellar' },
+  { slug: 'circle', name: 'Circle (USDC)' },
+  { slug: 'caja-de-valores', name: 'Caja de Valores' },
+  { slug: 'byma', name: 'BYMA' },
+  { slug: 'alfred-pay', name: 'Alfred Pay' },
+  { slug: 'scf', name: 'Stellar Community Fund' },
+];
+---
+
+<section aria-labelledby="ecosystem-title" class="space-y-6">
+  <SectionHeading id="ecosystem-title" eyebrow={e.eyebrow} title={e.title} lead={e.lead} />
+  <ul class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+    {LOGOS.map((l) => (
+      <li
+        class="card grid h-24 place-items-center px-5 dark:border-transparent dark:bg-ink/90"
+        title={l.name}
+      >
+        <img
+          src={`/brands/${l.slug}.png`}
+          alt={l.name}
+          class="max-h-9 w-auto max-w-[8.5rem] object-contain opacity-75 grayscale transition hover:opacity-100 hover:grayscale-0"
+          loading="lazy"
+          decoding="async"
+        />
+      </li>
+    ))}
+  </ul>
+</section>

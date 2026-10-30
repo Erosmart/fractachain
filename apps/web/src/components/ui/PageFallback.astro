@@ -12,6 +12,10 @@ interface Props {
 const text = translate(Astro.locals.locale, Astro.props.messageKey ?? 'misc.loading');
 ---
 
-<p class="py-16 text-center text-neutral-500" aria-busy="true">
+<div class="flex items-center justify-center gap-2.5 py-16 text-sm text-muted" role="status" aria-busy="true">
+  <span
+    class="h-4 w-4 animate-spin rounded-full border-2 border-line border-t-sky-strong motion-reduce:animate-none"
+    aria-hidden="true"
+  ></span>
   {text}
-</p>
+</div>

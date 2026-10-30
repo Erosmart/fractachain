@@ -34,10 +34,10 @@ export function ChecklistItem({
         {done ? <Check className="h-4 w-4" strokeWidth={2.5} /> : icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className={`block truncate text-sm font-medium ${done ? 'text-ink-2' : 'text-ink'}`}>
+        <span className={`block break-words text-sm font-medium ${done ? 'text-ink-2' : 'text-ink'}`}>
           {title}
         </span>
-        {subtitle && <span className="mt-0.5 block truncate text-xs text-muted">{subtitle}</span>}
+        {subtitle && <span className="mt-0.5 block break-words text-xs text-muted">{subtitle}</span>}
       </span>
       {trailing ??
         (href ? <ArrowUpRight className="h-4 w-4 shrink-0 text-ink-2" aria-hidden="true" /> : null)}

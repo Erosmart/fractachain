@@ -208,7 +208,7 @@ export function DenseBars({
                     />
                     {isHighlight && highlightLabel && (
                       <span
-                        className="absolute z-10 -translate-y-2 whitespace-nowrap rounded-md bg-butter px-2 py-0.5 text-[11px] font-medium text-ink shadow-card"
+                        className="absolute z-10 -translate-y-2 whitespace-nowrap rounded-md bg-butter px-2 py-0.5 text-[11px] font-medium text-on-pastel shadow-card"
                         style={{ bottom: empty ? '100%' : pct(d.value as number) }}
                       >
                         {highlightLabel}

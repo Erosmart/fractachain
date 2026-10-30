@@ -2,30 +2,28 @@ import { withIsland } from '@/components/island/withIsland';
 import { useSession } from '@/hooks/useSession';
 import { useI18n } from '@/hooks/useI18n';
 
-/** Admin column of the footer: the only session-dependent part of it. */
+/** Console column of the footer: the only session-dependent part of it. */
 function FooterAdminLinks() {
   const { user } = useSession();
   const { t } = useI18n();
   if (!user?.isAdmin) return null;
+  const links = [
+    { href: '/admin', label: t('admin.nav.overview') },
+    { href: '/admin/issuance', label: t('admin.nav.issuance') },
+    { href: '/admin/kyc', label: t('admin.nav.kyc') },
+    { href: '/admin/audit', label: t('admin.nav.audit') },
+  ];
   return (
     <div>
-      <h4 className="font-display font-extrabold text-black text-xs tracking-wider uppercase mb-3">Admin</h4>
-      <ul className="space-y-2 text-sm">
-        <li>
-          <a href="/admin/issuance" className="hover:text-black">
-            {t('nav.issuance')}
-          </a>
-        </li>
-        <li>
-          <a href="/admin/kyc" className="hover:text-black">
-            {t('nav.kyc')}
-          </a>
-        </li>
-        <li>
-          <a href="/admin/audit" className="hover:text-black">
-            {t('admAudit.nav')}
-          </a>
-        </li>
+      <h2 className="mb-3 text-xs font-medium text-muted">{t('landing.footer.console')}</h2>
+      <ul className="space-y-2.5">
+        {links.map((l) => (
+          <li key={l.href}>
+            <a href={l.href} className="text-ink-2 transition-colors hover:text-ink">
+              {l.label}
+            </a>
+          </li>
+        ))}
       </ul>
     </div>
   );

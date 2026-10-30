@@ -1,19 +1,10 @@
 ---
 /**
  * Sign-up and sign-in are the same flow: the first email login creates the
- * account. This route stays for old links and forwards to /login.
+ * account. Old links land on the login page in sign-up mode.
  */
-import BaseLayout from '@/layouts/BaseLayout.astro';
-import { translate } from '@/core/i18n/translate';
-
-const locale = Astro.locals.locale;
+const next = Astro.url.searchParams.get('next');
+const target = new URLSearchParams({ mode: 'register' });
+if (next && next.startsWith('/') && !next.startsWith('//')) target.set('next', next);
+return Astro.redirect(`/login?${target}`, 308);
 ---
-
-<BaseLayout title={translate(locale, 'nav.login')}>
-  <meta slot="head" http-equiv="refresh" content="0; url=/login" />
-  <p class="py-16 text-center text-neutral-500">
-    <a href="/login" class="underline">
-      {translate(locale, 'misc.registerSame')}
-    </a>
-  </p>
-</BaseLayout>

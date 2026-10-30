@@ -1,7 +1,513 @@
 /**
- * Copy for the redesigned landing screens. `en` must mirror `es`
- * (the type check fails otherwise).
+ * Copy for the redesigned landing screens (home, footer, auth, 404). `en`
+ * must mirror `es` (the type check fails otherwise).
+ *
+ * Claims stay inside what the product is today: a Stellar testnet demo
+ * designed for the CNV sandbox — no registrations, metrics or yields that
+ * the platform can't back with live data.
  */
-export const es = {};
+export const es = {
+  hero: {
+    chips: ['Diseñado para el sandbox CNV', 'USDC y XLM sobre Stellar', 'Testnet'],
+    title: 'Invertí en la economía real argentina',
+    lead: 'Campos, pymes y acciones tokenizados 1:1 con activos en custodia. Suscribís en USDC, seguís cada aporte on-chain y negociás tu posición en el mercado secundario.',
+    ctaInvest: 'Invertir',
+    ctaIssuer: 'Tokenizar mi empresa',
+    guarantee: 'Si una licitación no llega al mínimo, pedís el reembolso del 100% de tu aporte.',
+    readChip: 'Lectura on-chain',
+    nextChip: 'Liquidación en segundos',
+    refundFact: 'Reembolso si no hay mínimo',
+    refundFactBody: 'Recuperás el 100% de tu aporte: lo ejecuta el contrato.',
+  },
+  live: {
+    panelTitle: 'En vivo en Stellar testnet',
+    panelSubtitle: 'Licitaciones publicadas en la plataforma',
+    gaugeCaption: 'del tope total suscripto',
+    gaugeAria: '{pct} % del tope total de las licitaciones ya está suscripto',
+    offerings: 'Licitaciones',
+    offeringsUnit: 'publicadas',
+    reachedMin: 'Llegaron al mínimo',
+    reachedMinUnit: 'de {total}',
+    usdc: 'Suscripto en USDC',
+    xlm: 'Suscripto en XLM',
+    loading: 'Leyendo la red…',
+    error: 'No pudimos leer las licitaciones ahora.',
+    note: 'Datos del contrato de cada licitación, sin redondeos de marketing.',
+    viewAll: 'Ver licitaciones',
+  },
+  strip: {
+    title: 'La plataforma en números',
+    subtitle: 'Leídos en vivo de la red de prueba de Stellar',
+  },
+  offerings: {
+    eyebrow: 'Producto',
+    title: 'Licitaciones',
+    lead: 'Cada licitación tiene su expediente: emisor, CUIT, ISIN, custodia en Caja de Valores y el contrato Soroban que recibe los aportes.',
+    viewAll: 'Ver todas',
+    raised: 'Suscripto',
+    of: 'de {cap}',
+    minTicket: 'Mínimo por inversor',
+    term: 'Plazo',
+    daysLeft: '{days} días restantes',
+    closed: 'Cerrada',
+    tna: '{tna} % TNA',
+    open: 'Ver licitación',
+    empty: 'Todavía no hay licitaciones publicadas.',
+    emptyBody: 'Cuando un emisor abra una, la vas a ver acá con su progreso en tiempo real.',
+    status: {
+      open: 'Abierta',
+      closingSoon: 'Cierra pronto',
+      minReached: 'Mínimo alcanzado',
+      capFilled: 'Tope completo',
+      closed: 'Cerrada',
+      failed: 'No alcanzó el mínimo',
+    },
+  },
+  how: {
+    eyebrow: 'Cómo funciona',
+    title: 'De tu cuenta a tu primera renta, en cuatro pasos',
+    toggleLabel: 'Ver los pasos para',
+    investor: 'Inversores',
+    issuer: 'Emisores',
+    investorSteps: [
+      [
+        'Creá tu cuenta',
+        'Con email, Google o tu wallet Freighter. Confirmás el email y elegís quién guarda las claves.',
+      ],
+      [
+        'Validá tu identidad',
+        'Documento y prueba de vida con un proveedor de verificación. Una sola vez para todas las licitaciones.',
+      ],
+      [
+        'Suscribí en USDC',
+        'Elegís la licitación, ves el expediente y aportás. Cada aporte es una transacción que podés verificar.',
+      ],
+      [
+        'Cobrá y negociá',
+        'Al cierre recibís tus tokens. Cobrás la renta en tu wallet y podés vender en el mercado secundario.',
+      ],
+    ],
+    issuerSteps: [
+      [
+        'Estructuramos el vehículo',
+        'Armamos el fideicomiso o la serie del programa para tokenizar tus acciones o tu producción.',
+      ],
+      [
+        'Validamos el expediente',
+        'CUIT, ISIN, subcuenta en Caja de Valores y documentación legal quedan publicados con su hash.',
+      ],
+      [
+        'Abrís tu licitación',
+        'Definís mínimo, tope y plazo. Los inversores verificados suscriben desde cualquier lugar.',
+      ],
+      [
+        'Llegás al secundario',
+        'Si alcanzás el mínimo, se emiten los tokens y tu instrumento empieza a negociarse.',
+      ],
+    ],
+    guarantee: 'Si no se alcanza el mínimo, cada inversor recupera el 100% de lo que aportó.',
+  },
+  products: {
+    eyebrow: 'Productos',
+    title: 'Todo sobre un mismo riel',
+    lead: 'Mercado primario, secundario y renta, liquidados en Stellar. Lo que todavía es maqueta lo decimos.',
+    live: 'En vivo en testnet',
+    sandbox: 'Sandbox',
+    mockup: 'Maqueta',
+    items: [
+      [
+        'Licitaciones RWA',
+        'Suscribí deuda y acciones de empresas argentinas desde el primer día de la emisión.',
+      ],
+      ['Mercado secundario', 'Libro de órdenes para comprar y vender tus tokens cuando lo necesitás.'],
+      ['Merval tokenizado', 'tYPF, tGGAL y el panel líder: 1 token por acción custodiada.'],
+      ['Forwards y warrants', 'Producción a futuro (Código Civil y Comercial) y warrants de la Ley 9643.'],
+    ],
+  },
+  regulation: {
+    eyebrow: 'Regulación y custodia',
+    title: 'El marco del mercado de capitales, sobre un riel global',
+    lead: 'Diseñamos cada pieza para el sandbox de la CNV: el activo queda custodiado y el token lo representa 1:1. Es un diseño, no una habilitación ya otorgada.',
+    items: [
+      ['Sandbox CNV', 'RG 1150 · Ley 26.831. Programa global con series independientes por emisión.'],
+      [
+        'Caja de Valores',
+        'Custodia en subcuenta comitente: cada token respaldado 1:1 por el activo depositado.',
+      ],
+      [
+        'Contratos Soroban',
+        'Mínimo, tope, reembolsos y reparto de renta los ejecuta el contrato, no una planilla.',
+      ],
+      ['Compliance on-chain', 'Solo cuentas con KYC aprobado pueden recibir y negociar los tokens.'],
+    ],
+    note: 'Fractachain opera hoy en Stellar testnet: no hay dinero real en juego.',
+  },
+  issuers: {
+    eyebrow: 'Para emisores',
+    title: 'Tu empresa, a mercado sin cotizar en bolsa',
+    lead: 'Cotizar en BYMA exige costos y un tamaño que la mayoría de las empresas no alcanza. Con una licitación tokenizada llegás a inversores verificados de todo el mundo, con el expediente completo a la vista.',
+    cta: 'Tokenizar mi empresa',
+    points: [
+      [
+        'Costo de emisión menor',
+        'Series dentro de un mismo programa: cada emisión sucesiva sale más barata.',
+      ],
+      ['Inversores globales', 'Cualquier inversor con KYC aprobado puede suscribir en USDC.'],
+      ['Liquidez desde el día uno', 'Tus tokens nacen con libro de órdenes en el mercado secundario.'],
+    ],
+  },
+  security: {
+    eyebrow: 'Seguridad',
+    title: 'Tus activos, con las mismas reglas que un mercado tradicional',
+    items: [
+      [
+        'Verificación en dos pasos',
+        'Códigos TOTP con cualquier app de autenticación y códigos de recuperación.',
+      ],
+      [
+        'Tu wallet o la nuestra',
+        'Firmás con Freighter sin que la clave salga de tu navegador, o la custodiamos cifrada.',
+      ],
+      ['Identidad verificada', 'Nadie opera sin KYC: los contratos solo aceptan cuentas aprobadas.'],
+      ['Todo queda registrado', 'Cada aporte, reembolso y pago es una transacción pública en Stellar.'],
+    ],
+  },
+  ecosystem: {
+    eyebrow: 'Ecosistema',
+    title: 'En qué nos apoyamos',
+    lead: 'Red Stellar y contratos Soroban, USDC, wallets compatibles y la infraestructura del mercado de capitales argentino.',
+  },
+  faq: {
+    eyebrow: 'Preguntas frecuentes',
+    title: 'Lo que más nos preguntan',
+    items: [
+      [
+        '¿Qué estoy comprando cuando suscribo?',
+        'Un token que representa 1:1 una participación en el activo de la licitación (acciones, cuotapartes o deuda), según el expediente publicado en su ficha.',
+      ],
+      [
+        '¿Qué pasa si la licitación no llega al mínimo?',
+        'La licitación se cierra sin emitir tokens y podés pedir el reembolso del 100% de tu aporte desde la ficha. Lo ejecuta el contrato.',
+      ],
+      [
+        '¿Cuánto necesito para empezar?',
+        'Cada licitación define su mínimo por inversor. Lo ves en la ficha antes de suscribir.',
+      ],
+      [
+        '¿Quién guarda mis tokens?',
+        'Vos elegís: auto-custodia con Freighter (las claves nunca salen de tu navegador) o custodia de Fractachain con la clave cifrada.',
+      ],
+      [
+        '¿Puedo vender antes del vencimiento?',
+        'Sí, en el mercado secundario, si hay otro inversor que compre. La liquidez no está garantizada.',
+      ],
+      [
+        '¿Por qué tengo que verificar mi identidad?',
+        'Es un requisito del mercado de capitales (prevención de lavado). Los contratos solo aceptan cuentas con KYC aprobado.',
+      ],
+      [
+        '¿Hay dinero real en juego?',
+        'Todavía no: la plataforma corre en Stellar testnet. Los fondos son de prueba.',
+      ],
+    ],
+  },
+  cta: {
+    title: 'Empezá con tu cuenta',
+    lead: 'Crear la cuenta lleva un minuto. La verificación de identidad te la pedimos recién cuando vayas a invertir.',
+    primary: 'Crear cuenta',
+    secondary: 'Ver licitaciones',
+  },
+  risk: {
+    short: 'Invertir implica riesgos. Podés perder parte o todo lo invertido.',
+    long: 'Los rendimientos estimados o pasados no garantizan rendimientos futuros. La liquidez del mercado secundario no está garantizada. Leé el expediente de cada licitación antes de invertir.',
+  },
+  footer: {
+    blurb: 'Activos reales argentinos, tokenizados sobre Stellar.',
+    offerings: 'Licitaciones',
+    markets: 'Mercado',
+    portfolio: 'Portfolio',
+    account: 'Cuenta',
+    allOfferings: 'Todas las licitaciones',
+    howItWorks: 'Cómo funciona',
+    issuers: 'Para emisores',
+    secondary: 'Mercado secundario',
+    merval: 'Merval',
+    derivatives: 'Forwards y warrants',
+    dashboard: 'Inicio',
+    holdings: 'Mis inversiones',
+    wallet: 'Wallet',
+    security: 'Seguridad',
+    signIn: 'Ingresar',
+    console: 'Consola',
+    legalTitle: 'Aviso legal',
+    navLabel: 'Mapa del sitio',
+    testnet: 'Testnet',
+    rights: 'Fractachain',
+  },
+  auth: {
+    eyebrow: 'Tu cuenta',
+    title: 'Ingresá o creá tu cuenta',
+    subtitle: 'Es el mismo formulario: si el email no existe, creamos la cuenta.',
+    registerTitle: 'Creá tu cuenta',
+    registerSubtitle: 'Con tu email, Google o tu wallet. Si ya tenés cuenta, entrás con los mismos datos.',
+    name: 'Nombre',
+    nameHint: 'Solo la primera vez',
+    password: 'Contraseña',
+    passwordHint: 'Mínimo 6 caracteres',
+    kycNote: 'Después te pedimos elegir la custodia de tu wallet y verificar tu identidad antes de invertir.',
+    alreadyTitle: 'Ya estás adentro',
+    walletLabel: 'Tu wallet',
+    terms: 'Al continuar aceptás operar en un entorno de prueba (Stellar testnet).',
+    goHome: 'Ir al inicio',
+  },
+  notFound: {
+    code: 'Error 404',
+    secondary: 'Ver licitaciones',
+  },
+};
 
-export const en: typeof es = {};
+export const en: typeof es = {
+  hero: {
+    chips: ['Designed for the CNV sandbox', 'USDC and XLM on Stellar', 'Testnet'],
+    title: "Invest in Argentina's real economy",
+    lead: 'Farms, SMEs and shares tokenized 1:1 against assets in custody. Subscribe in USDC, follow every contribution on-chain and trade your position on the secondary market.',
+    ctaInvest: 'Invest',
+    ctaIssuer: 'Tokenize my company',
+    guarantee: 'If an offering misses its minimum, you can claim a 100% refund of your contribution.',
+    readChip: 'Read on-chain',
+    nextChip: 'Settles in seconds',
+    refundFact: 'Refund if the minimum is missed',
+    refundFactBody: 'You get 100% of your contribution back: the contract executes it.',
+  },
+  live: {
+    panelTitle: 'Live on Stellar testnet',
+    panelSubtitle: 'Offerings published on the platform',
+    gaugeCaption: 'of the total cap subscribed',
+    gaugeAria: '{pct}% of the offerings’ total cap is already subscribed',
+    offerings: 'Offerings',
+    offeringsUnit: 'published',
+    reachedMin: 'Reached the minimum',
+    reachedMinUnit: 'of {total}',
+    usdc: 'Subscribed in USDC',
+    xlm: 'Subscribed in XLM',
+    loading: 'Reading the network…',
+    error: "We couldn't read the offerings right now.",
+    note: 'Read from each offering’s contract, no marketing rounding.',
+    viewAll: 'See offerings',
+  },
+  strip: {
+    title: 'The platform in numbers',
+    subtitle: 'Read live from the Stellar test network',
+  },
+  offerings: {
+    eyebrow: 'Product',
+    title: 'Offerings',
+    lead: 'Every offering has its file: issuer, tax ID, ISIN, custody at Caja de Valores and the Soroban contract that receives contributions.',
+    viewAll: 'See all',
+    raised: 'Subscribed',
+    of: 'of {cap}',
+    minTicket: 'Minimum per investor',
+    term: 'Term',
+    daysLeft: '{days} days left',
+    closed: 'Closed',
+    tna: '{tna}% APR',
+    open: 'See offering',
+    empty: 'No offerings published yet.',
+    emptyBody: 'When an issuer opens one, you will see it here with its live progress.',
+    status: {
+      open: 'Open',
+      closingSoon: 'Closing soon',
+      minReached: 'Minimum reached',
+      capFilled: 'Cap filled',
+      closed: 'Closed',
+      failed: 'Missed the minimum',
+    },
+  },
+  how: {
+    eyebrow: 'How it works',
+    title: 'From sign-up to your first payout, in four steps',
+    toggleLabel: 'Show the steps for',
+    investor: 'Investors',
+    issuer: 'Issuers',
+    investorSteps: [
+      [
+        'Create your account',
+        'With email, Google or your Freighter wallet. Confirm your email and choose who keeps the keys.',
+      ],
+      [
+        'Verify your identity',
+        'ID document and liveness check with a verification provider. Once for every offering.',
+      ],
+      [
+        'Subscribe in USDC',
+        'Pick an offering, read its file and contribute. Every contribution is a transaction you can verify.',
+      ],
+      [
+        'Earn and trade',
+        'At closing you receive your tokens. Payouts land in your wallet and you can sell on the secondary market.',
+      ],
+    ],
+    issuerSteps: [
+      [
+        'We structure the vehicle',
+        'We set up the trust or the program series to tokenize your shares or your production.',
+      ],
+      [
+        'We validate the file',
+        'Tax ID, ISIN, Caja de Valores sub-account and legal documents are published with their hash.',
+      ],
+      [
+        'You open your offering',
+        'Set the minimum, cap and term. Verified investors subscribe from anywhere.',
+      ],
+      [
+        'You reach the secondary market',
+        'If you hit the minimum, tokens are issued and your instrument starts trading.',
+      ],
+    ],
+    guarantee: 'If the minimum is not reached, every investor gets back 100% of what they contributed.',
+  },
+  products: {
+    eyebrow: 'Products',
+    title: 'Everything on one rail',
+    lead: 'Primary market, secondary market and payouts, settled on Stellar. What is still a mockup, we say so.',
+    live: 'Live on testnet',
+    sandbox: 'Sandbox',
+    mockup: 'Mockup',
+    items: [
+      ['RWA offerings', 'Subscribe to debt and shares of Argentine companies from day one of the issue.'],
+      ['Secondary market', 'An order book to buy and sell your tokens when you need to.'],
+      ['Tokenized Merval', 'tYPF, tGGAL and the leading panel: 1 token per share in custody.'],
+      ['Forwards and warrants', 'Future production (Civil and Commercial Code) and Law 9643 warrants.'],
+    ],
+  },
+  regulation: {
+    eyebrow: 'Regulation and custody',
+    title: 'Capital-markets rules, on a global rail',
+    lead: 'Every piece is designed for the CNV sandbox: the asset stays in custody and the token represents it 1:1. It is a design, not a license already granted.',
+    items: [
+      ['CNV sandbox', 'RG 1150 · Law 26,831. A global program with an independent series per issue.'],
+      ['Caja de Valores', 'Custody in a client sub-account: each token backed 1:1 by the deposited asset.'],
+      [
+        'Soroban contracts',
+        'Minimum, cap, refunds and payouts are executed by the contract, not a spreadsheet.',
+      ],
+      ['On-chain compliance', 'Only accounts with approved KYC can receive and trade the tokens.'],
+    ],
+    note: 'Fractachain runs on Stellar testnet today: no real money is at stake.',
+  },
+  issuers: {
+    eyebrow: 'For issuers',
+    title: 'Take your company to market without listing on an exchange',
+    lead: 'Listing on BYMA takes costs and a size most companies never reach. A tokenized offering puts you in front of verified investors worldwide, with the full file in plain sight.',
+    cta: 'Tokenize my company',
+    points: [
+      ['Lower issuance cost', 'Series within one program: every new issue costs less.'],
+      ['Global investors', 'Any investor with approved KYC can subscribe in USDC.'],
+      ['Liquidity from day one', 'Your tokens are born with an order book on the secondary market.'],
+    ],
+  },
+  security: {
+    eyebrow: 'Security',
+    title: 'Your assets, under the same rules as a traditional market',
+    items: [
+      ['Two-step verification', 'TOTP codes with any authenticator app, plus recovery codes.'],
+      [
+        'Your wallet or ours',
+        'Sign with Freighter without the key leaving your browser, or let us keep it encrypted.',
+      ],
+      ['Verified identity', 'Nobody trades without KYC: contracts only accept approved accounts.'],
+      ['Everything is recorded', 'Every contribution, refund and payout is a public Stellar transaction.'],
+    ],
+  },
+  ecosystem: {
+    eyebrow: 'Ecosystem',
+    title: 'What we build on',
+    lead: 'The Stellar network and Soroban contracts, USDC, compatible wallets and Argentina’s capital-markets infrastructure.',
+  },
+  faq: {
+    eyebrow: 'FAQ',
+    title: 'What people ask us most',
+    items: [
+      [
+        'What am I buying when I subscribe?',
+        'A token that represents 1:1 a stake in the offering’s asset (shares, trust units or debt), as described in the file on its page.',
+      ],
+      [
+        'What if the offering misses its minimum?',
+        'The offering closes without issuing tokens and you can claim a 100% refund from its page. The contract executes it.',
+      ],
+      [
+        'How much do I need to start?',
+        'Each offering sets its minimum per investor. You see it on the page before subscribing.',
+      ],
+      [
+        'Who keeps my tokens?',
+        'You choose: self-custody with Freighter (keys never leave your browser) or Fractachain custody with the key encrypted.',
+      ],
+      [
+        'Can I sell before maturity?',
+        'Yes, on the secondary market, if another investor buys. Liquidity is not guaranteed.',
+      ],
+      [
+        'Why do I need to verify my identity?',
+        'It is a capital-markets requirement (anti-money laundering). Contracts only accept accounts with approved KYC.',
+      ],
+      ['Is real money at stake?', 'Not yet: the platform runs on Stellar testnet. Funds are test funds.'],
+    ],
+  },
+  cta: {
+    title: 'Start with your account',
+    lead: 'Creating an account takes a minute. We only ask you to verify your identity when you are about to invest.',
+    primary: 'Create account',
+    secondary: 'See offerings',
+  },
+  risk: {
+    short: 'Investing involves risk. You can lose part or all of your investment.',
+    long: 'Estimated or past returns do not guarantee future returns. Secondary-market liquidity is not guaranteed. Read each offering’s file before investing.',
+  },
+  footer: {
+    blurb: 'Argentine real-world assets, tokenized on Stellar.',
+    offerings: 'Offerings',
+    markets: 'Markets',
+    portfolio: 'Portfolio',
+    account: 'Account',
+    allOfferings: 'All offerings',
+    howItWorks: 'How it works',
+    issuers: 'For issuers',
+    secondary: 'Secondary market',
+    merval: 'Merval',
+    derivatives: 'Forwards and warrants',
+    dashboard: 'Home',
+    holdings: 'My investments',
+    wallet: 'Wallet',
+    security: 'Security',
+    signIn: 'Sign in',
+    console: 'Console',
+    legalTitle: 'Legal notice',
+    navLabel: 'Site map',
+    testnet: 'Testnet',
+    rights: 'Fractachain',
+  },
+  auth: {
+    eyebrow: 'Your account',
+    title: 'Sign in or create your account',
+    subtitle: 'Same form: if the email is new, we create the account.',
+    registerTitle: 'Create your account',
+    registerSubtitle:
+      'With your email, Google or your wallet. If you already have an account, use the same details.',
+    name: 'Name',
+    nameHint: 'First time only',
+    password: 'Password',
+    passwordHint: 'At least 6 characters',
+    kycNote: 'Next we ask you to choose your wallet custody and verify your identity before investing.',
+    alreadyTitle: "You're signed in",
+    walletLabel: 'Your wallet',
+    terms: 'By continuing you agree to operate in a test environment (Stellar testnet).',
+    goHome: 'Go to home',
+  },
+  notFound: {
+    code: 'Error 404',
+    secondary: 'See offerings',
+  },
+};

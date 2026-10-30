@@ -1,0 +1,49 @@
+---
+import { ArrowLeftRight, ArrowUpRight, BarChart3, Layers, Wheat } from 'lucide-react';
+import { messagesFor } from '@/core/i18n/translate';
+import SectionHeading from './SectionHeading.astro';
+
+const { landing } = messagesFor(Astro.locals.locale);
+const p = landing.products;
+const meta = [
+  { href: '/market', icon: Layers, chip: 'live' as const, tone: 'chip-good' },
+  { href: '/orderbook', icon: ArrowLeftRight, chip: 'sandbox' as const, tone: 'chip-sky' },
+  { href: '/stocks', icon: BarChart3, chip: 'mockup' as const, tone: 'chip-neutral' },
+  { href: '/forwards', icon: Wheat, chip: 'mockup' as const, tone: 'chip-neutral' },
+];
+---
+
+<section aria-labelledby="products-title" class="space-y-6">
+  <SectionHeading id="products-title" eyebrow={p.eyebrow} title={p.title} lead={p.lead} />
+  <ul class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {p.items.map(([title, body], i) => {
+      const m = meta[i];
+      const Icon = m.icon;
+      return (
+        <li class="card card-pad relative flex min-w-0 flex-col transition-shadow hover:shadow-lift">
+          <div class="flex items-start justify-between gap-3">
+            <span
+              class="grid h-10 w-10 place-items-center rounded-xl bg-sky-soft text-ink"
+              aria-hidden="true"
+            >
+              <Icon className="h-[18px] w-[18px]" />
+            </span>
+            <span class="arrow-btn" aria-hidden="true">
+              <ArrowUpRight className="h-4 w-4" />
+            </span>
+          </div>
+          <h3 class="mt-6 text-[17px] font-medium text-ink">
+            <a
+              href={m.href}
+              class="after:absolute after:inset-0 after:rounded-card focus-visible:outline-none"
+            >
+              {title}
+            </a>
+          </h3>
+          <p class="mt-1.5 flex-1 text-sm text-ink-2">{body}</p>
+          <span class={`chip ${m.tone} mt-5 w-fit`}>{p[m.chip]}</span>
+        </li>
+      );
+    })}
+  </ul>
+</section>

@@ -1,7 +1,7 @@
-import { useState, type SubmitEvent } from 'react';
-import { Wallet } from 'lucide-react';
+import { useEffect, useId, useState, type SubmitEvent } from 'react';
+import { ArrowRight, Wallet } from 'lucide-react';
 import { withIsland } from '@/components/island/withIsland';
-import BrandLogo from '@/components/ui/BrandLogo';
+import { Notice, StatusChip } from '@/components/ui/kit';
 import WalletAddress from '@/components/ui/WalletAddress';
 import type { LoginResult } from '@/core/auth/AuthService';
 import { afterAuthPath } from '@/core/auth/onboardingPath';
@@ -10,6 +10,7 @@ import { container } from '@/core/container';
 import { errorMessage } from '@/core/errors';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/hooks/useI18n';
+import AuthShell from './AuthShell';
 import GoogleLoginButton from './GoogleLoginButton';
 
 const { navigator } = container;
@@ -17,11 +18,16 @@ const { navigator } = container;
 function LoginPage() {
   const { user, loginWithEmail, loginWithWallet, linkFreighterWallet, isLoading, logout } = useAuth();
   const { t } = useI18n();
+  const ids = useId();
+  const [register, setRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+
+  // `/login?mode=register` (and the old /register route) opens the sign-up wording.
+  useEffect(() => setRegister(navigator.searchParam('mode') === 'register'), []);
 
   const goAfterAuth = (u: SessionUser) => navigator.navigate(afterAuthPath(u, navigator.searchParam('next')));
   /** A 2FA account stops here: the dialog (mounted in the Navbar) finishes the login. */
@@ -33,7 +39,8 @@ function LoginPage() {
     e.preventDefault();
     setError('');
     try {
-      onResult(await loginWithEmail(email, password, name));
+      // The name only matters when the account is created: signing in with it would rename the account.
+      onResult(await loginWithEmail(email, password, register ? name : ''));
     } catch (err) {
       setError(errorMessage(err, t('misc.loginFail')));
     }
@@ -50,125 +57,143 @@ function LoginPage() {
 
   if (user) {
     return (
-      <div className="max-w-md mx-auto py-16 space-y-6 text-center">
-        <h1 className="text-2xl font-extrabold font-display">{t('auth.alreadyIn')}</h1>
-        <p className="text-neutral-600">{user.email}</p>
-        {user.kycStatus !== 'APPROVED' && (
-          <div className="p-4 rounded-2xl border border-amber-300/60 bg-amber-50 text-left">
-            <p className="text-sm font-bold">{t('auth.kycNoticeTitle')}</p>
-            <p className="text-xs text-neutral-600 mt-1">{t('auth.kycNoticeBody')}</p>
+      <AuthShell title={t('landing.auth.alreadyTitle')} subtitle={user.email}>
+        <div className="space-y-4">
+          {user.kycStatus !== 'APPROVED' && (
+            <div className="flex items-start gap-3 rounded-xl bg-sky-soft px-4 py-3">
+              <StatusChip tone="sky">{t(`shell.kyc.${user.kycStatus}`)}</StatusChip>
+              <p className="text-[13px] text-ink-2">{t('landing.auth.kycNote')}</p>
+            </div>
+          )}
+          <div className="rounded-xl border border-line bg-surface-2 px-4 py-3">
+            <p className="eyebrow mb-1.5">{t('landing.auth.walletLabel')}</p>
+            <WalletAddress address={user.publicKey} />
           </div>
-        )}
-        <div className="p-4 rounded-2xl crystal-card text-left space-y-1">
-          <p className="text-[11px] uppercase tracking-wider text-neutral-500 font-display font-bold">
-            {t('nav.yourWallet')}
-          </p>
-          <WalletAddress address={user.publicKey} />
-        </div>
-        {user.custodyMode !== 'SELF' && (
-          <button
-            type="button"
-            onClick={() =>
-              linkFreighterWallet()
-                .then(() => setNotice(t('auth.linkWalletHint')))
-                .catch((err: unknown) => setError(errorMessage(err)))
-            }
-            disabled={isLoading}
-            className="px-6 py-3 rounded-2xl border border-black/15 bg-white font-display font-bold"
-          >
-            {t('auth.linkWallet')}
+          {notice && <Notice tone="good">{notice}</Notice>}
+          {error && <Notice tone="bad">{error}</Notice>}
+          <button type="button" onClick={() => goAfterAuth(user)} className="btn btn-primary btn-lg w-full">
+            {t('auth.continue')}
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </button>
-        )}
-        {notice && <p className="text-sm text-green-700">{notice}</p>}
-        {error && <p className="text-sm text-red-700">{error}</p>}
-        <button
-          type="button"
-          onClick={() => goAfterAuth(user)}
-          className="px-6 py-3 rounded-2xl bg-black text-white font-display font-bold"
-        >
-          {t('auth.continue')}
-        </button>
-        <button type="button" onClick={logout} className="block mx-auto text-sm text-neutral-500">
-          {t('auth.logout')}
-        </button>
-      </div>
+          {user.custodyMode !== 'SELF' && (
+            <button
+              type="button"
+              onClick={() =>
+                linkFreighterWallet()
+                  .then(() => setNotice(t('auth.linkWalletHint')))
+                  .catch((err: unknown) => setError(errorMessage(err)))
+              }
+              disabled={isLoading}
+              className="btn btn-secondary w-full"
+            >
+              {t('auth.linkWallet')}
+            </button>
+          )}
+          <button type="button" onClick={logout} className="btn btn-ghost w-full">
+            {t('auth.logout')}
+          </button>
+        </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="max-w-md mx-auto py-12 space-y-8">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-extrabold font-display">{t('auth.title')}</h1>
-        <p className="text-neutral-600">{t('auth.subtitle')}</p>
-      </div>
-
-      <div className="p-4 rounded-2xl border border-amber-300/60 bg-amber-50 text-left">
-        <p className="text-sm font-bold">{t('auth.kycNoticeTitle')}</p>
-        <p className="text-xs text-neutral-600 mt-1">{t('auth.kycNoticeBody')}</p>
-      </div>
-
-      <div className="p-6 rounded-3xl crystal-card space-y-5">
-        <GoogleLoginButton className="w-full py-3" onSuccess={goAfterAuth} />
+    <AuthShell
+      aside
+      eyebrow={t('landing.auth.eyebrow')}
+      title={register ? t('landing.auth.registerTitle') : t('landing.auth.title')}
+      subtitle={register ? t('landing.auth.registerSubtitle') : t('landing.auth.subtitle')}
+    >
+      <div className="grid gap-2.5 sm:grid-cols-2">
+        <GoogleLoginButton className="w-full" onSuccess={goAfterAuth} />
         <button
           type="button"
           onClick={handleWallet}
           disabled={isLoading}
-          className="w-full py-3 rounded-2xl border border-black/15 bg-white font-display font-bold flex items-center justify-center gap-2 hover:bg-black/[0.03] transition-colors"
+          className="btn btn-secondary w-full"
         >
-          <BrandLogo
-            slug="freighter"
-            alt="Freighter"
-            className="h-4 w-auto object-contain"
-            fallback={<Wallet size={18} />}
-          />
+          <Wallet className="h-4 w-4" aria-hidden="true" />
           {isLoading ? t('auth.walletLoading') : t('auth.wallet')}
         </button>
-        {error && <p className="text-sm text-red-700">{error}</p>}
-        <p className="text-center text-xs text-neutral-500">{t('auth.orEmail')}</p>
-        <form onSubmit={handleEmail} className="space-y-3">
+      </div>
+
+      <div className="my-6 flex items-center gap-3 text-xs text-muted" aria-hidden="true">
+        <span className="h-px flex-1 bg-line" />
+        {t('auth.orEmail')}
+        <span className="h-px flex-1 bg-line" />
+      </div>
+
+      <form onSubmit={handleEmail} className="space-y-4">
+        {register && (
+          <div>
+            <label htmlFor={`${ids}-name`} className="label">
+              {t('landing.auth.name')}{' '}
+              <span className="font-normal text-muted">· {t('landing.auth.nameHint')}</span>
+            </label>
+            <input
+              id={`${ids}-name`}
+              type="text"
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="input"
+            />
+          </div>
+        )}
+        <div>
+          <label htmlFor={`${ids}-email`} className="label">
+            {t('auth.email')}
+          </label>
           <input
-            type="text"
-            autoComplete="name"
-            placeholder={t('auth.name')}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2.5 rounded-xl border border-black/10 bg-white"
-          />
-          <input
+            id={`${ids}-email`}
             required
             type="email"
             autoComplete="email"
-            placeholder={t('auth.email')}
+            inputMode="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2.5 rounded-xl border border-black/10 bg-white"
+            className="input"
           />
+        </div>
+        <div>
+          <div className="flex items-baseline justify-between gap-3">
+            <label htmlFor={`${ids}-password`} className="label">
+              {t('landing.auth.password')}
+            </label>
+            {!register && (
+              <a
+                href="/forgot-password"
+                className="mb-1.5 text-xs text-ink-2 underline-offset-2 hover:text-ink hover:underline"
+              >
+                {t('pwd.forgotLink')}
+              </a>
+            )}
+          </div>
           <input
+            id={`${ids}-password`}
             required
             minLength={6}
             type="password"
-            autoComplete="current-password"
-            placeholder={t('auth.password')}
+            autoComplete={register ? 'new-password' : 'current-password'}
+            aria-describedby={`${ids}-password-hint`}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3 py-2.5 rounded-xl border border-black/10 bg-white"
+            className="input"
           />
-          {error && <p className="text-sm text-red-700">{error}</p>}
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-3 rounded-2xl bg-black text-white font-display font-bold"
-          >
-            {isLoading ? t('auth.entering') : t('auth.continue')}
-          </button>
-          <p className="text-center">
-            <a href="/forgot-password" className="text-xs text-neutral-600 underline">
-              {t('pwd.forgotLink')}
-            </a>
+          <p id={`${ids}-password-hint`} className="mt-1.5 text-xs text-muted">
+            {t('landing.auth.passwordHint')}
           </p>
-        </form>
-      </div>
-    </div>
+        </div>
+        {error && <Notice tone="bad">{error}</Notice>}
+        <button type="submit" disabled={isLoading} className="btn btn-primary btn-lg w-full">
+          {isLoading ? t('auth.entering') : t('auth.continue')}
+          {!isLoading && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
+        </button>
+      </form>
+
+      <p className="mt-6 text-xs text-muted">{t('landing.auth.kycNote')}</p>
+      <p className="mt-1 text-xs text-muted">{t('landing.auth.terms')}</p>
+    </AuthShell>
   );
 }
 

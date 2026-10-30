@@ -31,6 +31,7 @@ module.exports = {
         sky: { DEFAULT: token('sky'), strong: token('sky-strong'), soft: token('sky-soft') },
         peach: { DEFAULT: token('peach'), soft: token('peach-soft') },
         butter: { DEFAULT: token('butter'), soft: token('butter-soft') },
+        'on-pastel': token('on-pastel'),
         good: { DEFAULT: token('good'), soft: token('good-soft') },
         warn: { DEFAULT: token('warn'), soft: token('warn-soft') },
         bad: { DEFAULT: token('bad'), soft: token('bad-soft') },

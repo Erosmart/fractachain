@@ -1,6 +1,7 @@
-import { useEffect, useState, type SubmitEvent } from 'react';
+import { useEffect, useId, useState, type SubmitEvent } from 'react';
 import { KeyRound } from 'lucide-react';
 import { withIsland } from '@/components/island/withIsland';
+import { Notice } from '@/components/ui/kit';
 import { afterAuthPath } from '@/core/auth/onboardingPath';
 import { passwordProblem } from '@/core/auth/passwordRules';
 import { container } from '@/core/container';
@@ -8,6 +9,7 @@ import { errorMessage } from '@/core/errors';
 import { consumeUrlToken } from '@/core/security/otpauth';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/hooks/useI18n';
+import AuthShell from './AuthShell';
 
 const { navigator } = container;
 
@@ -15,6 +17,7 @@ const { navigator } = container;
 function ResetPasswordPage() {
   const { resetPassword, isLoading } = useAuth();
   const { t } = useI18n();
+  const id = useId();
   const [token, setToken] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
   const [password, setPassword] = useState('');
@@ -45,62 +48,57 @@ function ResetPasswordPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto py-12 space-y-6">
-      <div className="text-center space-y-2">
-        <KeyRound className="w-9 h-9 mx-auto" aria-hidden />
-        <h1 className="text-3xl font-extrabold font-display">{t('pwd.resetTitle')}</h1>
-        <p className="text-neutral-600">{t('pwd.resetLead')}</p>
-      </div>
-      <div className="p-6 rounded-3xl crystal-card space-y-4">
-        {checked && !token ? (
-          <div className="space-y-3 text-center">
-            <p className="text-sm text-red-700" role="alert">
-              {t('pwd.missingToken')}
-            </p>
-            <a href="/forgot-password" className="text-sm font-display font-bold underline">
-              {t('pwd.forgotTitle')}
-            </a>
-          </div>
-        ) : (
-          <form onSubmit={submit} className="space-y-3">
+    <AuthShell
+      icon={<KeyRound className="h-5 w-5" />}
+      title={t('pwd.resetTitle')}
+      subtitle={t('pwd.resetLead')}
+    >
+      {checked && !token ? (
+        <div className="space-y-4">
+          <Notice tone="bad">{t('pwd.missingToken')}</Notice>
+          <a href="/forgot-password" className="btn btn-secondary w-full">
+            {t('pwd.forgotTitle')}
+          </a>
+        </div>
+      ) : (
+        <form onSubmit={submit} className="space-y-4">
+          <div>
+            <label htmlFor={`${id}-new`} className="label">
+              {t('pwd.newPassword')}
+            </label>
             <input
+              id={`${id}-new`}
               required
               minLength={8}
               type="password"
               autoComplete="new-password"
-              placeholder={t('pwd.newPassword')}
-              aria-label={t('pwd.newPassword')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-black/10 bg-white"
+              className="input"
             />
+          </div>
+          <div>
+            <label htmlFor={`${id}-repeat`} className="label">
+              {t('pwd.repeatPassword')}
+            </label>
             <input
+              id={`${id}-repeat`}
               required
               minLength={8}
               type="password"
               autoComplete="new-password"
-              placeholder={t('pwd.repeatPassword')}
-              aria-label={t('pwd.repeatPassword')}
               value={repeat}
               onChange={(e) => setRepeat(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-black/10 bg-white"
+              className="input"
             />
-            {error && (
-              <p className="text-sm text-red-700" role="alert">
-                {error}
-              </p>
-            )}
-            <button
-              type="submit"
-              disabled={isLoading || !token}
-              className="w-full py-3 rounded-2xl bg-black text-white font-display font-bold disabled:opacity-50"
-            >
-              {isLoading ? t('pwd.saving') : t('pwd.save')}
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
+          </div>
+          {error && <Notice tone="bad">{error}</Notice>}
+          <button type="submit" disabled={isLoading || !token} className="btn btn-primary btn-lg w-full">
+            {isLoading ? t('pwd.saving') : t('pwd.save')}
+          </button>
+        </form>
+      )}
+    </AuthShell>
   );
 }
 

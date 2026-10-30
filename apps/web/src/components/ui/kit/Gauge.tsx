@@ -21,10 +21,16 @@ const TICKS = 64;
 /** Arc width in degrees, centered on 12 o'clock. */
 const SWEEP = 230;
 
+/** Rounded so server and browser render identical attributes (no hydration mismatch). */
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
 function polar(cx: number, cy: number, r: number, deg: number) {
   const rad = ((deg - 90) * Math.PI) / 180;
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  return { x: r2(cx + r * Math.cos(rad)), y: r2(cy + r * Math.sin(rad)) };
 }
+
+const VIEW_W = 300;
+const VIEW_H = 240;
 
 /**
  * Radial tick gauge with a big light numeral in the middle. Ticks up to the
@@ -65,7 +71,7 @@ export function Gauge({
       role="img"
       aria-label={ariaLabel}
     >
-      <svg viewBox="0 0 300 230" className="block w-full" aria-hidden="true">
+      <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="block w-full" aria-hidden="true">
         {ticks.map((tk) => (
           <line
             key={tk.key}
@@ -88,11 +94,20 @@ export function Gauge({
           </span>
         )}
       </div>
-      {(minLabel !== undefined || maxLabel !== undefined) && (
-        <div className="absolute inset-x-[6%] bottom-[6%] flex justify-between text-[11px] text-ink-2 tnum">
-          <span>{minLabel}</span>
-          <span>{maxLabel}</span>
-        </div>
+      {[
+        { label: minLabel, at: polar(cx, cy, 128, -SWEEP / 2) },
+        { label: maxLabel, at: polar(cx, cy, 128, SWEEP / 2) },
+      ].map(({ label, at }, n) =>
+        label === undefined ? null : (
+          // Just under each end of the arc.
+          <span
+            key={n}
+            className="absolute -translate-x-1/2 whitespace-nowrap text-[11px] text-ink-2 tnum"
+            style={{ left: `${(at.x / VIEW_W) * 100}%`, top: `${((at.y + 12) / VIEW_H) * 100}%` }}
+          >
+            {label}
+          </span>
+        ),
       )}
     </figure>
   );

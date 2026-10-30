@@ -1,0 +1,35 @@
+---
+import { Plus } from 'lucide-react';
+import { messagesFor } from '@/core/i18n/translate';
+
+const { landing } = messagesFor(Astro.locals.locale);
+const f = landing.faq;
+---
+
+<section aria-labelledby="faq-title" class="grid gap-8 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
+  <div>
+    <p class="eyebrow mb-2">{f.eyebrow}</p>
+    <h2
+      id="faq-title"
+      class="text-[28px] font-normal leading-tight tracking-[-0.025em] text-ink sm:text-[36px]"
+    >
+      {f.title}
+    </h2>
+  </div>
+  <div class="card divide-y divide-line px-5 sm:px-6">
+    {f.items.map(([q, a]) => (
+      <details class="faq group py-1">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 py-4 text-[15px] font-medium text-ink [&::-webkit-details-marker]:hidden">
+          {q}
+          <span
+            class="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-sky-soft/70 text-ink transition-transform group-open:rotate-45"
+            aria-hidden="true"
+          >
+            <Plus className="h-4 w-4" />
+          </span>
+        </summary>
+        <p class="pb-5 pr-10 text-sm text-ink-2">{a}</p>
+      </details>
+    ))}
+  </div>
+</section>

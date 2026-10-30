@@ -26,9 +26,12 @@ export default function LiveContractLink({ kind }: { kind: 'forward' | 'warrant'
   if (!id) return null;
 
   return (
-    <p className="text-xs font-mono text-neutral-600 break-all">
+    <p className="break-all text-xs text-ink-2">
       {t('misc.testnetInstance')}{' '}
-      <ExternalLink href={explorerContract(id)} className="underline">
+      <ExternalLink
+        href={explorerContract(id)}
+        className="font-mono text-ink underline decoration-line-strong underline-offset-2 hover:decoration-ink"
+      >
         {id}
       </ExternalLink>
     </p>

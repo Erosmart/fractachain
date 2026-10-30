@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Notice } from '@/components/ui/kit';
 import type { SessionUser } from '@/core/auth/SessionUser';
 import { errorMessage } from '@/core/errors';
 import { useAuth } from '@/hooks/useAuth';
@@ -8,15 +9,9 @@ interface GoogleLoginButtonProps {
   label?: string;
   onSuccess?: (user: SessionUser) => void;
   className?: string;
-  variant?: 'light' | 'dark';
 }
 
-export default function GoogleLoginButton({
-  label,
-  onSuccess,
-  className = '',
-  variant = 'light',
-}: GoogleLoginButtonProps) {
+export default function GoogleLoginButton({ label, onSuccess, className = '' }: GoogleLoginButtonProps) {
   const { loginWithGoogle, isLoading } = useAuth();
   const { t } = useI18n();
   const [error, setError] = useState('');
@@ -38,14 +33,10 @@ export default function GoogleLoginButton({
         type="button"
         disabled={isLoading}
         onClick={handleLogin}
-        className={`flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl font-medium text-xs transition-all shadow-sm transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed ${
-          variant === 'light'
-            ? 'bg-white hover:bg-gray-50 text-gray-800 border border-gray-300 shadow-md'
-            : 'bg-[#141b2c] hover:bg-[#1a2338] text-white border border-gray-700/80 shadow-inner'
-        } ${className}`}
+        className={`btn btn-secondary ${className}`}
       >
-        {/* Official Google G Logo SVG */}
-        <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden>
+        {/* Official Google "G" (brand colors are part of the mark). */}
+        <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
           <path
             fill="#4285F4"
             d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
@@ -65,7 +56,11 @@ export default function GoogleLoginButton({
         </svg>
         <span>{isLoading ? t('auth.googleLoading') : label || t('auth.google')}</span>
       </button>
-      {error ? <p className="text-xs text-red-700 text-center mt-2">{error}</p> : null}
+      {error ? (
+        <Notice tone="bad" className="mt-2">
+          {error}
+        </Notice>
+      ) : null}
     </>
   );
 }
