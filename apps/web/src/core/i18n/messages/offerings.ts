@@ -6,7 +6,7 @@ export const es = {
   kicker: 'Mercado primario',
   title: 'Licitaciones',
   subtitle:
-    'Empresas argentinas que se financian emitiendo acciones tokenizadas 1:1. Suscribís en USDC; si no se llega al mínimo, recuperás el 100 % de tu aporte.',
+    'Productores y empresas argentinas que financian su campaña o su crecimiento con una licitación tokenizada. Suscribís en USDC; si no se llega al mínimo, recuperás el 100 % de tu aporte.',
   demoNotice: 'Demo en Stellar testnet: los aportes usan USDC y XLM de prueba, sin valor real.',
   count: { one: '{n} licitación', many: '{n} licitaciones' },
   loading: 'Cargando licitaciones…',
@@ -63,8 +63,9 @@ export const es = {
     regulated: 'Expediente CNV {id}',
     why: {
       title: 'Por qué invertir',
-      backingTitle: 'Respaldo 1:1',
-      backing: 'Cada token está respaldado por una acción inmovilizada en Caja de Valores.',
+      backingTitle: 'Respaldo 1:1 (diseño)',
+      backing:
+        'Cada token está pensado para representar 1:1 el activo de la licitación, custodiado por un tercero. En testnet la custodia todavía no está operativa.',
       refundTitle: 'El mínimo lo garantiza el contrato',
       refund: 'Si la licitación no llega al mínimo, el contrato te devuelve el 100 % de tu aporte.',
       settleTitle: 'Liquidación on-chain',
@@ -337,7 +338,7 @@ export const en: typeof es = {
   kicker: 'Primary market',
   title: 'Offerings',
   subtitle:
-    'Argentine companies raising capital with 1:1 tokenized shares. You subscribe in USDC; if the minimum is not reached, you get 100% of your contribution back.',
+    'Argentine producers and companies funding their season or their growth with a tokenized offering. You subscribe in USDC; if the minimum is not reached, you get 100% of your contribution back.',
   demoNotice: 'Stellar testnet demo: contributions use test USDC and XLM with no real value.',
   count: { one: '{n} offering', many: '{n} offerings' },
   loading: 'Loading offerings…',
@@ -394,8 +395,9 @@ export const en: typeof es = {
     regulated: 'CNV file {id}',
     why: {
       title: 'Why invest',
-      backingTitle: '1:1 backing',
-      backing: 'Each token is backed by a share immobilized at Caja de Valores.',
+      backingTitle: '1:1 backing (design)',
+      backing:
+        "Each token is designed to represent the offering's asset 1:1, held by a third-party custodian. On testnet the custody is not operational yet.",
       refundTitle: 'The minimum is enforced by the contract',
       refund: 'If the offering does not reach its minimum, the contract returns 100% of your contribution.',
       settleTitle: 'On-chain settlement',

@@ -43,6 +43,7 @@ export function formatLegalDate(iso: string, locale: Locale): string {
 export const PUBLIC_PATHS: readonly string[] = [
   '/',
   '/market',
+  '/issuers',
   '/stocks',
   '/forwards',
   '/warrants',

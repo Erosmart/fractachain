@@ -16,7 +16,7 @@ const columns = [
     links: [
       { href: '/market', label: f.allOfferings },
       { href: '/#how-it-works', label: f.howItWorks },
-      { href: '/#issuers', label: f.issuers },
+      { href: '/issuers', label: f.issuers },
     ],
   },
   {
@@ -92,7 +92,10 @@ const columns = [
     <div class="mt-10 grid gap-3 lg:grid-cols-2">
       <div class="flex gap-3 rounded-2xl bg-peach-soft px-4 py-3.5 text-ink">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-ink-2" aria-hidden="true" />
-        <p class="text-[13px] leading-relaxed">{messagesFor(locale).landing.risk.short}</p>
+        <div class="min-w-0">
+          <p class="text-xs font-medium text-ink">{messagesFor(locale).landing.risk.title}</p>
+          <p class="mt-1 text-xs leading-relaxed text-ink-2">{messagesFor(locale).landing.risk.formal}</p>
+        </div>
       </div>
       <div class="rounded-2xl border border-line bg-surface px-4 py-3.5">
         <p class="text-xs font-medium text-ink">{f.legalTitle}</p>

@@ -104,6 +104,7 @@ export const es = {
       ['Política de privacidad', '/legal/privacy'],
       ['Aviso de riesgos', '/legal/risks'],
       ['Transparencia: contratos desplegados', '/transparency'],
+      ['Para emisores: simulá tu licitación', '/issuers'],
     ],
     categories: [
       {
@@ -221,6 +222,38 @@ export const es = {
           [
             '¿Puedo verificar todo por mi cuenta?',
             'Sí. Cada operación tiene un link a Stellar Expert y cada pantalla muestra el contrato del que lee los datos. En Transparencia está la lista de contratos desplegados.',
+          ],
+        ],
+      },
+      {
+        id: 'glossary',
+        title: 'Glosario',
+        items: [
+          ['USDC', 'Un dólar digital emitido por Circle: 1 USDC vale siempre 1 dólar estadounidense.'],
+          [
+            'Token',
+            'Una fracción digital del activo de una licitación (un lote de producción, una serie de deuda o acciones).',
+          ],
+          [
+            'Licitación',
+            'La venta inicial de los tokens, a precio fijo, con un mínimo, un tope y una fecha de cierre.',
+          ],
+          [
+            'Mínimo y tope',
+            'El mínimo es lo que hay que recaudar para que la emisión valga; si no se llega, se reembolsa todo. El tope es el máximo que se acepta.',
+          ],
+          [
+            'Trustline',
+            'La autorización que tu cuenta de Stellar da para recibir un activo distinto de XLM. Se firma una vez y reserva 0,5 XLM.',
+          ],
+          ['Smart contract', 'Un programa en la blockchain que ejecuta las reglas solo, sin intermediarios.'],
+          [
+            'Fiduciaria',
+            'La entidad que recibe los fondos de una licitación exitosa y los administra separados del patrimonio del emisor.',
+          ],
+          [
+            'Mercado secundario',
+            'Donde comprás y vendés tokens entre inversores después de la licitación. En Fractachain es el DEX de Stellar.',
           ],
         ],
       },
@@ -429,6 +462,7 @@ export const en: typeof es = {
       ['Privacy policy', '/legal/privacy'],
       ['Risk disclosure', '/legal/risks'],
       ['Transparency: deployed contracts', '/transparency'],
+      ['For issuers: simulate your offering', '/issuers'],
     ],
     categories: [
       {
@@ -546,6 +580,38 @@ export const en: typeof es = {
           [
             'Can I verify everything myself?',
             'Yes. Every operation has a Stellar Expert link and every screen shows the contract it reads. Transparency lists the deployed contracts.',
+          ],
+        ],
+      },
+      {
+        id: 'glossary',
+        title: 'Glossary',
+        items: [
+          ['USDC', 'A digital dollar issued by Circle: 1 USDC is always worth 1 US dollar.'],
+          ['Token', "A digital fraction of an offering's asset (a production lot, a debt series or shares)."],
+          [
+            'Offering',
+            'The initial sale of the tokens, at a fixed price, with a minimum, a cap and a closing date.',
+          ],
+          [
+            'Minimum and cap',
+            'The minimum is what must be raised for the issue to stand; if it is not reached, everything is refunded. The cap is the most accepted.',
+          ],
+          [
+            'Trustline',
+            'The permission your Stellar account gives to receive an asset other than XLM. You sign it once and it reserves 0.5 XLM.',
+          ],
+          [
+            'Smart contract',
+            'A program on the blockchain that enforces the rules by itself, with no intermediaries.',
+          ],
+          [
+            'Trustee',
+            "The entity that receives the funds of a successful offering and manages them apart from the issuer's own assets.",
+          ],
+          [
+            'Secondary market',
+            "Where you buy and sell tokens between investors after the offering. On Fractachain it is Stellar's DEX.",
           ],
         ],
       },

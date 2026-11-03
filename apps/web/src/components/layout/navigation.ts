@@ -45,7 +45,7 @@ export const PUBLIC_TABS = [
   { key: 'offerings', href: '/market', label: 'shell.tabs.offerings' },
   // Trading screens need an account: visitors get the product overview.
   { key: 'markets', href: '/#products', label: 'shell.tabs.markets' },
-  { key: 'issuers', href: '/#issuers', label: 'shell.tabs.issuers' },
+  { key: 'issuers', href: '/issuers', label: 'shell.tabs.issuers' },
   { key: 'how', href: '/#how-it-works', label: 'shell.tabs.howItWorks' },
 ] as const;
 

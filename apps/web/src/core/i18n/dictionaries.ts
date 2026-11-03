@@ -43,7 +43,7 @@ const es = {
   },
   footer: {
     legal:
-      'Sandbox CNV RG 1150/2026. Tokens de acciones 1:1 en Caja de Valores. Forwards y warrants: Art. 1131 CCyC y Ley 9643.',
+      'Diseñado para el sandbox de tokenización de la CNV (RG 1150/2026): no es una autorización obtenida. La custodia 1:1 en Caja de Valores es un objetivo de diseño; no tenemos acuerdos con BYMA, Caja de Valores ni Matba Rofex. Forwards y warrants: Art. 1131 CCyC y Ley 9643. Hoy opera en Stellar testnet, sin dinero real.',
   },
   auth: {
     alreadyIn: 'Ya estás adentro',
@@ -465,7 +465,7 @@ const en: Messages = {
   },
   footer: {
     legal:
-      'CNV sandbox RG 1150/2026. Equity tokens 1:1 at Caja de Valores. Forwards and warrants: Civil Code Art. 1131 and Law 9643.',
+      'Designed for the CNV tokenization sandbox (RG 1150/2026): no authorization has been obtained. 1:1 custody at Caja de Valores is a design goal; we have no agreements with BYMA, Caja de Valores or Matba Rofex. Forwards and warrants: Civil Code Art. 1131 and Law 9643. It runs on Stellar testnet today, with no real money.',
   },
   auth: {
     alreadyIn: 'You are already in',

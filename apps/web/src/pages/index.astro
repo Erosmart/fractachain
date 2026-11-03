@@ -1,13 +1,16 @@
 ---
 import { ArrowRight, Building2, Clock3 } from 'lucide-react';
 import Ecosystem from '@/components/marketing/Ecosystem.astro';
+import Elevators from '@/components/marketing/Elevators.astro';
 import Faq from '@/components/marketing/Faq.astro';
 import FinalCta from '@/components/marketing/FinalCta.astro';
 import Issuers from '@/components/marketing/Issuers.astro';
+import Liquidity from '@/components/marketing/Liquidity.astro';
 import Products from '@/components/marketing/Products.astro';
 import Regulation from '@/components/marketing/Regulation.astro';
 import SectionHeading from '@/components/marketing/SectionHeading.astro';
 import Security from '@/components/marketing/Security.astro';
+import WhyStellar from '@/components/marketing/WhyStellar.astro';
 import { WireframeAsset } from '@/components/ui/kit';
 import HeroFacts from '@/features/landing/components/HeroFacts';
 import HeroLivePanel from '@/features/landing/components/HeroLivePanel';
@@ -106,8 +109,11 @@ const steps = landing.how.investorSteps;
     </section>
 
     <Products />
+    <Liquidity />
     <Regulation />
     <Issuers />
+    <Elevators />
+    <WhyStellar />
     <Security />
     <Ecosystem />
     <Faq />

@@ -7,9 +7,9 @@ const { landing } = messagesFor(Astro.locals.locale);
 const p = landing.products;
 const meta = [
   { href: '/market', icon: Layers, chip: 'live' as const, tone: 'chip-good' },
-  { href: '/orderbook', icon: ArrowLeftRight, chip: 'sandbox' as const, tone: 'chip-sky' },
-  { href: '/stocks', icon: BarChart3, chip: 'mockup' as const, tone: 'chip-neutral' },
-  { href: '/forwards', icon: Wheat, chip: 'mockup' as const, tone: 'chip-neutral' },
+  { href: '/orderbook', icon: ArrowLeftRight, chip: 'live' as const, tone: 'chip-good' },
+  { href: '/stocks', icon: BarChart3, chip: 'readOnly' as const, tone: 'chip-sky' },
+  { href: '/forwards', icon: Wheat, chip: 'readOnly' as const, tone: 'chip-sky' },
 ];
 ---
 

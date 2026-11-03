@@ -10,7 +10,7 @@ export const es = {
   hero: {
     chips: ['Diseñado para el sandbox CNV', 'USDC y XLM sobre Stellar', 'Testnet'],
     title: 'Invertí en la economía real argentina',
-    lead: 'Campos, pymes y acciones tokenizados 1:1 con activos en custodia. Suscribís en USDC, seguís cada aporte on-chain y negociás tu posición en el mercado secundario.',
+    lead: 'Financiá la campaña de productores y pymes argentinas desde montos chicos. Suscribís en USDC, seguís cada aporte on-chain y negociás tu posición en el mercado secundario.',
     ctaInvest: 'Invertir',
     ctaIssuer: 'Tokenizar mi empresa',
     guarantee: 'Si una licitación no llega al mínimo, pedís el reembolso del 100% de tu aporte.',
@@ -102,18 +102,28 @@ export const es = {
   products: {
     eyebrow: 'Productos',
     title: 'Todo sobre un mismo riel',
-    lead: 'Mercado primario, secundario y renta, liquidados en Stellar. Lo que todavía es maqueta lo decimos.',
+    lead: 'Mercado primario, secundario y renta, liquidados en Stellar. Decimos qué está en vivo y qué es solo lectura.',
     live: 'En vivo en testnet',
     sandbox: 'Sandbox',
     mockup: 'Maqueta',
+    readOnly: 'Solo lectura en testnet',
     items: [
       [
         'Licitaciones RWA',
-        'Suscribí deuda y acciones de empresas argentinas desde el primer día de la emisión.',
+        'Financiá la campaña de un productor o el crecimiento de una pyme desde el primer día de la emisión.',
       ],
-      ['Mercado secundario', 'Libro de órdenes para comprar y vender tus tokens cuando lo necesitás.'],
-      ['Merval tokenizado', 'tYPF, tGGAL y el panel líder: 1 token por acción custodiada.'],
-      ['Forwards y warrants', 'Producción a futuro (Código Civil y Comercial) y warrants de la Ley 9643.'],
+      [
+        'Mercado secundario',
+        'Libro de órdenes en el DEX de Stellar para comprar y vender tus tokens cuando lo necesitás.',
+      ],
+      [
+        'Merval tokenizado',
+        'Bóvedas de acciones con prueba de reserva y dividendos. Las lecturas salen del contrato; las operaciones llegan en la próxima etapa.',
+      ],
+      [
+        'Forwards y warrants',
+        'Venta de cosecha futura (art. 1131 CCyC) y préstamos contra grano depositado (Ley 9643), leídos de contratos en testnet.',
+      ],
     ],
   },
   regulation: {
@@ -121,10 +131,13 @@ export const es = {
     title: 'El marco del mercado de capitales, sobre un riel global',
     lead: 'Diseñamos cada pieza para el sandbox de la CNV: el activo queda custodiado y el token lo representa 1:1. Es un diseño, no una habilitación ya otorgada.',
     items: [
-      ['Sandbox CNV', 'RG 1150 · Ley 26.831. Programa global con series independientes por emisión.'],
       [
-        'Caja de Valores',
-        'Custodia en subcuenta comitente: cada token respaldado 1:1 por el activo depositado.',
+        'Sandbox CNV',
+        'RG 1150 · Ley 26.831. Fideicomiso financiero con un programa global y una serie por emisión.',
+      ],
+      [
+        'Custodia 1:1 (objetivo)',
+        'El diseño apunta a custodia en Caja de Valores o en un almacén habilitado. Hoy no hay acuerdos firmados.',
       ],
       [
         'Contratos Soroban',
@@ -136,9 +149,9 @@ export const es = {
   },
   issuers: {
     eyebrow: 'Para emisores',
-    title: 'Tu empresa, a mercado sin cotizar en bolsa',
-    lead: 'Cotizar en BYMA exige costos y un tamaño que la mayoría de las empresas no alcanza. Con una licitación tokenizada llegás a inversores verificados de todo el mundo, con el expediente completo a la vista.',
-    cta: 'Tokenizar mi empresa',
+    title: 'Financiá tu campaña o tu empresa sin cotizar en bolsa',
+    lead: 'Cotizar en BYMA exige costos y un tamaño que la mayoría de los productores y pymes no alcanza. Con una licitación tokenizada llegás a inversores verificados de todo el mundo, con el expediente completo a la vista.',
+    cta: 'Ver cómo funciona',
     points: [
       [
         'Costo de emisión menor',
@@ -167,7 +180,113 @@ export const es = {
   ecosystem: {
     eyebrow: 'Ecosistema',
     title: 'En qué nos apoyamos',
-    lead: 'Red Stellar y contratos Soroban, USDC, wallets compatibles y la infraestructura del mercado de capitales argentino.',
+    lead: 'Red Stellar y contratos Soroban, USDC de Circle y wallets compatibles. Tomamos como referencia la infraestructura del mercado de capitales argentino.',
+    note: 'BYMA, Caja de Valores y Alfred Pay son referencias del diseño: no tenemos acuerdos con ellos.',
+  },
+  elevators: {
+    eyebrow: 'Para acopios y cooperativas',
+    title: 'Financiá a tus productores sin poner tu balance',
+    lead: 'El acopio ya conoce al productor, guarda el grano y cobra la comercialización. Con Fractachain, inversores verificados financian la campaña con tu marca, y vos seguís cobrando tu comisión.',
+    cta: 'Hablemos',
+    points: [
+      [
+        'Retenés a tus productores',
+        'Les ofrecés financiamiento sin depender solo de tu capital ni del banco.',
+      ],
+      ['Sin capital propio', 'Los fondos vienen de los inversores de la licitación, no de tu balance.'],
+      ['Un canal, muchos lotes', 'Cada acopio suma a todos sus productores con el mismo proceso.'],
+    ],
+  },
+  liquidity: {
+    eyebrow: 'Liquidez primero',
+    title: 'Tokenizar sin mercado secundario no sirve',
+    lead: 'Cada licitación exitosa pasa al libro de órdenes del DEX de Stellar. El inversor no queda atado hasta la cosecha: puede salir cuando lo necesita.',
+    items: [
+      [
+        'Libro de órdenes 24/7',
+        'Órdenes límite en el DEX nativo de Stellar, entre cuentas con identidad verificada.',
+      ],
+      [
+        'Precio anclado a la emisión',
+        'El mercado abre con el precio de la licitación como referencia, no desde cero.',
+      ],
+      [
+        'Pago al vender la cosecha',
+        'Próxima etapa: el emisor deposita lo cobrado con la evidencia y cada tenedor canjea sus tokens por USDC.',
+      ],
+    ],
+    soon: 'Próxima etapa',
+  },
+  whyStellar: {
+    eyebrow: 'La red',
+    title: '¿Por qué Stellar?',
+    lead: 'Una red pensada para pagos y activos regulados, con dólares digitales y salida a pesos.',
+    items: [
+      ['USDC de Circle', 'Las licitaciones se suscriben y liquidan en el dólar digital nativo de la red.'],
+      [
+        'Cumplimiento en la red',
+        'Los tokens se emiten con AUTH_REQUIRED: solo las cuentas aprobadas pueden tenerlos.',
+      ],
+      ['Comisiones mínimas', 'Cada operación cuesta fracciones de centavo y confirma en segundos.'],
+      ['Pesos ↔ USDC', 'Anchors de la red, como MoneyGram o Alfred Pay, conectan con el sistema bancario.'],
+      ['Contratos Soroban', 'Mínimo, tope, reembolso, OPA y dividendos los ejecuta el contrato.'],
+    ],
+  },
+  issuerPage: {
+    eyebrow: 'Para emisores',
+    title: 'Financiá tu campaña con una licitación tokenizada',
+    lead: 'Convertí un lote de producción o una serie de tu empresa en tokens que cualquier inversor verificado puede comprar. Recibís el financiamiento por adelantado y los inversores participan del resultado.',
+    cta: 'Quiero emitir',
+    ctaSecondary: 'Ver licitaciones',
+    stepsTitle: 'Cómo es el proceso',
+    steps: [
+      [
+        'Contanos tu proyecto',
+        'Cultivo o actividad, cantidad, campaña y cuánto necesitás. Lo revisamos con vos.',
+      ],
+      [
+        'Estructuramos la serie',
+        'Armamos el expediente: fideicomiso o serie del programa, documentos y su huella digital.',
+      ],
+      [
+        'Abrís la licitación',
+        'Se despliega el contrato con mínimo, tope y plazo. Los inversores verificados aportan USDC.',
+      ],
+      [
+        'Cobrás o se reembolsa',
+        'Si llegás al mínimo, los fondos van a la cuenta fiduciaria. Si no, cada inversor recupera el 100 %.',
+      ],
+      ['Mercado secundario', 'Tus tokens se negocian en el DEX de Stellar mientras dura la campaña.'],
+    ],
+    sim: {
+      title: 'Simulá tu licitación',
+      subtitle: 'Cálculo orientativo en tu navegador: no se guarda ni se envía nada.',
+      quantity: 'Cantidad del lote',
+      unit: 'Unidad',
+      unitPlaceholder: 'tn',
+      price: 'Precio por token (USDC)',
+      supply: 'Tokens a emitir',
+      softCap: 'Mínimo a recaudar (USDC)',
+      hardCap: 'Tope a recaudar (USDC)',
+      days: 'Duración (días)',
+      sold: 'Tokens vendidos si se llena',
+      kept: 'Tokens que quedan sin vender',
+      perUnit: 'Valor implícito por {unit}',
+      minTicket: 'Ticket mínimo (1 token)',
+      close: 'Cierre estimado',
+      bar: 'La parte marcada es el mínimo que hay que recaudar para que la licitación sea exitosa.',
+      errSupply: 'Con ese precio, el tope necesita {n} tokens y emitís {s}. Subí la cantidad o el precio.',
+      errCaps: 'El mínimo no puede ser mayor que el tope.',
+    },
+    glossaryTitle: 'Glosario rápido',
+    glossary: [
+      ['USDC', 'Un dólar digital: 1 USDC vale siempre 1 dólar estadounidense.'],
+      ['Token', 'Una fracción digital del activo de la licitación.'],
+      ['Licitación', 'La venta inicial, con precio fijo, un mínimo, un tope y un plazo.'],
+      ['Mínimo y tope', 'Lo mínimo que hay que juntar para que la emisión valga, y el máximo que se acepta.'],
+      ['Smart contract', 'Un programa en la blockchain que ejecuta las reglas solo, sin intermediarios.'],
+    ],
+    fees: 'En testnet Fractachain no cobra comisiones. El modelo previsto es una comisión de éxito solo si la licitación llega al mínimo.',
   },
   faq: {
     eyebrow: 'Preguntas frecuentes',
@@ -211,6 +330,9 @@ export const es = {
   },
   risk: {
     short: 'Invertir implica riesgos. Podés perder parte o todo lo invertido.',
+    title: 'Antes de invertir',
+    formal:
+      'Como toda inversión, los activos tokenizados tienen riesgos: su valor puede variar y la venta en el mercado secundario depende de que haya compradores. Te recomendamos leer el expediente de cada licitación y el aviso de riesgos. La información de este sitio no constituye asesoramiento financiero, legal ni impositivo.',
     long: 'Los rendimientos estimados o pasados no garantizan rendimientos futuros. La liquidez del mercado secundario no está garantizada. Leé el expediente de cada licitación antes de invertir.',
   },
   footer: {
@@ -262,7 +384,7 @@ export const en: typeof es = {
   hero: {
     chips: ['Designed for the CNV sandbox', 'USDC and XLM on Stellar', 'Testnet'],
     title: "Invest in Argentina's real economy",
-    lead: 'Farms, SMEs and shares tokenized 1:1 against assets in custody. Subscribe in USDC, follow every contribution on-chain and trade your position on the secondary market.',
+    lead: 'Fund the season of Argentine producers and SMEs from small amounts. Subscribe in USDC, follow every contribution on-chain and trade your position on the secondary market.',
     ctaInvest: 'Invest',
     ctaIssuer: 'Tokenize my company',
     guarantee: 'If an offering misses its minimum, you can claim a 100% refund of your contribution.',
@@ -354,15 +476,22 @@ export const en: typeof es = {
   products: {
     eyebrow: 'Products',
     title: 'Everything on one rail',
-    lead: 'Primary market, secondary market and payouts, settled on Stellar. What is still a mockup, we say so.',
+    lead: 'Primary market, secondary market and payouts, settled on Stellar. We say what is live and what is read-only.',
     live: 'Live on testnet',
     sandbox: 'Sandbox',
     mockup: 'Mockup',
+    readOnly: 'Read-only on testnet',
     items: [
-      ['RWA offerings', 'Subscribe to debt and shares of Argentine companies from day one of the issue.'],
-      ['Secondary market', 'An order book to buy and sell your tokens when you need to.'],
-      ['Tokenized Merval', 'tYPF, tGGAL and the leading panel: 1 token per share in custody.'],
-      ['Forwards and warrants', 'Future production (Civil and Commercial Code) and Law 9643 warrants.'],
+      ['RWA offerings', "Fund a producer's season or an SME's growth from day one of the issue."],
+      ['Secondary market', "An order book on Stellar's DEX to buy and sell your tokens when you need to."],
+      [
+        'Tokenized Merval',
+        'Share vaults with proof of reserve and dividends. Reads come from the contract; trading comes in the next stage.',
+      ],
+      [
+        'Forwards and warrants',
+        'Forward harvest sales (Civil Code Art. 1131) and loans against stored grain (Law 9643), read from testnet contracts.',
+      ],
     ],
   },
   regulation: {
@@ -370,8 +499,14 @@ export const en: typeof es = {
     title: 'Capital-markets rules, on a global rail',
     lead: 'Every piece is designed for the CNV sandbox: the asset stays in custody and the token represents it 1:1. It is a design, not a license already granted.',
     items: [
-      ['CNV sandbox', 'RG 1150 · Law 26,831. A global program with an independent series per issue.'],
-      ['Caja de Valores', 'Custody in a client sub-account: each token backed 1:1 by the deposited asset.'],
+      [
+        'CNV sandbox',
+        'RG 1150 · Law 26,831. A financial trust with a global program and one series per issue.',
+      ],
+      [
+        '1:1 custody (goal)',
+        'The design targets custody at Caja de Valores or a licensed warehouse. No agreements are signed today.',
+      ],
       [
         'Soroban contracts',
         'Minimum, cap, refunds and payouts are executed by the contract, not a spreadsheet.',
@@ -382,9 +517,9 @@ export const en: typeof es = {
   },
   issuers: {
     eyebrow: 'For issuers',
-    title: 'Take your company to market without listing on an exchange',
-    lead: 'Listing on BYMA takes costs and a size most companies never reach. A tokenized offering puts you in front of verified investors worldwide, with the full file in plain sight.',
-    cta: 'Tokenize my company',
+    title: 'Fund your season or your company without listing on an exchange',
+    lead: 'Listing on BYMA takes costs and a size most producers and SMEs never reach. A tokenized offering puts you in front of verified investors worldwide, with the full file in plain sight.',
+    cta: 'See how it works',
     points: [
       ['Lower issuance cost', 'Series within one program: every new issue costs less.'],
       ['Global investors', 'Any investor with approved KYC can subscribe in USDC.'],
@@ -407,7 +542,113 @@ export const en: typeof es = {
   ecosystem: {
     eyebrow: 'Ecosystem',
     title: 'What we build on',
-    lead: 'The Stellar network and Soroban contracts, USDC, compatible wallets and Argentina’s capital-markets infrastructure.',
+    lead: 'The Stellar network and Soroban contracts, Circle’s USDC and compatible wallets. We use Argentina’s capital-markets infrastructure as a reference.',
+    note: 'BYMA, Caja de Valores and Alfred Pay are design references: we have no agreements with them.',
+  },
+  elevators: {
+    eyebrow: 'For grain elevators and cooperatives',
+    title: 'Fund your producers without using your balance sheet',
+    lead: 'The elevator already knows the producer, stores the grain and earns the marketing fee. With Fractachain, verified investors fund the season under your brand, and you keep earning your fee.',
+    cta: "Let's talk",
+    points: [
+      ['Keep your producers', 'Offer them financing without relying only on your capital or the bank.'],
+      [
+        'No capital of your own',
+        "The money comes from the offering's investors, not from your balance sheet.",
+      ],
+      ['One channel, many lots', 'Each elevator brings all of its producers through the same process.'],
+    ],
+  },
+  liquidity: {
+    eyebrow: 'Liquidity first',
+    title: 'Tokenizing without a secondary market does not work',
+    lead: "Every successful offering moves to the order book on Stellar's DEX. Investors are not locked in until harvest: they can exit when they need to.",
+    items: [
+      ['24/7 order book', "Limit orders on Stellar's native DEX, between accounts with verified identity."],
+      [
+        'Price anchored to the issue',
+        "The market opens with the offering's price as its reference, not from scratch.",
+      ],
+      [
+        'Paid when the harvest sells',
+        'Next stage: the issuer deposits the proceeds with the evidence and each holder redeems their tokens for USDC.',
+      ],
+    ],
+    soon: 'Next stage',
+  },
+  whyStellar: {
+    eyebrow: 'The network',
+    title: 'Why Stellar?',
+    lead: 'A network built for payments and regulated assets, with digital dollars and a way back to pesos.',
+    items: [
+      ['Circle USDC', 'Offerings are subscribed and settled in the network’s native digital dollar.'],
+      [
+        'On-network compliance',
+        'Tokens are issued with AUTH_REQUIRED: only approved accounts can hold them.',
+      ],
+      ['Minimal fees', 'Each operation costs fractions of a cent and confirms in seconds.'],
+      ['Pesos ↔ USDC', 'Network anchors such as MoneyGram or Alfred Pay connect to the banking system.'],
+      ['Soroban contracts', 'Minimum, cap, refund, tender offer and dividends are executed by the contract.'],
+    ],
+  },
+  issuerPage: {
+    eyebrow: 'For issuers',
+    title: 'Fund your season with a tokenized offering',
+    lead: 'Turn a production lot or a series of your company into tokens any verified investor can buy. You get the financing up front and investors share in the outcome.',
+    cta: 'I want to issue',
+    ctaSecondary: 'See offerings',
+    stepsTitle: 'How the process works',
+    steps: [
+      [
+        'Tell us about your project',
+        'Crop or activity, quantity, season and how much you need. We review it with you.',
+      ],
+      [
+        'We structure the series',
+        'We put the file together: trust or program series, documents and their digital fingerprint.',
+      ],
+      [
+        'You open the offering',
+        'The contract is deployed with a minimum, a cap and a term. Verified investors contribute USDC.',
+      ],
+      [
+        'You get paid or it is refunded',
+        'If you reach the minimum, the funds go to the trust account. If not, every investor gets 100% back.',
+      ],
+      ['Secondary market', "Your tokens trade on Stellar's DEX while the season runs."],
+    ],
+    sim: {
+      title: 'Simulate your offering',
+      subtitle: 'An estimate computed in your browser: nothing is saved or sent.',
+      quantity: 'Lot quantity',
+      unit: 'Unit',
+      unitPlaceholder: 't',
+      price: 'Price per token (USDC)',
+      supply: 'Tokens to issue',
+      softCap: 'Minimum raise (USDC)',
+      hardCap: 'Maximum raise (USDC)',
+      days: 'Duration (days)',
+      sold: 'Tokens sold if filled',
+      kept: 'Tokens left unsold',
+      perUnit: 'Implied value per {unit}',
+      minTicket: 'Minimum ticket (1 token)',
+      close: 'Estimated close',
+      bar: 'The marked part is the minimum that must be raised for the offering to succeed.',
+      errSupply: 'At that price, the cap needs {n} tokens and you issue {s}. Raise the supply or the price.',
+      errCaps: 'The minimum cannot exceed the cap.',
+    },
+    glossaryTitle: 'Quick glossary',
+    glossary: [
+      ['USDC', 'A digital dollar: 1 USDC is always worth 1 US dollar.'],
+      ['Token', "A digital fraction of the offering's asset."],
+      ['Offering', 'The initial sale, with a fixed price, a minimum, a cap and a term.'],
+      ['Minimum and cap', 'The least that must be raised for the issue to stand, and the most accepted.'],
+      [
+        'Smart contract',
+        'A program on the blockchain that enforces the rules by itself, with no intermediaries.',
+      ],
+    ],
+    fees: 'On testnet Fractachain charges no fees. The planned model is a success fee only if the offering reaches its minimum.',
   },
   faq: {
     eyebrow: 'FAQ',
@@ -448,6 +689,9 @@ export const en: typeof es = {
   },
   risk: {
     short: 'Investing involves risk. You can lose part or all of your investment.',
+    title: 'Before you invest',
+    formal:
+      "Like any investment, tokenized assets carry risk: their value can change and selling on the secondary market depends on there being buyers. We recommend reading each offering's file and the risk disclosure. The information on this site is not financial, legal or tax advice.",
     long: 'Estimated or past returns do not guarantee future returns. Secondary-market liquidity is not guaranteed. Read each offering’s file before investing.',
   },
   footer: {
