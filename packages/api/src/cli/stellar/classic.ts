@@ -5,7 +5,7 @@
  * and behind a captcha).
  */
 import { Asset, BASE_FEE, Keypair, Operation, TransactionBuilder, type Horizon } from '@stellar/stellar-sdk';
-import { fundAccount, log, type StellarContext } from './network';
+import { fundAccount, loadAccountReady, log, type StellarContext } from './network';
 
 const TIMEOUT = 120;
 
@@ -16,7 +16,8 @@ export async function submitClassic(
   ops: ReturnType<typeof Operation.payment>[],
   extraSigners: Keypair[] = [],
 ): Promise<string> {
-  const account = await ctx.horizon.loadAccount(source.publicKey());
+  // Horizon can lag a just-funded account (404) or still be starting (503).
+  const account = await loadAccountReady(ctx, source.publicKey());
   const builder = new TransactionBuilder(account, {
     fee: String(Number(BASE_FEE) * 10),
     networkPassphrase: ctx.preset.passphrase,

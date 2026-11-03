@@ -116,10 +116,46 @@ export function stellarContext(preset: NetworkPreset, deploymentFile: string): S
   };
 }
 
-/** Funds an account through Friendbot (testnet and quickstart both expose one). */
+/** Horizon answers it while it is still catching up with the ledger (fresh quickstart, busy testnet). */
+const TRANSIENT_HORIZON = new Set([404, 429, 502, 503, 504]);
+
+function horizonStatus(err: unknown): number | undefined {
+  return (err as { response?: { status?: number } })?.response?.status;
+}
+
+/**
+ * Loads an account from Horizon, waiting out the lag between a ledger closing
+ * and Horizon ingesting it: an account Friendbot just created can 404, and a
+ * local Horizon still starting answers 503. Any other error is thrown as is.
+ */
+export async function loadAccountReady(
+  ctx: StellarContext,
+  publicKey: string,
+  { attempts = 30, delayMs = 2000 }: { attempts?: number; delayMs?: number } = {},
+): Promise<Horizon.AccountResponse> {
+  for (let i = 1; ; i++) {
+    try {
+      return await ctx.horizon.loadAccount(publicKey);
+    } catch (err) {
+      const status = horizonStatus(err);
+      if (i >= attempts || status === undefined || !TRANSIENT_HORIZON.has(status)) throw err;
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+}
+
+/**
+ * Funds an account through Friendbot (testnet and quickstart both expose one)
+ * and returns once Horizon serves it, so the next transaction can load it.
+ */
 export async function fundAccount(ctx: StellarContext, publicKey: string, label: string): Promise<void> {
   const res = await ctx.friendbot.fund(publicKey);
   if (!res.funded && !res.already) throw new Error(`Friendbot no fondeó ${label} (${publicKey})`);
+  try {
+    await loadAccountReady(ctx, publicKey);
+  } catch (err) {
+    throw new Error(`Horizon no muestra ${label} (${publicKey}) después de fondearla: ${String(err)}`);
+  }
 }
 
 export async function accountExists(ctx: StellarContext, publicKey: string): Promise<boolean> {

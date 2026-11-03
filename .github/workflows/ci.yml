@@ -93,7 +93,7 @@ jobs:
         env:
           SOROBAN_SDK_BUILD_SYSTEM_SUPPORTS_SPEC_SHAKING_V2: '1'
       - run: npm run build -w @fractachain/api
-      - name: Wait for the local network (RPC healthy, Friendbot up)
+      - name: Wait for the local network (RPC healthy, Friendbot up, Horizon ingesting)
         run: |
           for i in $(seq 1 90); do
             status=$(curl -s -X POST http://localhost:8000/rpc -H 'content-type: application/json' \
@@ -103,11 +103,21 @@ jobs:
           done
           [ "$status" = "healthy" ] || { docker logs stellar | tail -100; exit 1; }
           probe=$(cd packages/api && node -e "console.log(require('@stellar/stellar-sdk').Keypair.random().publicKey())")
+          funded=false
           for i in $(seq 1 60); do
-            curl -sf "http://localhost:8000/friendbot?addr=$probe" > /dev/null && exit 0
+            if curl -sf "http://localhost:8000/friendbot?addr=$probe" > /dev/null; then funded=true; break; fi
             sleep 5
           done
-          docker logs stellar | tail -100; exit 1
+          $funded || { docker logs stellar | tail -100; exit 1; }
+          # The deploy opens trustlines through Horizon (loadAccount + submitTransaction).
+          # RPC and Friendbot can be up while Horizon is still catching up, which made the
+          # deploy fail with "Not Found" / "Service Unavailable": wait until Horizon serves
+          # the account Friendbot just created.
+          for i in $(seq 1 60); do
+            curl -sf "http://localhost:8000/accounts/$probe" > /dev/null && exit 0
+            sleep 5
+          done
+          echo "Horizon never served $probe"; docker logs stellar | tail -100; exit 1
       - name: Deploy contracts, team USDC and test instances (one command)
         run: npm run stellar:deploy -- --network local --no-build --refund-minutes 30 --out "$E2E_DIR/deployment.json" --env-out "$E2E_DIR/.env"
       - name: Start the API against the local network
