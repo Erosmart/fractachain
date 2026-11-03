@@ -13,8 +13,8 @@ import {
   MESSAGE_MAX,
   MESSAGE_MIN,
   SUPPORT_TOPICS,
+  prefillFromParams,
   toRequest,
-  topicFromParam,
   validateContact,
   type ContactField,
   type ContactForm,
@@ -52,10 +52,7 @@ function ContactPage() {
   const doneRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
-    setForm((f) => ({
-      ...f,
-      topic: topicFromParam(navigator.searchParam('topic') ?? navigator.searchParam('tema')),
-    }));
+    setForm((f) => ({ ...f, ...prefillFromParams((name) => navigator.searchParam(name)) }));
   }, []);
 
   // Signed-in users: prefill what we already know (still editable).

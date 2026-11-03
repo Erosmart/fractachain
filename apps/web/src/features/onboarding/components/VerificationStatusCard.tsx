@@ -1,5 +1,6 @@
 import { ArrowRight, RefreshCw } from 'lucide-react';
 import { Notice, StatusChip } from '@/components/ui/kit';
+import { returnTo } from '@/core/auth/returnTo';
 import { useI18n } from '@/hooks/useI18n';
 import type { VerificationState } from '../hooks/useVerification';
 
@@ -51,6 +52,8 @@ export default function VerificationStatusCard({
   const identity = view.identity;
   const showSupport = p.action === 'none' && (p.stage === 'rejected' || p.stage === 'revoked');
   const cta = p.copy.cta ? t(p.copy.cta) : '';
+  // The offering the investor left to verify, if any (set by the subscription box).
+  const back = p.action === 'invest' ? returnTo.peek() : null;
 
   return (
     <section className={`card card-pad ${className}`} aria-labelledby="kyc-status-title">
@@ -119,8 +122,8 @@ export default function VerificationStatusCard({
           </a>
         )}
         {p.action === 'invest' && (
-          <a href="/market" className="btn btn-primary">
-            {cta}
+          <a href={back ?? '/market'} className="btn btn-primary" onClick={() => returnTo.clear()}>
+            {back ? t('onboard.status.backToOffering') : cta}
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </a>
         )}

@@ -34,6 +34,13 @@ export const DEFAULT_SIMULATION: SimulatorInput = {
   days: '30',
 };
 
+/** Issuer contact form, prefilled with the simulated cap and a summary of the offering. */
+export function issuerContactHref(summary: string, hardCap: number): string {
+  const q = new URLSearchParams({ topic: 'issuer', message: summary });
+  if (hardCap > 0) q.set('amount', String(Math.round(hardCap)));
+  return `/contact?${q.toString()}`;
+}
+
 /** "1.500,5" or "1500.5" → 1500.5; anything not positive → 0. */
 export function parsePositive(value: string): number {
   const trimmed = value.trim();

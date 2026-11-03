@@ -255,6 +255,15 @@ describe('TxRunner (Freighter flow)', () => {
     });
     expect(classifyTxError(new Error('Saldo insuficiente'))).toMatchObject({ message: 'Saldo insuficiente' });
   });
+
+  it('tells a missing server setup apart from a network outage', () => {
+    expect(classifyTxError(new ApiError('No hay pool de USDC de demo', 503, 'NOT_CONFIGURED'))).toMatchObject(
+      {
+        code: 'NOT_CONFIGURED',
+        retryable: false,
+      },
+    );
+  });
 });
 
 describe('review and labels', () => {

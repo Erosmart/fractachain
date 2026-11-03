@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
-import RequireOnboarding from '@/components/guards/RequireOnboarding';
 import { withIsland } from '@/components/island/withIsland';
 import { EmptyState, PillTabs } from '@/components/ui/kit';
 import { useI18n } from '@/hooks/useI18n';
@@ -93,9 +92,11 @@ function Orderbook() {
               {/* Remount per market so the ticket starts at that market's last price. */}
               <OrderForm key={book.listingId} ref={form} state={state} onTaken={setTaken} />
             </div>
-            <div className="order-4 min-w-0 lg:order-none">
-              <MyOrdersCard state={state} />
-            </div>
+            {state.signedIn && (
+              <div className="order-4 min-w-0 lg:order-none">
+                <MyOrdersCard state={state} />
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -103,12 +104,13 @@ function Orderbook() {
   );
 }
 
+/**
+ * Public, read-only for visitors: the book's reads need no session. Placing
+ * or cancelling an order still requires an account (the API enforces it) and
+ * the ticket says so.
+ */
 function OrderbookPage() {
-  return (
-    <RequireOnboarding>
-      <Orderbook />
-    </RequireOnboarding>
-  );
+  return <Orderbook />;
 }
 
 export default withIsland(OrderbookPage);

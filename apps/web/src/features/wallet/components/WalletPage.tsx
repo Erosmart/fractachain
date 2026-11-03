@@ -12,6 +12,7 @@ import ExternalLink from '@/components/ui/ExternalLink';
 import { Card, GradientPanel, Notice, PageHeader, PanelNote, Stat, StatGrid } from '@/components/ui/kit';
 import { container } from '@/core/container';
 import { errorMessage } from '@/core/errors';
+import { ApiError } from '@/core/http/HttpClient';
 import { explorerAccount, formatAmount } from '@/core/format/number';
 import GoogleLoginButton from '@/features/auth/components/GoogleLoginButton';
 import CopyAddress from '@/features/account/components/CopyAddress';
@@ -19,6 +20,7 @@ import { LoadingLine } from '@/features/onboarding/components/OnboardingFrame';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n } from '@/hooks/useI18n';
 import { useWalletState } from '../hooks/useWalletState';
+import CircleFaucetNote from './CircleFaucetNote';
 
 const { wallet } = container;
 
@@ -30,6 +32,8 @@ function WalletPage() {
   const balances = useWalletState(publicKey || undefined);
   const [funding, setFunding] = useState(false);
   const [fundNotice, setFundNotice] = useState<{ tone: 'good' | 'bad' | 'sky'; text: string } | null>(null);
+  // The demo pool is not configured here: point to Circle's faucet instead of a config error.
+  const [noPool, setNoPool] = useState(false);
 
   const fundUsdc = async () => {
     if (!user) return;
@@ -47,7 +51,8 @@ function WalletPage() {
       });
       void balances.reload();
     } catch (err) {
-      setFundNotice({ tone: 'bad', text: errorMessage(err, t('wallet.usdcFundFail')) });
+      if (err instanceof ApiError && err.code === 'NOT_CONFIGURED') setNoPool(true);
+      else setFundNotice({ tone: 'bad', text: errorMessage(err, t('wallet.usdcFundFail')) });
     } finally {
       setFunding(false);
     }
@@ -144,6 +149,7 @@ function WalletPage() {
                     {fundNotice.text}
                   </Notice>
                 )}
+                {noPool && <CircleFaucetNote address={publicKey} className="mt-4" />}
               </Card>
             )}
           </div>

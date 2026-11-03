@@ -1,11 +1,12 @@
-import { useId, useState, type SubmitEvent } from 'react';
-import { Clock3, Coins, IdCard, LogIn, Stamp, Wallet, X } from 'lucide-react';
+import { useEffect, useId, useState, type SubmitEvent } from 'react';
+import { Check, Clock3, Coins, IdCard, LogIn, Stamp, Wallet, X } from 'lucide-react';
 import ChainSource from '@/components/tx/ChainSource';
 import { assetAmount } from '@/components/tx/format';
 import TxPanel from '@/components/tx/TxPanel';
 import WalletStatusChip from '@/components/tx/WalletStatusChip';
 import PhaseChip from '@/components/ui/PhaseChip';
 import { CapProgress, ChecklistItem, Notice, StatusChip } from '@/components/ui/kit';
+import { returnTo } from '@/core/auth/returnTo';
 import { formatAmount } from '@/core/format/number';
 import { useI18n } from '@/hooks/useI18n';
 import { checkContribution, unitsFor } from '../../chainModel';
@@ -15,7 +16,7 @@ import { LIVE_PHASES, percentOf, timeLeft } from '../../model';
 import MoneyFigure from '../MoneyFigure';
 
 /** Actions whose status this box shows (the others show in their own cards). */
-const BOX_ACTIONS = new Set(['contribute', 'usdc_trustline', 'fund', 'trustline']);
+const BOX_ACTIONS = new Set(['contribute', 'usdc_trustline', 'fund']);
 
 /**
  * Subscription box. Every figure is read from the tender contract (with its
@@ -46,10 +47,17 @@ export default function InvestBox({ offering, onClose }: { offering: Offering; o
 
   const hasWallet = Boolean(user?.custodyMode && user.publicKey);
   const kyc = user?.kycStatus;
-  const trusted = Boolean(user?.trustlines?.includes(listing!.id));
   const ready = Boolean(user) && hasWallet && kyc === 'APPROVED';
   const paymentReady = payment.trustline;
+  const funded = !payment.classic || (payment.balance ?? 0) >= min;
+  // 1 · verify identity → 2 · set up the wallet (payment trustline + funds) → 3 · subscribe.
+  const step = !ready ? 1 : !paymentReady || !funded ? 2 : 3;
   const canSubmit = live && ready && paymentReady && check.ok && riskOk && !flow.busy;
+
+  // Verification happens on other pages: remember this offering so they bring the investor back.
+  useEffect(() => {
+    if (live && user && !ready) returnTo.set(`/market/${listing!.id}`);
+  }, [live, user, ready, listing]);
   const riskError = touched && !riskOk;
   const flowHere = flow.snap.action !== null && BOX_ACTIONS.has(flow.snap.action);
 
@@ -225,6 +233,30 @@ export default function InvestBox({ offering, onClose }: { offering: Offering; o
         )}
         {live ? (
           <form onSubmit={submit} noValidate className="space-y-4">
+            <ol className="grid grid-cols-3 gap-1.5" aria-label={t('offerings.invest.steps.label')}>
+              {(['verify', 'prepare', 'subscribe'] as const).map((key, i) => {
+                const n = i + 1;
+                const state = n < step ? 'done' : n === step ? 'current' : 'todo';
+                return (
+                  <li
+                    key={key}
+                    aria-current={state === 'current' ? 'step' : undefined}
+                    className={`flex min-w-0 items-center gap-1.5 rounded-xl px-2 py-1.5 text-[11.5px] font-medium ${
+                      state === 'current'
+                        ? 'bg-navy text-navy-ink'
+                        : state === 'done'
+                          ? 'bg-good-soft text-good'
+                          : 'bg-surface-2 text-muted'
+                    }`}
+                  >
+                    <span className="grid h-4 w-4 shrink-0 place-items-center" aria-hidden="true">
+                      {state === 'done' ? <Check className="h-3.5 w-3.5" strokeWidth={2.5} /> : n}
+                    </span>
+                    <span className="truncate">{t(`offerings.invest.steps.${key}`)}</span>
+                  </li>
+                );
+              })}
+            </ol>
             <div>
               <label htmlFor={ids.amount} className="label">
                 {t('offerings.invest.amount', { u: code })}
@@ -337,24 +369,6 @@ export default function InvestBox({ offering, onClose }: { offering: Offering; o
               />
             )}
 
-            {ready && !trusted && listing!.dossier.issuerPublicKey && (
-              <ChecklistItem
-                icon={<Stamp className="h-4 w-4" />}
-                title={t('offerings.invest.reqToken', { code: d.tokenTicker })}
-                subtitle={t('offerings.invest.reqTokenSub')}
-                trailing={
-                  <button
-                    type="button"
-                    className="btn btn-soft btn-sm"
-                    disabled={flow.busy}
-                    onClick={() => void actions.approve()}
-                  >
-                    {t('offerings.invest.approve')}
-                  </button>
-                }
-              />
-            )}
-
             <label
               htmlFor={ids.risk}
               className="flex cursor-pointer items-start gap-2.5 text-[13px] text-ink-2"
@@ -392,6 +406,11 @@ export default function InvestBox({ offering, onClose }: { offering: Offering; o
                 ? t('offerings.invest.submitting')
                 : t('offerings.invest.submit', { amount: fmt(amount || 0) })}
             </button>
+            {step < 3 && (
+              <p className="-mt-2 text-center text-xs text-muted">
+                {t(step === 1 ? 'offerings.invest.steps.needVerify' : 'offerings.invest.steps.needPrepare')}
+              </p>
+            )}
           </form>
         ) : tender ? (
           <Notice tone="sky">{t('offerings.invest.notOpen')}</Notice>

@@ -92,6 +92,10 @@ export const es = {
     fund: 'Fondear USDC de testnet',
     funding: 'Fondeando…',
     fundHint: 'Te acreditamos USDC de prueba para aportar en licitaciones.',
+    faucetTitle: 'Pedí USDC de prueba al faucet de Circle',
+    faucetBody:
+      'El fondeo automático no está disponible en este entorno. En el faucet de Circle elegí USDC y la red Stellar Testnet, pegá tu dirección y volvé a consultar tus saldos.',
+    faucetCta: 'Abrir el faucet de Circle',
     invest: 'Ver licitaciones',
     signedOut: 'Ingresá para ver tu wallet.',
   },
@@ -302,6 +306,10 @@ export const en: typeof es = {
     fund: 'Fund testnet USDC',
     funding: 'Funding…',
     fundHint: 'We credit test USDC so you can contribute to offerings.',
+    faucetTitle: "Get test USDC from Circle's faucet",
+    faucetBody:
+      "Automatic funding is not available in this environment. On Circle's faucet pick USDC and the Stellar Testnet network, paste your address and check your balances again.",
+    faucetCta: "Open Circle's faucet",
     invest: 'See offerings',
     signedOut: 'Sign in to see your wallet.',
   },

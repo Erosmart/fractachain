@@ -1,6 +1,7 @@
 import { forwardRef, useId, useImperativeHandle, useMemo, useRef, useState, type SubmitEvent } from 'react';
 import type { OrderSide } from '@fractachain/shared';
-import { IdCard, Stamp } from 'lucide-react';
+import { IdCard, LogIn, Stamp } from 'lucide-react';
+import { investorReadyPath } from '@/core/auth/onboardingPath';
 import { Card, ChecklistItem, PillTabs } from '@/components/ui/kit';
 import { money, qty } from '@/core/market/money';
 import { useI18n } from '@/hooks/useI18n';
@@ -59,7 +60,8 @@ const OrderForm = forwardRef<
   };
   const exceeds = amount > maxQty + 1e-9;
   const needsTrustline = state.needsTrustline(side);
-  const canSubmit = approved && !needsTrustline && price > 0 && amount > 0 && !exceeds && !busy;
+  const canSubmit =
+    state.signedIn && approved && !needsTrustline && price > 0 && amount > 0 && !exceeds && !busy;
 
   const submit = async (e: SubmitEvent) => {
     e.preventDefault();
@@ -183,13 +185,22 @@ const OrderForm = forwardRef<
           <span className="text-lg font-medium text-ink tnum">{money(price * amount, 'USDC', 2)}</span>
         </div>
 
-        {!approved && (
+        {!state.signedIn ? (
           <ChecklistItem
-            icon={<IdCard className="h-4 w-4" />}
-            title={t('markets.form.kyc')}
-            subtitle={t('markets.form.kycCta')}
-            href="/onboarding/kyc"
+            icon={<LogIn className="h-4 w-4" />}
+            title={t('markets.form.signIn')}
+            subtitle={t('markets.form.signInSub')}
+            href={`/login?next=${encodeURIComponent('/orderbook')}`}
           />
+        ) : (
+          !approved && (
+            <ChecklistItem
+              icon={<IdCard className="h-4 w-4" />}
+              title={t('markets.form.kyc')}
+              subtitle={t('markets.form.kycCta')}
+              href={investorReadyPath(state.user) ?? '/onboarding/kyc'}
+            />
+          )
         )}
         {approved && needsTrustline && (
           <ChecklistItem

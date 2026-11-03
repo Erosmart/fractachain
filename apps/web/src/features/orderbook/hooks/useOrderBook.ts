@@ -204,6 +204,8 @@ export function useOrderBook() {
 
   return {
     user,
+    /** Visitors see the book read-only; trading needs an account. */
+    signedIn: Boolean(user),
     markets,
     listingId,
     selectMarket,

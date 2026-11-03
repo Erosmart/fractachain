@@ -17,6 +17,8 @@ export const es = {
   wallet: {
     eyebrow: 'Paso 2 · Wallet',
     recommended: 'Recomendada',
+    advanced: 'Opciones avanzadas',
+    advancedHint: 'Si ya usás una wallet de Stellar o querés guardar vos la clave.',
     secretTitle: 'Tu clave secreta',
     copy: 'Copiar clave',
     copied: 'Copiada',
@@ -138,6 +140,7 @@ export const es = {
     document: 'Documento',
     goHome: 'Ir al inicio',
     goAccount: 'Ver mi cuenta',
+    backToOffering: 'Volver a la licitación',
     logout: 'Cerrar sesión',
     provider: 'Proveedor',
     providerDidit: 'Didit',
@@ -187,6 +190,8 @@ export const en: typeof es = {
   wallet: {
     eyebrow: 'Step 2 · Wallet',
     recommended: 'Recommended',
+    advanced: 'Advanced options',
+    advancedHint: 'If you already use a Stellar wallet or want to keep the key yourself.',
     secretTitle: 'Your secret key',
     copy: 'Copy key',
     copied: 'Copied',
@@ -308,6 +313,7 @@ export const en: typeof es = {
     document: 'Document',
     goHome: 'Go home',
     goAccount: 'View my account',
+    backToOffering: 'Back to the offering',
     logout: 'Sign out',
     provider: 'Provider',
     providerDidit: 'Didit',
