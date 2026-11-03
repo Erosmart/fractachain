@@ -90,10 +90,21 @@ investor signs), `after-tender-confirmed.jpg` (hash + Stellar Expert link).
 first), Docker image, and `e2e-local` (stellar/quickstart `--local`: one-command deploy
 → API → the same E2E: contribute / finalize / refund in USDC + security refusals).
 
+Green run on `macroupdate` (commit `b4fa139`):
+[Actions run 41563459803](https://github.com/Erosmart/fractachain/actions/runs/41563459803) —
+all four jobs passed: app (typecheck, test, build, audit), Docker image, contracts
+(`cargo test`) and
+[`e2e-local`](https://github.com/Erosmart/fractachain/actions/runs/41563459803/job/125679235203):
+on a fresh local network (`Standalone Network ; February 2017`) the one-command deploy
+ran, then 18/18 checks — wallet login (SEP-53), terms accepted, KYC, USDC trustline and
+`contribute` ×2 signed by the investor, chain reads in USDC, `TX_MISMATCH` /
+`TX_BAD_SIGNATURE` / `TX_ALREADY_SUBMITTED` refusals, `finalize` paying the trustee,
+`finalize` → Failed and `refund` back to the investor.
+
 ## Still to be produced by the team (needs accounts or permissions)
 
-| Evidence                                                 | Why it is not here                                               | How                                                       |
-| -------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------- |
-| Demo video with the real Freighter extension             | needs a person and a browser with Freighter                      | [`demo-video.md`](demo-video.md)                          |
-| Public demo URL                                          | needs the team's Railway project                                 | [`deploy.md`](deploy.md), `docs/guides/deploy-railway.md` |
-| Merged PR + green GitHub Actions run (incl. `e2e-local`) | branch is local; write access to `Erosmart/fractachain` required | push `macroupdate`, open the PR, let CI run               |
+| Evidence                                     | Why it is not here                                                     | How                                                       |
+| -------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------- |
+| Demo video with the real Freighter extension | needs a person and a browser with Freighter                            | [`demo-video.md`](demo-video.md)                          |
+| Public demo URL                              | needs the team's Railway project                                       | [`deploy.md`](deploy.md), `docs/guides/deploy-railway.md` |
+| Merged PR                                    | the branch is pushed and CI is green; merging is the maintainers' call | open the PR from `macroupdate` to `main`                  |
