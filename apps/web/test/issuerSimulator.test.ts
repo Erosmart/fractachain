@@ -1,5 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SIMULATION, parsePositive, simulate } from '@/features/issuers/simulator';
+import { DEFAULT_SIMULATION, issuerContactHref, parsePositive, simulate } from '@/features/issuers/simulator';
+import { MESSAGE_MAX, prefillFromParams } from '@/features/support/model';
+
+describe('issuer simulator → contact form', () => {
+  it('links to the issuer topic with the cap and the summary', () => {
+    const href = issuerContactHref('Lote: 250 tn', 250_000.4);
+    const q = new URL(href, 'http://x').searchParams;
+    expect(href.startsWith('/contact?')).toBe(true);
+    expect(q.get('topic')).toBe('issuer');
+    expect(q.get('amount')).toBe('250000');
+    expect(q.get('message')).toBe('Lote: 250 tn');
+  });
+
+  it('prefills topic, amount and message, sanitized and capped', () => {
+    const params = new URLSearchParams({
+      topic: 'issuer',
+      amount: '250.000<script>',
+      message: `  ${'x'.repeat(MESSAGE_MAX + 50)}  `,
+    });
+    const p = prefillFromParams((n) => params.get(n));
+    expect(p.topic).toBe('issuer');
+    expect(p.amount).toBe('250.000');
+    expect(p.message?.length).toBe(MESSAGE_MAX);
+    expect(prefillFromParams(() => null)).toEqual({ topic: 'general' });
+  });
+});
 
 const NOW = Date.UTC(2026, 10, 2);
 

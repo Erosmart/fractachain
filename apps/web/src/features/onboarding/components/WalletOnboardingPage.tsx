@@ -161,35 +161,44 @@ function WalletOnboardingPage() {
           </div>
         </section>
       ) : (
-        <div className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
-            <Option
-              icon={<Landmark className="h-5 w-5" />}
-              title={t('onboarding.custodialTitle')}
-              body={t('onboarding.custodialBody')}
-              badge={
-                <StatusChip tone="sky" icon={false}>
-                  {t('onboard.wallet.recommended')}
-                </StatusChip>
-              }
-              disabled={busy}
-              onClick={() => void pick('CUSTODIAL')}
-            />
-            <Option
-              icon={<KeyRound className="h-5 w-5" />}
-              title={t('onboarding.selfTitle')}
-              body={t('onboarding.selfBody')}
-              disabled={busy}
-              onClick={() => void pick('SELF')}
-            />
-            <Option
-              icon={<Wallet className="h-5 w-5" />}
-              title={t('onboarding.freighterTitle')}
-              body={t('onboarding.freighterBody')}
-              disabled={busy}
-              onClick={() => void pickFreighter()}
-            />
-          </div>
+        <div className="max-w-2xl space-y-4">
+          <Option
+            icon={<Landmark className="h-5 w-5" />}
+            title={t('onboarding.custodialTitle')}
+            body={t('onboarding.custodialBody')}
+            badge={
+              <StatusChip tone="sky" icon={false}>
+                {t('onboard.wallet.recommended')}
+              </StatusChip>
+            }
+            disabled={busy}
+            onClick={() => void pick('CUSTODIAL')}
+          />
+          {/* Most investors never need these; they stay one click away. */}
+          <details className="group rounded-2xl border border-line bg-surface-2 px-4 py-3">
+            <summary className="cursor-pointer list-none text-sm font-medium text-ink [&::-webkit-details-marker]:hidden">
+              {t('onboard.wallet.advanced')}
+              <span className="mt-0.5 block text-xs font-normal text-muted">
+                {t('onboard.wallet.advancedHint')}
+              </span>
+            </summary>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <Option
+                icon={<Wallet className="h-5 w-5" />}
+                title={t('onboarding.freighterTitle')}
+                body={t('onboarding.freighterBody')}
+                disabled={busy}
+                onClick={() => void pickFreighter()}
+              />
+              <Option
+                icon={<KeyRound className="h-5 w-5" />}
+                title={t('onboarding.selfTitle')}
+                body={t('onboarding.selfBody')}
+                disabled={busy}
+                onClick={() => void pick('SELF')}
+              />
+            </div>
+          </details>
           <p className="text-xs text-muted">{t('onboard.wallet.trustlineNote')}</p>
         </div>
       )}

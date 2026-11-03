@@ -24,6 +24,8 @@ export type TxErrorCode =
   | 'RPC_DOWN'
   | 'API_DOWN'
   | 'NOT_ALLOWED'
+  /** The server lacks the configuration for this action (e.g. no demo USDC pool). */
+  | 'NOT_CONFIGURED'
   | 'UNKNOWN';
 
 export interface TxError {
@@ -103,6 +105,7 @@ export function classifyTxError(err: unknown): TxError {
   } else if (err instanceof ApiError) {
     if (err.isNetwork) code = 'API_DOWN';
     else if (err.code && SERVER_CODES.has(err.code)) code = err.code as TxErrorCode;
+    else if (err.code === 'NOT_CONFIGURED') code = 'NOT_CONFIGURED';
     // The build is gone (server restart, already consumed): prepare a new one.
     else if (err.status === 404 || err.status === 410) code = 'TX_EXPIRED';
     else if (err.code === 'UPSTREAM_FAILED' || err.status === 502 || err.status === 503) code = 'RPC_DOWN';

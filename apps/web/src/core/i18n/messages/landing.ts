@@ -277,6 +277,9 @@ export const es = {
       bar: 'La parte marcada es el mínimo que hay que recaudar para que la licitación sea exitosa.',
       errSupply: 'Con ese precio, el tope necesita {n} tokens y emitís {s}. Subí la cantidad o el precio.',
       errCaps: 'El mínimo no puede ser mayor que el tope.',
+      apply: 'Quiero emitir con estos números',
+      summary:
+        'Quiero estructurar una licitación. Lote: {quantity} {unit}. Precio por token: {price} USDC. Tokens a emitir: {supply}. Mínimo: {soft} USDC. Tope: {hard} USDC. Duración: {days} días.',
     },
     glossaryTitle: 'Glosario rápido',
     glossary: [
@@ -636,6 +639,9 @@ export const en: typeof es = {
       bar: 'The marked part is the minimum that must be raised for the offering to succeed.',
       errSupply: 'At that price, the cap needs {n} tokens and you issue {s}. Raise the supply or the price.',
       errCaps: 'The minimum cannot exceed the cap.',
+      apply: 'I want to issue with these numbers',
+      summary:
+        'I want to structure an offering. Lot: {quantity} {unit}. Price per token: {price} USDC. Tokens to issue: {supply}. Minimum: {soft} USDC. Cap: {hard} USDC. Duration: {days} days.',
     },
     glossaryTitle: 'Quick glossary',
     glossary: [

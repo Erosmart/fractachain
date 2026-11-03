@@ -19,11 +19,14 @@ const DOCS = [
   ['/legal/cookies', 'cookies'],
 ] as const;
 
-/** Where to go once the terms are accepted: `?next=` (same site) or the next onboarding step. */
+/**
+ * Where to go once the terms are accepted: `?next=` (same site) or home.
+ * Wallet and KYC are asked for later, when the investor goes to invest.
+ */
 function destination(user: Parameters<typeof nextOnboardingPath>[0]): string {
   const next = safeNextPath(navigator.searchParam('next'));
   if (next && next !== TERMS_PATH) return next;
-  return nextOnboardingPath(user);
+  return user?.isAdmin ? nextOnboardingPath(user) : '/dashboard';
 }
 
 /**

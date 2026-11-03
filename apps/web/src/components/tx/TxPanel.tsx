@@ -7,6 +7,7 @@ import { useI18n } from '@/hooks/useI18n';
 import { feeXlm, reviewArgs, shortId } from './format';
 
 const FREIGHTER_URL = 'https://www.freighter.app/';
+const CIRCLE_FAUCET_URL = 'https://faucet.circle.com';
 
 const TONE = {
   progress: 'bg-sky-soft text-ink',
@@ -195,6 +196,12 @@ export default function TxPanel({
             </details>
           ) : null}
           <div className="mt-3 flex flex-wrap gap-2">
+            {err?.code === 'NOT_CONFIGURED' && snap.action === 'fund' && (
+              <ExternalLink href={CIRCLE_FAUCET_URL} className="btn btn-primary btn-sm">
+                {k('faucet')}
+                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              </ExternalLink>
+            )}
             {err?.code === 'WALLET_NOT_INSTALLED' && (
               <ExternalLink href={FREIGHTER_URL} className="btn btn-primary btn-sm">
                 <Download className="h-4 w-4" aria-hidden="true" />

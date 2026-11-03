@@ -44,6 +44,7 @@ export const PUBLIC_PATHS: readonly string[] = [
   '/',
   '/market',
   '/issuers',
+  '/orderbook',
   '/stocks',
   '/forwards',
   '/warrants',
@@ -66,7 +67,6 @@ export const PRIVATE_PREFIXES: readonly string[] = [
   '/wallet',
   '/portfolio',
   '/dashboard',
-  '/orderbook',
   '/reset-password',
   '/verify-email',
 ];

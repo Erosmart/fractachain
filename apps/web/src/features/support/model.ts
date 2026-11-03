@@ -39,6 +39,23 @@ export function topicFromParam(param: string | null | undefined): SupportTopic {
 export const MESSAGE_MIN = 10;
 export const MESSAGE_MAX = 4000;
 
+/**
+ * Form values a link can prefill: `?topic=` (or legacy `?tema=`), and for the
+ * issuer simulator `?amount=` and `?message=`. Everything stays editable; the
+ * amount keeps only digits and separators and the message is capped.
+ */
+export function prefillFromParams(
+  get: (name: string) => string | null,
+): Pick<ContactForm, 'topic'> & Partial<Pick<ContactForm, 'amount' | 'message'>> {
+  const amount = (get('amount') ?? '').replace(/[^\d.,]/g, '').slice(0, 20);
+  const message = (get('message') ?? '').trim().slice(0, MESSAGE_MAX);
+  return {
+    topic: topicFromParam(get('topic') ?? get('tema')),
+    ...(amount ? { amount } : {}),
+    ...(message ? { message } : {}),
+  };
+}
+
 export interface ContactForm {
   topic: SupportTopic;
   name: string;

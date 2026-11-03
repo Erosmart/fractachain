@@ -24,16 +24,24 @@ export function nextOnboardingPath(user: OnboardingUser | null): string {
 }
 
 /**
- * Where to land after signing in. Admins go to `?next=` or the KYC queue;
- * investors honour `?next=` only once onboarding is complete.
+ * The verification step an investor still owes before they can invest
+ * (wallet → KYC → review), or `null` when they are ready. Admins never owe one.
+ */
+export function investorReadyPath(user: OnboardingUser | null): string | null {
+  const dest = nextOnboardingPath(user);
+  return dest === '/dashboard' ? null : dest;
+}
+
+/**
+ * Where to land after signing in. Admins go to `?next=` or the KYC queue.
+ * Investors accept the terms first, then go straight to `?next=` or home:
+ * wallet and KYC are asked for only when they are about to invest.
  */
 export function afterAuthPath(user: OnboardingUser, nextParam?: string | null): string {
   const next = safeNextPath(nextParam);
   if (user.isAdmin) return next || '/admin/kyc';
-  const dest = nextOnboardingPath(user);
-  if (dest === TERMS_PATH) return termsPath(next);
-  if (next && user.kycStatus === 'APPROVED') return next;
-  return dest;
+  if (needsTerms(user)) return termsPath(next);
+  return next || '/dashboard';
 }
 
 /** The terms step, coming back to `next` (a same-site path) once accepted. */

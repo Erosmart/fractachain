@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
+import { ArrowRight } from 'lucide-react';
 import { withIsland } from '@/components/island/withIsland';
 import { CapProgress, Notice } from '@/components/ui/kit';
 import { formatAmount, formatInt } from '@/core/format/number';
 import { useI18n } from '@/hooks/useI18n';
-import { DEFAULT_SIMULATION, simulate, type SimulatorInput } from '../simulator';
+import { DEFAULT_SIMULATION, issuerContactHref, simulate, type SimulatorInput } from '../simulator';
 
 /** Form fields, in order; each key is also its label key in `landing.issuerPage.sim`. */
 const FIELDS: (keyof SimulatorInput)[] = [
@@ -82,6 +83,24 @@ function IssuerSimulator() {
             </Notice>
           )}
           {result.errors.caps && <Notice tone="warn">{s.errCaps}</Notice>}
+          <a
+            href={issuerContactHref(
+              t('landing.issuerPage.sim.summary', {
+                quantity: form.quantity,
+                unit,
+                price: form.price,
+                supply: form.supply,
+                soft: form.softCap,
+                hard: form.hardCap,
+                days: form.days,
+              }),
+              result.hardCap,
+            )}
+            className="btn btn-primary w-full"
+          >
+            {s.apply}
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </a>
         </div>
       </div>
     </section>

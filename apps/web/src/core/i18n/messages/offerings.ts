@@ -193,6 +193,14 @@ export const es = {
       risk: 'Confirmá que leíste los riesgos y los términos.',
     },
     requirements: 'Antes de suscribir',
+    steps: {
+      label: 'Pasos para suscribir',
+      verify: 'Verificá tu identidad',
+      prepare: 'Prepará tu wallet',
+      subscribe: 'Suscribí',
+      needVerify: 'Completá el paso 1 para suscribir.',
+      needPrepare: 'Completá el paso 2 para suscribir.',
+    },
     reqLogin: 'Iniciá sesión',
     reqLoginSub: 'Con email, Google o tu wallet',
     reqWallet: 'Creá o conectá tu wallet',
@@ -213,6 +221,12 @@ export const es = {
   },
   position: {
     title: 'Tu participación',
+    holding: 'Tu tenencia',
+    where: 'Dónde está tu tenencia',
+    inContract: 'Registrada en el contrato',
+    inWallet: 'En tu wallet (token del DEX)',
+    toReceive: 'Por recibir en tu wallet',
+    claimMore: '¿Algo no se acreditó?',
     contributed: 'Aportaste',
     asset: 'Asset en Stellar',
     receive: 'Recibir en mi wallet',
@@ -277,8 +291,10 @@ export const es = {
     resign: 'Firmar de nuevo',
     close: 'Cerrar',
     install: 'Instalar Freighter',
+    faucet: 'Pedir USDC al faucet de Circle',
     errors: {
-      WALLET_NOT_INSTALLED: 'No encontramos Freighter en este navegador.',
+      WALLET_NOT_INSTALLED:
+        'No encontramos Freighter en este navegador. Hace falta la extensión Freighter (MetaMask y otras wallets no sirven), con la red en Testnet.',
       WALLET_DENIED: 'Freighter no dio acceso. Desbloqueala y permití que Fractachain lea tu dirección.',
       WRONG_NETWORK: 'Freighter está en {network}. Cambiá a Testnet en Freighter y volvé a intentar.',
       ACCOUNT_MISMATCH:
@@ -294,6 +310,8 @@ export const es = {
       RPC_DOWN: 'La red de Stellar no respondió a tiempo. Probá de nuevo en un rato.',
       API_DOWN: 'No pudimos conectar con el servidor. Probá de nuevo en un rato.',
       NOT_ALLOWED: 'No podés hacer esta operación con tu cuenta ahora.',
+      NOT_CONFIGURED:
+        'Esta función no está disponible en este entorno. Para USDC de prueba, usá el faucet de Circle (USDC, red Stellar Testnet) con tu dirección.',
       UNKNOWN: 'Algo falló al procesar la transacción.',
     },
   },
@@ -525,6 +543,14 @@ export const en: typeof es = {
       risk: 'Confirm you read the risks and terms.',
     },
     requirements: 'Before you subscribe',
+    steps: {
+      label: 'Steps to subscribe',
+      verify: 'Verify your identity',
+      prepare: 'Set up your wallet',
+      subscribe: 'Subscribe',
+      needVerify: 'Complete step 1 to subscribe.',
+      needPrepare: 'Complete step 2 to subscribe.',
+    },
     reqLogin: 'Sign in',
     reqLoginSub: 'With email, Google or your wallet',
     reqWallet: 'Create or connect your wallet',
@@ -545,6 +571,12 @@ export const en: typeof es = {
   },
   position: {
     title: 'Your position',
+    holding: 'Your holding',
+    where: 'Where your holding is',
+    inContract: 'Recorded in the contract',
+    inWallet: 'In your wallet (DEX token)',
+    toReceive: 'To be received in your wallet',
+    claimMore: 'Something was not credited?',
     contributed: 'You contributed',
     asset: 'Stellar asset',
     receive: 'Receive in my wallet',
@@ -608,8 +640,10 @@ export const en: typeof es = {
     resign: 'Sign again',
     close: 'Close',
     install: 'Install Freighter',
+    faucet: "Get USDC from Circle's faucet",
     errors: {
-      WALLET_NOT_INSTALLED: "We couldn't find Freighter in this browser.",
+      WALLET_NOT_INSTALLED:
+        "We couldn't find Freighter in this browser. You need the Freighter extension (MetaMask and other wallets won't work), set to Testnet.",
       WALLET_DENIED: "Freighter didn't grant access. Unlock it and allow Fractachain to read your address.",
       WRONG_NETWORK: 'Freighter is on {network}. Switch Freighter to Testnet and try again.',
       ACCOUNT_MISMATCH:
@@ -625,6 +659,8 @@ export const en: typeof es = {
       RPC_DOWN: "The Stellar network didn't answer in time. Try again in a while.",
       API_DOWN: "We couldn't reach the server. Try again in a while.",
       NOT_ALLOWED: "Your account can't do this operation right now.",
+      NOT_CONFIGURED:
+        "This feature isn't available in this environment. For test USDC, use Circle's faucet (USDC, Stellar Testnet network) with your address.",
       UNKNOWN: 'Something failed while processing the transaction.',
     },
   },

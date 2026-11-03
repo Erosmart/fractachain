@@ -422,7 +422,8 @@ const es = {
     finalizeFail: 'No se pudo finalizar la licitación',
     refundFail: 'No se pudo reembolsar',
     dividendFail: 'No se pudo cobrar el dividendo',
-    freighterMissing: 'No encontramos Freighter. Instalá la extensión desde freighter.app y recargá.',
+    freighterMissing:
+      'No encontramos Freighter. Instalá la extensión desde freighter.app (MetaMask y otras wallets no sirven), ponela en Testnet y recargá.',
     freighterRejected: 'Freighter rechazó la conexión',
     freighterNoAddress: 'Freighter no devolvió tu dirección',
     freighterNoSign: 'Freighter no firmó el mensaje',
@@ -845,7 +846,8 @@ const en: Messages = {
     finalizeFail: 'Could not finalize the offering',
     refundFail: 'Could not process the refund',
     dividendFail: 'Could not collect the dividend',
-    freighterMissing: 'Freighter not found. Install the extension from freighter.app and reload.',
+    freighterMissing:
+      "Freighter not found. Install the extension from freighter.app (MetaMask and other wallets won't work), set it to Testnet and reload.",
     freighterRejected: 'Freighter rejected the connection',
     freighterNoAddress: 'Freighter did not return your address',
     freighterNoSign: 'Freighter did not sign the message',
