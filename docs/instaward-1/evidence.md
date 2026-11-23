@@ -101,10 +101,16 @@ ran, then 18/18 checks — wallet login (SEP-53), terms accepted, KYC, USDC trus
 `TX_BAD_SIGNATURE` / `TX_ALREADY_SUBMITTED` refusals, `finalize` paying the trustee,
 `finalize` → Failed and `refund` back to the investor.
 
+## Demo video (Deliverable 2)
+
+[FractaChain — Instaward 1 demo on YouTube](https://www.youtube.com/watch?v=F-QzX4YHCCw): an investor signs in with the
+real Freighter extension, subscribes to a tender in Circle USDC and signs `contribute`
+in Freighter; the transaction is then opened on Stellar Expert (signer = the investor's
+`G…`, asset = `USDC` issued by `GBBD47IF…`). Script: [`demo-video.md`](demo-video.md).
+
 ## Still to be produced by the team (needs accounts or permissions)
 
 | Evidence                                     | Why it is not here                                                     | How                                                       |
 | -------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------- |
-| Demo video with the real Freighter extension | needs a person and a browser with Freighter                            | [`demo-video.md`](demo-video.md)                          |
 | Public demo URL                              | needs the team's Railway project                                       | [`deploy.md`](deploy.md), `docs/guides/deploy-railway.md` |
 | Merged PR                                    | the branch is pushed and CI is green; merging is the maintainers' call | open the PR from `macroupdate` to `main`                  |

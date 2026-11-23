@@ -30,8 +30,8 @@ testnet**. Links go to Stellar Expert, a public block explorer.
 3. The investor got their test USDC from the demo pool, not a faucet:
    [deb605dc…](https://stellar.expert/explorer/testnet/tx/deb605dcd6dc0a11e36abed24a4c0305c7466bc78f761a3f054eb7225a3c55a1)
    (from `GBOMPS5X…`, the pool).
-4. Watch the demo video (link in [`evidence.md`](evidence.md) once recorded): the
-   Freighter popup asks the investor to sign.
+4. Watch the demo video ([on YouTube](https://www.youtube.com/watch?v=F-QzX4YHCCw), also linked from
+   [`evidence.md`](evidence.md)): the Freighter popup asks the investor to sign.
 
 ✅ Present if the source of each investor transaction is the investor's `G…` address.
 
