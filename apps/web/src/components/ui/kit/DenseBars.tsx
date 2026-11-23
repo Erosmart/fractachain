@@ -166,7 +166,7 @@ export function DenseBars({
 
             {reference && (
               <div
-                className="pointer-events-none absolute inset-x-0 border-t border-dashed border-ink/35"
+                className="pointer-events-none absolute inset-x-0 border-t border-dashed border-ink/20"
                 style={{ bottom: pct(reference.value) }}
                 aria-hidden="true"
               >
@@ -210,7 +210,7 @@ export function DenseBars({
                       <>
                         {/* The pill floats above the plot; a dashed guide drops to the bar. */}
                         <span
-                          className="pointer-events-none absolute w-px border-l border-dashed border-ink/40"
+                          className="pointer-events-none absolute w-px border-l border-dashed border-ink/25"
                           style={{ top: 0, bottom: empty ? 0 : pct(d.value as number) }}
                           aria-hidden="true"
                         />

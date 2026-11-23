@@ -17,7 +17,7 @@
   --line-strong: 205 214 228;
   --ink: 14 31 61;
   --ink-2: 70 85 112;
-  --muted: 104 117 140;
+  --muted: 92 104 126;
   --navy: 14 31 61;
   --navy-ink: 255 255 255;
   --sky: 108 196 245;
@@ -159,13 +159,13 @@ p {
 @layer components {
   /* ---------- Surfaces ---------- */
   .card {
-    @apply rounded-card border border-line bg-surface shadow-card;
+    @apply rounded-card border border-line/60 bg-surface shadow-card dark:border-line;
   }
   .card-pad {
     @apply p-5 sm:p-6;
   }
   .card-muted {
-    @apply rounded-card border border-line bg-surface-2;
+    @apply rounded-card border border-line/60 bg-surface-2 dark:border-line;
   }
   /* The signature panel in the logo's blue → teal → green → gold. Ink text only (never white). */
   .gradient-panel {
@@ -213,7 +213,7 @@ p {
     @apply bg-navy text-navy-ink hover:bg-navy/90;
   }
   .btn-secondary {
-    @apply border border-line bg-surface text-ink hover:border-line-strong hover:bg-surface-2;
+    @apply border border-line/80 bg-surface text-ink hover:border-line-strong hover:bg-surface-2 dark:border-line;
   }
   .btn-soft {
     @apply bg-sky-soft text-ink hover:bg-sky/30;
@@ -225,14 +225,14 @@ p {
     @apply bg-bad-soft text-bad hover:bg-bad/15;
   }
   .icon-btn {
-    @apply inline-grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line bg-surface text-ink-2 transition-colors hover:text-ink hover:border-line-strong;
+    @apply inline-grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line/80 bg-surface text-ink-2 transition-colors dark:border-line hover:text-ink hover:border-line-strong;
   }
   /* Small square ↗ link in a card corner. */
   .arrow-btn {
     @apply inline-grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-sky-soft/70 text-ink transition-colors hover:bg-sky/30;
   }
   .input {
-    @apply h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-sm text-ink placeholder:text-muted/80 transition-colors focus:border-sky-strong focus:outline-none focus:ring-4 focus:ring-sky/20 disabled:opacity-60;
+    @apply h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-sm text-ink placeholder:text-muted transition-colors focus:border-sky-strong focus:outline-none focus:ring-4 focus:ring-sky/20 disabled:opacity-60;
   }
   textarea.input {
     @apply h-auto py-2.5;
@@ -243,7 +243,7 @@ p {
 
   /* ---------- Pills & chips ---------- */
   .pill-tabs {
-    @apply inline-flex items-center gap-0.5 rounded-xl border border-line bg-surface p-1;
+    @apply inline-flex items-center gap-0.5 rounded-xl border border-line/80 bg-surface p-1 dark:border-line;
   }
   .pill-tab {
     @apply inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[13px] text-ink-2 transition-colors hover:bg-ink/5 hover:text-ink;

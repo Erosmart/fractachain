@@ -31,7 +31,10 @@ function OfferingCard({ pool }: { pool: Pool }) {
       </header>
       <h3 className="mt-5 text-[17px] font-medium leading-snug text-ink">
         {/* The whole card is the link target; the heading carries the accessible name. */}
-        <a href={href} className="after:absolute after:inset-0 after:rounded-card focus-visible:outline-none">
+        <a
+          href={href}
+          className="after:absolute after:inset-0 after:rounded-card after:content-[''] focus-visible:outline-none focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-sky-strong"
+        >
           {issuerName(pool)}
         </a>
       </h3>

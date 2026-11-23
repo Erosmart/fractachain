@@ -44,7 +44,7 @@ export function ChecklistItem({
       {done && <span className="sr-only">(hecho)</span>}
     </>
   );
-  const cls = `flex min-w-0 items-center gap-3 rounded-2xl border border-line bg-surface px-3.5 py-3 ${className}`;
+  const cls = `flex min-w-0 items-center gap-3 rounded-2xl border border-line/60 bg-surface px-3.5 dark:border-line py-3 ${className}`;
   return href ? (
     <a href={href} className={`${cls} transition-colors hover:border-line-strong hover:bg-surface-2`}>
       {body}
