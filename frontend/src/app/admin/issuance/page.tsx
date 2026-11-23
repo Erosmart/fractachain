@@ -17,7 +17,7 @@ const empty = {
   isin: '',
   authorizedShares: 1000000,
   sharesToTokenize: 10000,
-  pricePerShareUsdc: 1,
+  pricePerShareUsdc: 10,
   cajaSubaccount: '',
   custodianCuit: '30-50001091-2',
   cnvRecordId: '',
@@ -28,16 +28,13 @@ const empty = {
   issuerPublicKey: '',
   proceedsWallet: '',
   paymentKind: 'USDC',
-  offeringSoftCapUsdc: 3,
-  offeringHardCapUsdc: 5,
+  offeringSoftCapUsdc: 15000,
+  offeringHardCapUsdc: 100000,
   offeringDays: 21,
   tnaUsd: 0,
-  minInvestmentUsdc: 1,
+  minInvestmentUsdc: 100,
   useOfProceeds: 'Capital de trabajo y listado primario de acciones tokenizadas.',
 };
-
-/** Licitaciones with a Soroban instance close through finalize(), whatever they bill in. */
-const isContractId = (id?: string) => /^C[A-Z2-7]{55}$/.test(id || '');
 
 const emptyStock = {
   ticker: '',
@@ -449,12 +446,12 @@ export default function AdminIssuancePage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => act(l.id, isContractId(l.licitacionContract) ? 'finalize' : 'close')}
+                    onClick={() => act(l.id, l.dossier.paymentKind === 'XLM' ? 'finalize' : 'close')}
                     disabled={Boolean(busy)}
                     className="px-3 py-2 rounded-xl border border-black/10 text-xs font-bold disabled:opacity-40"
                   >
-                    {isContractId(l.licitacionContract)
-                      ? t('admIss.finalizeOnChain')
+                    {l.dossier.paymentKind === 'XLM'
+                      ? t('admIss.finalizeXlm')
                       : t('admIss.closeNow', { n: l.dossier.offeringSoftCapUsdc })}
                   </button>
                 </>
