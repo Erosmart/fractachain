@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { Keypair, StrKey } from '@stellar/stellar-sdk';
+import { Asset, Keypair, StrKey } from '@stellar/stellar-sdk';
+import { getTestnetConfig } from '../admin/testnet';
 import { fundFriendbot } from '../auth/stellar_testnet';
 import { loadTestnetDeployment } from './deployment';
 
@@ -138,38 +139,77 @@ export async function ensurePlatformIssuer(): Promise<Keypair> {
   throw new Error(`Friendbot no fondeó el emisor de plataforma ${kp.publicKey()}`);
 }
 
+/** Circle's USDC issuer on Stellar testnet (developers.circle.com). */
+export const CIRCLE_TESTNET_USDC_ISSUER = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
+
+export function usdcCode(): string {
+  return (
+    loadTestnetDeployment()?.usdcClassic?.code ||
+    String(process.env.STELLAR_USDC_CODE || '').trim() ||
+    'USDC'
+  );
+}
+
+let warnedIssuerOverride = false;
+
 /**
- * Testnet USDC issuer: a dedicated, flag-free account so the platform can
- * mint faucet USDC to investor wallets. Keeping it separate from
- * STELLAR_ISSUER_SECRET matters because that account runs AUTH_REQUIRED for
- * the security tokens — every USDC trustline would need issuer sign-off,
- * which defeats a demo faucet.
+ * Classic USDC the licitaciones settle in: Circle's on testnet, or a
+ * platform-issued asset as the fallback (`npm run usdc:set`).
  *
- * Resolution order for the public key: the configured secret (derivable),
- * STELLAR_USDC_ISSUER, then the classic issuer recorded in
- * deployments/testnet.json.
+ * deployments/testnet.json wins because the factory and every deployed
+ * instance are bound to that asset's SAC; letting an env var drift from it is
+ * how balance checks ended up reading one USDC while the contract pulled
+ * another. STELLAR_USDC_ISSUER and the issuer secret only apply to a fresh
+ * clone with no deployment recorded.
  */
 export function usdcIssuerPublicKey(): string | null {
+  const deployed = loadTestnetDeployment()?.usdcClassic?.issuer;
+  const configured = String(process.env.STELLAR_USDC_ISSUER || '').trim();
+  if (deployed && StrKey.isValidEd25519PublicKey(deployed)) {
+    if (configured && configured !== deployed && !warnedIssuerOverride) {
+      warnedIssuerOverride = true;
+      console.warn(
+        `STELLAR_USDC_ISSUER (${configured}) se ignora: deployments/testnet.json fija ${deployed}. Cambialo con npm run usdc:set.`,
+      );
+    }
+    return deployed;
+  }
+  if (configured && StrKey.isValidEd25519PublicKey(configured)) return configured;
   const secret = String(process.env.STELLAR_USDC_ISSUER_SECRET || '').trim();
   if (secret.startsWith('S')) {
     try {
       return Keypair.fromSecret(secret).publicKey();
     } catch {
-      // malformed — keep looking
+      // malformed — nothing configured
     }
   }
-  const configured = String(process.env.STELLAR_USDC_ISSUER || '').trim();
-  if (configured && StrKey.isValidEd25519PublicKey(configured)) return configured;
-  return loadTestnetDeployment()?.usdcClassic?.issuer || null;
+  return null;
+}
+
+export function usdcClassicAsset(): Asset {
+  const issuer = usdcIssuerPublicKey();
+  if (!issuer) {
+    throw new Error('Falta el emisor USDC: corré npm run usdc:set -- circle');
+  }
+  return new Asset(usdcCode(), issuer);
 }
 
 /**
- * Signing side of `usdcIssuerPublicKey`. Provisions a friendbot-funded issuer
- * and persists it when nothing is configured — same pattern as
- * `ensurePlatformIssuer`, so a fresh clone still gets a working faucet.
+ * Contract ID of the USDC SAC, derived from the classic asset so it can never
+ * point at a different token than the one balances are read against.
  */
-export async function usdcIssuerKeypair(): Promise<Keypair> {
+export function usdcSacId(): string {
+  return usdcClassicAsset().contractId(getTestnetConfig().networkPassphrase);
+}
+
+export function isCircleUsdc(): boolean {
+  return usdcIssuerPublicKey() === CIRCLE_TESTNET_USDC_ISSUER;
+}
+
+/** The USDC issuer key when the platform holds it (own asset); null for Circle. */
+export function usdcMintKeypair(): Keypair | null {
   const want = usdcIssuerPublicKey();
+  if (!want) return null;
   for (const name of [
     'STELLAR_USDC_ISSUER_SECRET',
     'STELLAR_ISSUER_SECRET',
@@ -181,11 +221,54 @@ export async function usdcIssuerKeypair(): Promise<Keypair> {
     if (!secret.startsWith('S')) continue;
     try {
       const kp = Keypair.fromSecret(secret);
-      if (want && kp.publicKey() === want) return kp;
+      if (kp.publicKey() === want) return kp;
     } catch {
       // malformed secret — keep looking
     }
   }
+  return null;
+}
+
+/**
+ * Demo USDC pool. Circle's USDC cannot be minted by the platform, so grants
+ * are transfers out of this wallet, topped up from faucet.circle.com.
+ */
+export function usdcTreasuryKeypair(): Keypair | null {
+  const secret = String(process.env.STELLAR_USDC_TREASURY_SECRET || '').trim();
+  if (!secret.startsWith('S')) return null;
+  try {
+    return Keypair.fromSecret(secret);
+  } catch {
+    return null;
+  }
+}
+
+/** Same as `usdcTreasuryKeypair`, provisioning a friendbot-funded pool when missing. */
+export async function ensureUsdcTreasuryKeypair(): Promise<Keypair> {
+  const existing = usdcTreasuryKeypair();
+  if (existing) return existing;
+  const kp = Keypair.random();
+  for (let i = 0; i < 3; i++) {
+    const faucet = await fundFriendbot(kp.publicKey());
+    if (faucet.funded) {
+      writeEnv('STELLAR_USDC_TREASURY_SECRET', kp.secret());
+      console.warn(`Tesorería USDC de demo provisionada: ${kp.publicKey()}`);
+      return kp;
+    }
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  throw new Error(`Friendbot no fondeó la tesorería USDC ${kp.publicKey()}`);
+}
+
+/**
+ * Signing side of `usdcIssuerPublicKey`. Provisions a friendbot-funded issuer
+ * and persists it when nothing is configured — same pattern as
+ * `ensurePlatformIssuer`, so a fresh clone still gets a working faucet.
+ */
+export async function usdcIssuerKeypair(): Promise<Keypair> {
+  const want = usdcIssuerPublicKey();
+  const held = usdcMintKeypair();
+  if (held) return held;
   if (want) {
     throw new Error(
       `La plataforma no tiene la clave del emisor USDC ${want}. Configurá STELLAR_USDC_ISSUER_SECRET con la S… de esa cuenta.`,

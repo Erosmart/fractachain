@@ -16,10 +16,9 @@ import { loadAssetBalance, loadNativeXlm } from '../auth/stellar_testnet';
 import { explorerTx } from '../stellar/onchain';
 import { usdcIssuerPublicKey } from '../stellar/keys';
 
-// Canonical platform USDC issuer: env secret/pubkey first, then
-// deployments/testnet.json. Falling back to the Circle issuer here would make
-// the portfolio and the SDEX quote a different asset than the one licitaciones
-// actually charge.
+// Canonical USDC issuer from deployments/testnet.json (Circle's, or the
+// platform fallback). Hardcoding either one here would make the portfolio and
+// the SDEX quote a different asset than the one licitaciones actually charge.
 function usdcIssuer(): string | null {
   return usdcIssuerPublicKey();
 }

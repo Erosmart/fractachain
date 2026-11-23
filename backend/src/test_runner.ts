@@ -7,6 +7,7 @@ import { getAllCommodityPrices } from './mocks/fiat_oracle';
 import { getMervalStocks } from './custody/stocks';
 import { canFinalizeFromSnapshot, parseLicitacionState } from './stellar/licitacion_state';
 import { settlementAction } from './market/settlement_rules';
+import { fromStroops, toStroops } from './stellar/soroban';
 
 console.log('=== INICIANDO SUITE DE PRUEBAS DE FRACTACHAIN BACKEND ===');
 
@@ -171,6 +172,23 @@ assert(
   settlementAction({ status: 'CLOSED_FAILED', onChain: true }) === 'skip',
   'Cerrada fallida no acredita nada (el inversor usa refund)',
 );
+
+console.log('\n[9] Probando montos en USDC (7 decimales del SAC):');
+
+assert(toStroops(1) === 10_000_000n, '1 USDC son 10.000.000 unidades del SAC');
+assert(toStroops(0.1 + 0.2) === 3_000_000n, '0.1 + 0.2 USDC no pierde una unidad por punto flotante');
+assert(toStroops(2.675) === 26_750_000n, '2.675 USDC se convierte exacto');
+assert(toStroops(0.0000001) === 1n, 'El mínimo representable es 0.0000001 USDC');
+assert(toStroops(3) % toStroops(1) === 0n, 'Un aporte de 3 USDC es múltiplo del precio 1 USDC');
+assert(toStroops(2.5) % toStroops(1) !== 0n, 'Un aporte de 2.5 USDC no es múltiplo del precio 1 USDC');
+assert(fromStroops(toStroops(4.2)) === 4.2, 'Ida y vuelta de 4.2 USDC conserva el monto');
+let rejected = false;
+try {
+  toStroops(0);
+} catch {
+  rejected = true;
+}
+assert(rejected, 'Un monto de 0 USDC se rechaza');
 
 console.log(`\n=== RESUMEN: ${testsPassed} PASADOS, ${testsFailed} FALLIDOS ===\n`);
 if (testsFailed > 0) {

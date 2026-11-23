@@ -31,6 +31,8 @@ export interface TestnetDeployment {
   forwardWasmHash?: string;
   warrantWasmHash?: string;
   usdcClassic?: { code: string; issuer: string };
+  /** USDC the platform settled in before the last `usdc:set` switch. */
+  usdcClassicLegacy?: { code: string; issuer: string };
 }
 
 function deploymentFile(): string {

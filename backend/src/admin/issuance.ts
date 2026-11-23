@@ -1,4 +1,4 @@
-import { loadTestnetDeployment } from '../stellar/deployment';
+import { usdcSacId } from '../stellar/keys';
 
 export type ProductKind = 'LICITACION' | 'FORWARD' | 'WARRANT' | 'STOCK';
 export type PaymentKind = 'XLM' | 'USDC' | 'USDT';
@@ -21,10 +21,18 @@ let seq = 1;
 
 /**
  * Testnet defaults. Native XLM SAC is derived per-network; the USDC SAC is
- * read from deployments/testnet.json (the platform-issued faucet asset), so
- * this map always points at the same contract the licitaciones bill in.
- * USDT is set from admin.
+ * derived from the classic USDC in deployments/testnet.json (Circle's, or the
+ * platform fallback), so this map always points at the same contract the
+ * licitaciones bill in. USDT is set from admin.
  */
+function usdcSacOrEmpty(): string {
+  try {
+    return usdcSacId();
+  } catch {
+    return '';
+  }
+}
+
 const DEFAULT_TESTNET_ASSETS: Record<PaymentKind, string> = {
   XLM: 'native',
   USDC: '',
@@ -34,7 +42,7 @@ const DEFAULT_TESTNET_ASSETS: Record<PaymentKind, string> = {
 export function getPaymentAssets(): Record<PaymentKind, string> {
   return {
     ...DEFAULT_TESTNET_ASSETS,
-    USDC: DEFAULT_TESTNET_ASSETS.USDC || loadTestnetDeployment()?.usdcSac || '',
+    USDC: DEFAULT_TESTNET_ASSETS.USDC || usdcSacOrEmpty(),
   };
 }
 
@@ -60,7 +68,7 @@ export function createProduct(input: {
     kind: input.kind,
     name: input.name,
     paymentKind: input.paymentKind,
-    paymentTokenAddress: DEFAULT_TESTNET_ASSETS[input.paymentKind],
+    paymentTokenAddress: getPaymentAssets()[input.paymentKind],
     pricePerUnit: input.pricePerUnit || '0',
     contractAddress: input.contractAddress || 'PENDING_DEPLOY',
     active: true,

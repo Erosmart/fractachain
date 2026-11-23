@@ -1,12 +1,14 @@
 import { createHash } from 'crypto';
 import {
   Address,
+  Contract,
   Keypair,
   StrKey,
   Transaction,
   TransactionBuilder,
   contract,
   rpc,
+  scValToNative,
 } from '@stellar/stellar-sdk';
 import { getTestnetConfig } from '../admin/testnet';
 import { loadTestnetDeployment } from './deployment';
@@ -31,11 +33,19 @@ export function isLiveContractId(id?: string | null): boolean {
   }
 }
 
+export const STROOP_DECIMALS = 7;
+
+/**
+ * Exact decimal → 7-decimal integer conversion. `amount * 1e7` in floating
+ * point turns 0.1 + 0.2 style values into off-by-one stroops, which the
+ * contract then rejects as not divisible by the unit price.
+ */
 export function toStroops(amount: number): bigint {
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error('Monto inválido');
   }
-  return BigInt(Math.round(amount * Number(STROOPS_PER_UNIT)));
+  const [whole, frac = ''] = amount.toFixed(STROOP_DECIMALS).split('.');
+  return BigInt(whole) * STROOPS_PER_UNIT + BigInt(frac.padEnd(STROOP_DECIMALS, '0'));
 }
 
 export function fromStroops(stroops: bigint | number | string): number {
@@ -300,6 +310,34 @@ export async function wasmHashOf(contractId: string): Promise<string> {
   const wasm = await rpcServer().getContractWasmByContractId(contractId);
   const { createHash } = await import('crypto');
   return createHash('sha256').update(wasm).digest('hex');
+}
+
+/**
+ * `decimals()` of a Stellar Asset Contract. SACs have no WASM spec, so this
+ * simulates the call directly instead of going through `contract.Client`.
+ */
+export async function sacDecimals(sacId: string): Promise<number> {
+  const srv = rpcServer();
+  const source = loadTestnetDeployment()?.deployer;
+  if (!source) throw new Error('Falta deployer en deployments/testnet.json');
+  const account = await srv.getAccount(source);
+  const tx = new TransactionBuilder(account, { fee: SOROBAN_FEE, networkPassphrase: networkPassphrase() })
+    .addOperation(new Contract(sacId).call('decimals'))
+    .setTimeout(SOROBAN_TIMEOUT)
+    .build();
+  const sim = await srv.simulateTransaction(tx);
+  if (!rpc.Api.isSimulationSuccess(sim) || !sim.result) {
+    throw new Error(`No se pudo leer decimals() de ${sacId}`);
+  }
+  return Number(scValToNative(sim.result.retval));
+}
+
+/** Fails loudly if the payment SAC is not on the 7-decimal scale `toStroops` uses. */
+export async function assertStroopScale(sacId: string): Promise<void> {
+  const decimals = await sacDecimals(sacId);
+  if (decimals !== STROOP_DECIMALS) {
+    throw new Error(`El token ${sacId} usa ${decimals} decimales; los montos se convierten con ${STROOP_DECIMALS}`);
+  }
 }
 
 export function xlmSac(): string {

@@ -1,14 +1,18 @@
 /**
  * Testnet USDC faucet + trustline plumbing.
  *
- * Friendbot only ever funds native XLM, so "USDC de prueba" has to come from
- * an issuer the platform controls. The issuer lives in
- * STELLAR_USDC_ISSUER_SECRET and is deliberately a separate account from the
- * security-token issuer: that account runs AUTH_REQUIRED (every trustline
- * would need issuer sign-off, killing the faucet UX), this one does not.
+ * Friendbot only ever funds native XLM, so "USDC de prueba" comes from one of
+ * two sources, picked by which asset deployments/testnet.json settles in:
  *
- * The licitación contract pulls the payment token via its SAC, whose address
- * is recorded as `usdcSac` in deployments/testnet.json.
+ * - Circle's USDC (default): the platform cannot mint it, so grants are
+ *   transfers out of the demo pool (STELLAR_USDC_TREASURY_SECRET), topped up
+ *   from faucet.circle.com.
+ * - Platform-issued USDC (fallback): the issuer key mints the grant. That
+ *   issuer is deliberately separate from the security-token issuer, which runs
+ *   AUTH_REQUIRED and would need to sign off every trustline.
+ *
+ * The licitación contract pulls the payment token via the SAC of that same
+ * asset (`usdcSacId`).
  */
 import {
   Asset,
@@ -19,9 +23,17 @@ import {
   TransactionBuilder,
 } from '@stellar/stellar-sdk';
 import { getTestnetConfig } from '../admin/testnet';
-import { fundFriendbot, isStellarPublicKey, loadAssetBalance, loadNativeXlm, topUpXlm } from '../auth/stellar_testnet';
-import { usdcIssuerKeypair, usdcIssuerPublicKey } from './keys';
-import { loadTestnetDeployment } from './deployment';
+import { fundFriendbot, loadAssetBalance, loadNativeXlm, topUpXlm } from '../auth/stellar_testnet';
+import {
+  isCircleUsdc,
+  usdcClassicAsset,
+  usdcCode,
+  usdcIssuerKeypair,
+  usdcIssuerPublicKey,
+  usdcMintKeypair,
+  usdcSacId,
+  usdcTreasuryKeypair,
+} from './keys';
 import {
   describeHorizonError,
   getTrustlineState,
@@ -29,9 +41,7 @@ import {
 } from './sdex';
 import { explorerTx } from './onchain';
 
-export const USDC_CODE = 'USDC';
-/** Wallet top-up granted on hydrate / fund clicks. */
-const USDC_GRANT = Math.max(1, Number(process.env.STELLAR_USDC_GRANT || 10_000));
+export const USDC_CODE = usdcCode();
 const FEE = String(Number(BASE_FEE) * 100);
 const TX_TIMEOUT_SECONDS = 180;
 
@@ -55,19 +65,23 @@ function networkPassphrase() {
 }
 
 export function usdcAsset(): Asset {
-  const issuer = usdcIssuerPublicKey();
-  if (!issuer || !isStellarPublicKey(issuer)) {
-    throw new Error('Falta el emisor USDC de testnet (STELLAR_USDC_ISSUER_SECRET)');
+  return usdcClassicAsset();
+}
+
+function sacOrNull(): string | null {
+  try {
+    return usdcSacId();
+  } catch {
+    return null;
   }
-  return new Asset(USDC_CODE, issuer);
 }
 
 export function usdcAssetDescriptor() {
-  const issuer = usdcIssuerPublicKey();
   return {
     code: USDC_CODE,
-    issuer,
-    sac: loadTestnetDeployment()?.usdcSac || null,
+    issuer: usdcIssuerPublicKey(),
+    sac: sacOrNull(),
+    circle: isCircleUsdc(),
   };
 }
 
@@ -103,6 +117,35 @@ async function submitTx(sourcePublicKey: string, ops: any[], signers: Keypair[])
   }
 }
 
+/**
+ * Who pays a grant: the issuer mints when the platform holds its key (own
+ * asset); otherwise the demo treasury transfers from its Circle USDC pool.
+ */
+async function usdcSource(): Promise<{ kp: Keypair; mints: boolean }> {
+  const minter = usdcMintKeypair();
+  if (minter) return { kp: minter, mints: true };
+  const treasury = usdcTreasuryKeypair();
+  if (treasury) return { kp: treasury, mints: false };
+  const issuer = usdcIssuerPublicKey();
+  // Fresh clone with no USDC configured at all: provision a platform issuer.
+  if (!issuer) return { kp: await usdcIssuerKeypair(), mints: true };
+  throw new Error(
+    `No hay de dónde fondear USDC ${issuer}: configurá STELLAR_USDC_TREASURY_SECRET con una wallet ` +
+      'que tenga USDC de Circle (faucet.circle.com) o corré npm run usdc:set -- circle para provisionarla.',
+  );
+}
+
+/**
+ * Default grant per wallet. Minting is free, but every Circle grant drains a
+ * pool fed by a faucet that pays 20 USDC every 2 hours, so it stays small
+ * unless STELLAR_USDC_GRANT says otherwise.
+ */
+function defaultGrant(mints: boolean): number {
+  const configured = Number(process.env.STELLAR_USDC_GRANT);
+  if (Number.isFinite(configured) && configured > 0) return configured;
+  return mints ? 10_000 : 5;
+}
+
 export interface UsdcFundResult {
   funded: boolean;
   already: boolean;
@@ -111,14 +154,9 @@ export interface UsdcFundResult {
   hash: string | null;
   explorer: string | null;
   issuer: string;
+  source: 'mint' | 'treasury';
 }
 
-/**
- * Issues `grant` USDC to `wallet`, creating/authorizing the trustline when
- * `walletSecret` is available (custodial wallets and demo treasuries).
- * Without the wallet secret a missing trustline throws `USDC_NEEDS_TRUSTLINE`
- * so the caller can hand the user a `changeTrust` XDR instead.
- */
 /**
  * Automatic heals must never top a wallet back up: that would silently undo
  * every purchase. Only a wallet holding no USDC at all — free or locked in
@@ -129,134 +167,119 @@ function grantGap(line: { balance: number }, grant: number, onlyIfEmpty?: boolea
   return grant - line.balance;
 }
 
-export async function fundTestnetUsdc(
+/** `setTrustLineFlags` is only possible (and only needed) with the issuer key. */
+async function authorizeOps(
   wallet: string,
-  opts?: { walletSecret?: string | null; grant?: number; onlyIfEmpty?: boolean },
-): Promise<UsdcFundResult> {
-  const issuer = await usdcIssuerKeypair();
-  const asset = usdcAsset();
-  const grant = opts?.grant ?? USDC_GRANT;
-
-  const fundedXlm = await fundFriendbot(wallet).catch(() => ({ funded: false }));
-  void fundedXlm;
-  const line = await getTrustlineState(wallet, asset);
-  const needsAuth = await issuerRequiresAuth(issuer.publicKey());
-
-  if (!line.exists && !opts?.walletSecret) {
-    throw new Error(USDC_NEEDS_TRUSTLINE);
+  asset: Asset,
+  line: { authorized: boolean },
+  source: { kp: Keypair; mints: boolean },
+) {
+  if (line.authorized || !(await issuerRequiresAuth(asset.issuer!))) return [];
+  if (!source.mints) {
+    throw new Error(`El emisor ${asset.issuer} exige autorizar la trustline y la plataforma no tiene su clave`);
   }
+  return [
+    Operation.setTrustLineFlags({
+      trustor: wallet,
+      asset,
+      flags: { authorized: true },
+      source: source.kp.publicKey(),
+    }),
+  ];
+}
+
+async function grantOps(
+  wallet: string,
+  asset: Asset,
+  gap: number,
+  source: { kp: Keypair; mints: boolean },
+) {
+  if (gap <= 0) return [];
+  if (!source.mints) {
+    if (source.kp.publicKey() === wallet) return [];
+    const pool = await loadAssetBalance(source.kp.publicKey(), asset.code, asset.issuer!);
+    if (pool < gap) {
+      throw new Error(
+        `El pool de USDC de demo (${source.kp.publicKey()}) tiene ${pool.toFixed(2)} USDC y hacen falta ${gap}. ` +
+          'Recargalo desde faucet.circle.com (Stellar Testnet).',
+      );
+    }
+  }
+  return [
+    Operation.payment({
+      destination: wallet,
+      asset,
+      amount: toStellarAmount(gap),
+      source: source.kp.publicKey(),
+    }),
+  ];
+}
+
+async function grantUsdc(
+  wallet: string,
+  opts: { walletSecret?: string | null; grant?: number; onlyIfEmpty?: boolean; missingTrustline: string },
+): Promise<UsdcFundResult> {
+  const source = await usdcSource();
+  const asset = usdcAsset();
+  const line = await getTrustlineState(wallet, asset);
+  if (!line.exists && !opts.walletSecret) throw new Error(opts.missingTrustline);
 
   const ops: any[] = [];
-  const signers: Keypair[] = [issuer];
+  const signers: Keypair[] = [source.kp];
   if (!line.exists) {
-    const walletKp = Keypair.fromSecret(opts!.walletSecret!);
-    signers.push(walletKp);
+    signers.push(Keypair.fromSecret(opts.walletSecret!));
     ops.push(Operation.changeTrust({ asset, source: wallet }));
   }
-  if (needsAuth && !line.authorized) {
-    ops.push(
-      Operation.setTrustLineFlags({
-        trustor: wallet,
-        asset,
-        flags: { authorized: true },
-        source: issuer.publicKey(),
-      }),
-    );
-  }
-  const gap = grantGap(line, grant, opts?.onlyIfEmpty);
-  if (gap > 0) {
-    ops.push(
-      Operation.payment({
-        destination: wallet,
-        asset,
-        amount: toStellarAmount(gap),
-        source: issuer.publicKey(),
-      }),
-    );
-  }
-  if (!ops.length) {
-    return {
-      funded: true,
-      already: true,
-      balance: line.balance,
-      trustline: true,
-      hash: null,
-      explorer: null,
-      issuer: issuer.publicKey(),
-    };
-  }
-  const result = await submitTx(issuer.publicKey(), ops, signers);
-  const balance = await usdcBalance(wallet);
-  return {
+  ops.push(...(await authorizeOps(wallet, asset, line, source)));
+  const gap = grantGap(line, opts.grant ?? defaultGrant(source.mints), opts.onlyIfEmpty);
+  ops.push(...(await grantOps(wallet, asset, gap, source)));
+
+  const base = {
     funded: true,
-    already: false,
-    balance,
     trustline: true,
-    hash: (result as any).hash || null,
-    explorer: explorerTx((result as any).hash),
-    issuer: issuer.publicKey(),
+    issuer: asset.issuer!,
+    source: source.mints ? ('mint' as const) : ('treasury' as const),
+  };
+  if (!ops.length) {
+    return { ...base, already: true, balance: line.balance, hash: null, explorer: null };
+  }
+  const result = await submitTx(source.kp.publicKey(), ops, signers);
+  const hash = (result as any).hash || null;
+  return {
+    ...base,
+    already: false,
+    balance: await usdcBalance(wallet),
+    hash,
+    explorer: explorerTx(hash),
   };
 }
 
 /**
- * Issuer-side top-up for a wallet that already opened its trustline — used by
- * the self-custody flow right after the user signs `changeTrust` in Freighter.
+ * Grants `grant` USDC to `wallet`, creating/authorizing the trustline when
+ * `walletSecret` is available (custodial wallets and demo treasuries).
+ * Without the wallet secret a missing trustline throws `USDC_NEEDS_TRUSTLINE`
+ * so the caller can hand the user a `changeTrust` XDR instead.
+ */
+export async function fundTestnetUsdc(
+  wallet: string,
+  opts?: { walletSecret?: string | null; grant?: number; onlyIfEmpty?: boolean },
+): Promise<UsdcFundResult> {
+  await fundFriendbot(wallet).catch(() => undefined);
+  return grantUsdc(wallet, { ...opts, missingTrustline: USDC_NEEDS_TRUSTLINE });
+}
+
+/**
+ * Grant for a wallet that already opened its trustline — used by the
+ * self-custody flow right after the user signs `changeTrust` in Freighter.
  */
 export async function payUsdcGrant(
   wallet: string,
   opts?: { onlyIfEmpty?: boolean },
 ): Promise<UsdcFundResult> {
-  const issuer = await usdcIssuerKeypair();
-  const asset = usdcAsset();
-  const line = await getTrustlineState(wallet, asset);
-  if (!line.exists) {
-    throw new Error('La wallet todavía no tiene trustline USDC: firmá el changeTrust primero');
-  }
-  const needsAuth = await issuerRequiresAuth(issuer.publicKey());
-  const ops: any[] = [];
-  if (needsAuth && !line.authorized) {
-    ops.push(
-      Operation.setTrustLineFlags({
-        trustor: wallet,
-        asset,
-        flags: { authorized: true },
-        source: issuer.publicKey(),
-      }),
-    );
-  }
-  const gap = grantGap(line, USDC_GRANT, opts?.onlyIfEmpty);
-  if (gap > 0) {
-    ops.push(
-      Operation.payment({
-        destination: wallet,
-        asset,
-        amount: toStellarAmount(gap),
-        source: issuer.publicKey(),
-      }),
-    );
-  }
-  if (!ops.length) {
-    return {
-      funded: true,
-      already: true,
-      balance: line.balance,
-      trustline: true,
-      hash: null,
-      explorer: null,
-      issuer: issuer.publicKey(),
-    };
-  }
-  const result = await submitTx(issuer.publicKey(), ops, [issuer]);
-  const balance = await usdcBalance(wallet);
-  return {
-    funded: true,
-    already: false,
-    balance,
-    trustline: true,
-    hash: (result as any).hash || null,
-    explorer: explorerTx((result as any).hash),
-    issuer: issuer.publicKey(),
-  };
+  return grantUsdc(wallet, {
+    onlyIfEmpty: opts?.onlyIfEmpty,
+    missingTrustline: 'La wallet todavía no tiene trustline USDC: firmá el changeTrust primero',
+  });
 }
 
 /**
@@ -272,27 +295,30 @@ export async function ensureFiduciaryUsdcTrustline(
   const line = await getTrustlineState(wallet, asset);
   if (line.exists && line.authorized) return true;
   if (!line.exists && !walletSecret) return false;
-  const issuer = await usdcIssuerKeypair();
-  const needsAuth = await issuerRequiresAuth(issuer.publicKey());
+
+  const minter = usdcMintKeypair();
+  const needsAuth = await issuerRequiresAuth(asset.issuer!);
+  if (needsAuth && !line.authorized && !minter) return false;
+
   const ops: any[] = [];
-  const signers: Keypair[] = [issuer];
+  const signers: Keypair[] = [];
   if (!line.exists) {
-    const walletKp = Keypair.fromSecret(walletSecret!);
-    signers.push(walletKp);
+    signers.push(Keypair.fromSecret(walletSecret!));
     ops.push(Operation.changeTrust({ asset, source: wallet }));
   }
   if (needsAuth && !line.authorized) {
+    signers.push(minter!);
     ops.push(
       Operation.setTrustLineFlags({
         trustor: wallet,
         asset,
         flags: { authorized: true },
-        source: issuer.publicKey(),
+        source: minter!.publicKey(),
       }),
     );
   }
   if (!ops.length) return line.exists && (!needsAuth || line.authorized);
-  await submitTx(issuer.publicKey(), ops, signers);
+  await submitTx(signers[0].publicKey(), ops, signers);
   const after = await getTrustlineState(wallet, asset);
   return after.exists && after.authorized;
 }
@@ -321,7 +347,7 @@ export async function ensureWalletFunded(
   return { funded: false, trustline: false };
 }
 
-/** Snapshot for the wallet page: XLM + USDC under the platform issuer. */
+/** Snapshot for the wallet page: XLM + the USDC the licitaciones settle in. */
 export async function walletFunds(publicKey: string) {
   const issuer = usdcIssuerPublicKey();
   const [xlm, usdc] = await Promise.all([
@@ -333,6 +359,25 @@ export async function walletFunds(publicKey: string) {
     usdc,
     usdcIssuer: issuer,
     usdcCode: USDC_CODE,
-    usdcSac: loadTestnetDeployment()?.usdcSac || null,
+    usdcSac: sacOrNull(),
+    usdcCircle: isCircleUsdc(),
+  };
+}
+
+/** Demo pool status for the admin / setup script. */
+export async function usdcTreasuryStatus() {
+  const treasury = usdcTreasuryKeypair();
+  const minter = usdcMintKeypair();
+  const asset = usdcAsset();
+  const pool = treasury ? await getTrustlineState(treasury.publicKey(), asset) : null;
+  return {
+    asset: `${asset.code}:${asset.issuer}`,
+    sac: usdcSacId(),
+    circle: isCircleUsdc(),
+    mode: minter ? ('mint' as const) : treasury ? ('treasury' as const) : ('none' as const),
+    treasury: treasury?.publicKey() || null,
+    treasuryTrustline: pool?.exists ?? false,
+    treasuryBalance: pool?.balance ?? 0,
+    grant: defaultGrant(Boolean(minter)),
   };
 }

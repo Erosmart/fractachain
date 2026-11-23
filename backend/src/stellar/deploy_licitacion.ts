@@ -1,29 +1,32 @@
 /**
- * Instantiate a new Las Lilas licitacion on testnet, paid in native XLM (SAC),
- * with human-scale caps in stroops. Reuses the factory + wasm already on chain.
+ * Instantiate a new Las Lilas licitacion on testnet, paid in Circle's USDC
+ * (SAC), with caps sized for the 5 USDC each demo wallet gets from the pool.
+ * Reuses the factory + wasm already on chain.
  *
- *   cd backend && npx ts-node src/stellar/deploy_licitacion.ts
+ *   cd backend && npm run deploy:licitacion
  */
 import 'dotenv/config';
 import { bindLicitacionForDemo, getListing } from '../admin/listings';
 import { isStellarPublicKey } from '../auth/stellar_testnet';
 import { saveTestnetDeployment, loadTestnetDeployment } from './deployment';
-import { hasDeployerSecret, licitacionAdminKeypair } from './keys';
+import { hasDeployerSecret, licitacionAdminKeypair, usdcSacId } from './keys';
 import {
+  assertStroopScale,
   contractClient,
   deployFromWasmHash,
   factoryId,
   invoke,
+  toStroops,
   wasmHashOf,
-  xlmSac,
 } from './soroban';
+import { ensureFiduciaryUsdcTrustline } from './usdc';
 
 const LISTING_ID = 'IPO-SOJA-PERGAMINO-2026';
-const PRICE = 100_000_000n; // 10 XLM
-const SOFT = 1_000_000_000n; // 100 XLM pitch // 200 XLM
-const HARD = 1_000_000_000n; // 100 XLM pitch close-on-one-ticket // 500 XLM
+const PRICE = toStroops(1); // 1 USDC per unit
+const SOFT = toStroops(3);
+const HARD = toStroops(5);
 const KIND_LICITACION = 0;
-const KIND_XLM = 0;
+const KIND_USDC = 1;
 
 async function main() {
   const deployment = loadTestnetDeployment();
@@ -46,10 +49,12 @@ async function main() {
     ? proceedsWallet!
     : deployment.deployer || admin.publicKey();
   console.log('fiduciary', fiduciary);
+  const paymentToken = usdcSacId();
+  await assertStroopScale(paymentToken);
   await invoke(client, 'initialize', {
     admin: admin.publicKey(),
     fiduciary,
-    payment_token: xlmSac(),
+    payment_token: paymentToken,
     soft_cap: SOFT,
     hard_cap: HARD,
     deadline,
@@ -60,7 +65,13 @@ async function main() {
       legal_terms_uri: 'https://example.com/las-lilas/terms',
     },
   });
-  console.log('initialized XLM licitacion');
+  console.log('initialized USDC licitacion');
+
+  // finalize() pays out on a classic trustline: without one the whole close reverts.
+  const { demoTreasurySecret } = await import('../admin/demo');
+  if (!(await ensureFiduciaryUsdcTrustline(fiduciary, demoTreasurySecret(fiduciary)))) {
+    console.warn(`fiduciary ${fiduciary} todavía no tiene trustline USDC: abrila antes del finalize`);
+  }
 
   let productId: number | null = null;
   if (hasDeployerSecret()) {
@@ -70,7 +81,7 @@ async function main() {
         admin: admin.publicKey(),
         kind: KIND_LICITACION,
         contract_address: deployed.contractId,
-        payment_kind: KIND_XLM,
+        payment_kind: KIND_USDC,
         price_per_unit: PRICE,
         name: 'Las Lilas soja Pergamino',
       });
@@ -88,7 +99,7 @@ async function main() {
     licitacion: deployed.contractId,
     licitacionWasmHash: wasmHash,
   });
-  bindLicitacionForDemo(LISTING_ID, deployed.contractId, { factoryProductId: productId });
+  bindLicitacionForDemo(LISTING_ID, deployed.contractId, { factoryProductId: productId, paymentKind: 'USDC' });
   console.log('bound', LISTING_ID, '→', saved.licitacion);
 }
 

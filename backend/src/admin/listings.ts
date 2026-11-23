@@ -3,7 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { PaymentKind } from './issuance';
 import { persistToPg } from '../data/pgstore';
-import { addHolding, creditCash, debitCash, findAccountByPublicKey, getAccount, requireApprovedTrader } from '../auth/accounts';
+import { addHolding, creditCash, findAccountByPublicKey } from '../auth/accounts';
 import { getTestnetConfig } from './testnet';
 import { StrKey } from '@stellar/stellar-sdk';
 import { isStellarPublicKey } from '../auth/stellar_testnet';
@@ -194,10 +194,12 @@ export function createListing(dossier: CompanyDossier): Listing {
       tokenTicker: dossier.tokenTicker.trim().toUpperCase(),
       issuerPublicKey: issuer,
       proceedsWallet: dossier.proceedsWallet.trim().toUpperCase(),
-      paymentKind: dossier.paymentKind || 'USDC',
+      // New offerings settle in Circle USDC only; XLM survives on old instances.
+      paymentKind: 'USDC',
       jurisdiction: dossier.jurisdiction || 'Argentina',
-      minInvestmentUsdc: dossier.minInvestmentUsdc && dossier.minInvestmentUsdc > 0 ? dossier.minInvestmentUsdc : 15000,
-      offeringSoftCapUsdc: dossier.offeringSoftCapUsdc > 0 ? dossier.offeringSoftCapUsdc : 15000,
+      // Demo defaults sized for the 5 USDC each testnet wallet gets from the pool.
+      minInvestmentUsdc: dossier.minInvestmentUsdc && dossier.minInvestmentUsdc > 0 ? dossier.minInvestmentUsdc : 1,
+      offeringSoftCapUsdc: dossier.offeringSoftCapUsdc > 0 ? dossier.offeringSoftCapUsdc : 3,
     },
     status: 'DRAFT',
     stockContract: '',
@@ -307,14 +309,23 @@ export function prepareOpenLicitacion(id: string, opts?: SettleOpts): { listing:
   return { listing, deadlineMs };
 }
 
+/**
+ * Marks the listing as open once its Soroban instance exists. There is no
+ * sandbox fallback: a licitación without a contract would take "USDC" that
+ * only exists in our database.
+ */
 export function openLicitacion(
   id: string,
-  opts?: SettleOpts,
-  onChain?: { contractId: string; factoryProductId?: number | null },
+  opts: SettleOpts | undefined,
+  onChain: { contractId: string; factoryProductId?: number | null },
 ): Listing {
   const { listing } = prepareOpenLicitacion(id, opts);
-  listing.licitacionContract = onChain?.contractId || contractId(`${listing.id}:licitacion`);
-  if (onChain?.factoryProductId != null) listing.factoryProductId = onChain.factoryProductId;
+  if (!isLiveContractId(onChain?.contractId)) {
+    throw new Error('La licitación necesita su contrato Soroban desplegado para abrir');
+  }
+  listing.licitacionContract = onChain.contractId;
+  listing.dossier.paymentKind = 'USDC';
+  if (onChain.factoryProductId != null) listing.factoryProductId = onChain.factoryProductId;
   listing.status = 'LISTED';
   listing.listedAt = new Date().toISOString();
   applySettleChoice(listing, opts);
@@ -577,11 +588,11 @@ export function bindLicitacionForDemo(
   listing.licitacionContract = contractId;
   // Must match the token the contract was initialized with — the contract
   // itself rejects any other asset, so a wrong label just produces bad UX.
-  listing.dossier.paymentKind = opts?.paymentKind === 'USDC' ? 'USDC' : 'XLM';
-  listing.dossier.pricePerShareUsdc = 10;
-  listing.dossier.minInvestmentUsdc = 100;
-  listing.dossier.offeringSoftCapUsdc = 100;
-  listing.dossier.offeringHardCapUsdc = 100;
+  listing.dossier.paymentKind = opts?.paymentKind === 'XLM' ? 'XLM' : 'USDC';
+  listing.dossier.pricePerShareUsdc = 1;
+  listing.dossier.minInvestmentUsdc = 1;
+  listing.dossier.offeringSoftCapUsdc = 3;
+  listing.dossier.offeringHardCapUsdc = 5;
   listing.raisedUsdc = 0;
   listing.status = 'LISTED';
   listing.closedAt = undefined;
@@ -659,47 +670,6 @@ export function closeListing(id: string) {
   if (listing.status === 'CLOSED_SUCCESS') payListingProceeds(listing);
   save();
   return listing;
-}
-
-export function contributeListing(id: string, usdcAmount: number, accountId: string) {
-  const investor = getAccount(accountId);
-  if (!investor) throw new Error('Inversor no encontrado');
-  requireApprovedTrader(investor);
-  const listing = getListing(id);
-  if (!listing) throw new Error('Listing no encontrado');
-  if (listing.status !== 'LISTED') throw new Error('La licitación no está abierta');
-  const amount = Number(usdcAmount);
-  if (!Number.isFinite(amount) || amount <= 0) throw new Error('Monto inválido');
-  const price = listing.dossier.pricePerShareUsdc;
-  if (price <= 0) throw new Error('Precio por acción inválido');
-  const tokenCapacity = listing.tokensMinted * price;
-  const remaining = Math.min(
-    listing.dossier.offeringHardCapUsdc - listing.raisedUsdc,
-    tokenCapacity - listing.raisedUsdc,
-  );
-  if (remaining <= 0) throw new Error('No queda cupo en esta licitación');
-  if (amount > remaining + 1e-9) {
-    throw new Error(`Solo quedan ${remaining.toLocaleString('es-AR')} USDC de cupo`);
-  }
-  const ticket = listing.dossier.minInvestmentUsdc || price;
-  const minNow = remaining < ticket ? price : ticket;
-  if (amount + 1e-9 < minNow) {
-    throw new Error(`El aporte mínimo ahora es ${minNow.toLocaleString('es-AR')} USDC`);
-  }
-  const next = listing.raisedUsdc + amount;
-  const tokens = amount / price;
-  debitCash(accountId, amount);
-  listing.raisedUsdc = next;
-  addHolding(accountId, {
-    listingId: listing.id,
-    tokenTicker: listing.dossier.tokenTicker,
-    usdcAmount: amount,
-    tokens: 0,
-    tokensOwed: tokens,
-  });
-  maybeCloseIfMinReached(listing.id);
-  save();
-  return getListing(id)!;
 }
 
 export function tradeableMarkets() {
