@@ -108,9 +108,17 @@ real Freighter extension, subscribes to a tender in Circle USDC and signs `contr
 in Freighter; the transaction is then opened on Stellar Expert (signer = the investor's
 `G…`, asset = `USDC` issued by `GBBD47IF…`). Script: [`demo-video.md`](demo-video.md).
 
+## Public demo (Deliverables 2 and 3)
+
+[fractachain.com](https://fractachain.com) runs this version on Stellar testnet: web and
+API in one service, with the chain reads at
+[`/api/chain/network`](https://fractachain.com/api/chain/network) and non-custodial signing
+through `/api/tx/build` + `/api/tx/submit`. A reviewer signs in with Freighter, gets test
+USDC from the demo pool and subscribes to a tender; every screen shows the contract ID it
+reads from.
+
 ## Still to be produced by the team (needs accounts or permissions)
 
 | Evidence                                     | Why it is not here                                                     | How                                                       |
 | -------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------- |
-| Public demo URL                              | needs the team's Railway project                                       | [`deploy.md`](deploy.md), `docs/guides/deploy-railway.md` |
 | Merged PR                                    | the branch is pushed and CI is green; merging is the maintainers' call | open the PR from `macroupdate` to `main`                  |
