@@ -121,8 +121,5 @@ reads from.
 
 [PR #50](https://github.com/Erosmart/fractachain/pull/50) merged `macroupdate` into `main`
 on 2026-11-23 (merge commit
-[`b72b52b`](https://github.com/Erosmart/fractachain/commit/b72b52b)); `main` now matches the
-integrated branch file for file. The first USDC implementation
-([PR #48](https://github.com/Erosmart/fractachain/pull/48)) was merged and then reverted
-([PR #51](https://github.com/Erosmart/fractachain/pull/51)) so its commits stay in the history
-while `macroupdate`, which supersedes it, provides the code.
+[`b72b52b`](https://github.com/Erosmart/fractachain/commit/b72b52b)). Full commit history:
+[github.com/Erosmart/fractachain/commits/main](https://github.com/Erosmart/fractachain/commits/main).
