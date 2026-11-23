@@ -5,7 +5,7 @@ use soroban_sdk::{
     contract, contractimpl,
     testutils::{Address as _, Ledger},
     token::{StellarAssetClient, TokenClient},
-    Address, BytesN, Env, String, Symbol,
+    Address, BytesN, Env, IntoVal, String, Symbol,
 };
 
 use crate::{StockVaultContract, StockVaultContractClient};
@@ -54,18 +54,20 @@ fn setup() -> Fixture {
     let registry = env.register(MockRegistry, ());
     MockRegistryClient::new(&env, &registry).seed(&token_id);
 
-    let id = env.register(StockVaultContract, ());
-    let client = StockVaultContractClient::new(&env, &id);
-    client.initialize_stock(
-        &admin,
-        &oracle,
-        &registry,
-        &token_id,
-        &Symbol::new(&env, "GGAL"),
-        &String::from_str(&env, "Grupo Financiero Galicia"),
-        &String::from_str(&env, "ARP495251018"),
-        &String::from_str(&env, "30-11111111-1"),
+    let id = env.register(
+        StockVaultContract,
+        (
+            &admin,
+            &oracle,
+            &registry,
+            &token_id,
+            &Symbol::new(&env, "GGAL"),
+            &String::from_str(&env, "Grupo Financiero Galicia"),
+            &String::from_str(&env, "ARP495251018"),
+            &String::from_str(&env, "30-11111111-1"),
+        ),
     );
+    let client = StockVaultContractClient::new(&env, &id);
 
     Fixture {
         env,
@@ -258,16 +260,18 @@ fn custodian_cannot_be_the_por_oracle() {
     let registry = env.register(MockRegistry, ());
     MockRegistryClient::new(&env, &registry).seed(&token_id);
 
-    let id = env.register(StockVaultContract, ());
-    StockVaultContractClient::new(&env, &id).initialize_stock(
-        &admin,
-        &admin,
-        &registry,
-        &token_id,
-        &Symbol::new(&env, "GGAL"),
-        &String::from_str(&env, "Galicia"),
-        &String::from_str(&env, "ARP495251018"),
-        &String::from_str(&env, "30-11111111-1"),
+    env.register(
+        StockVaultContract,
+        (
+            &admin,
+            &admin,
+            &registry,
+            &token_id,
+            &Symbol::new(&env, "GGAL"),
+            &String::from_str(&env, "Galicia"),
+            &String::from_str(&env, "ARP495251018"),
+            &String::from_str(&env, "30-11111111-1"),
+        ),
     );
 }
 
@@ -324,30 +328,17 @@ fn sweep_releases_genuine_excess() {
     assert_eq!(TokenClient::new(&f.env, &f.token_id).balance(&treasury), 777);
 }
 
+/// The allowlist is checked by the factory before it deploys a vault
+/// (`issuance-factory::deploy_stock_vault`), and here when the token changes.
 #[test]
 #[should_panic(expected = "Payment token not allowlisted")]
 fn payment_token_must_be_allowlisted() {
-    let env = Env::default();
-    env.mock_all_auths();
-    let admin = Address::generate(&env);
-    let oracle = Address::generate(&env);
-    let sac_admin = Address::generate(&env);
-    let real = env.register_stellar_asset_contract_v2(sac_admin.clone()).address();
-    let fake = env.register_stellar_asset_contract_v2(sac_admin).address();
-    let registry = env.register(MockRegistry, ());
-    MockRegistryClient::new(&env, &registry).seed(&real);
-
-    let id = env.register(StockVaultContract, ());
-    StockVaultContractClient::new(&env, &id).initialize_stock(
-        &admin,
-        &oracle,
-        &registry,
-        &fake,
-        &Symbol::new(&env, "GGAL"),
-        &String::from_str(&env, "Galicia"),
-        &String::from_str(&env, "ARP495251018"),
-        &String::from_str(&env, "30-11111111-1"),
-    );
+    let f = setup();
+    let fake = f
+        .env
+        .register_stellar_asset_contract_v2(Address::generate(&f.env))
+        .address();
+    f.client.set_payment_token(&f.admin, &fake);
 }
 
 /// M-11 regression: the deposit-slip hash was accepted and thrown away.
@@ -365,21 +356,31 @@ fn every_mint_records_its_custody_attestation() {
     assert_eq!(recorded, hash);
 }
 
+/// SC-06: construction happens with the deploy; the host refuses to run the
+/// constructor again, so nobody can re-point the admin or the registry.
 #[test]
-#[should_panic(expected = "Already initialized")]
-fn double_initialization_is_rejected() {
+fn the_constructor_cannot_be_run_again() {
     let f = setup();
-    f.client.initialize_stock(
-        &f.admin,
-        &f.oracle,
-        &f.registry,
-        &f.token_id,
-        &Symbol::new(&f.env, "GGAL"),
-        &String::from_str(&f.env, "Galicia"),
-        &String::from_str(&f.env, "ARP495251018"),
-        &String::from_str(&f.env, "30-11111111-1"),
+    let attacker = Address::generate(&f.env);
+    let again = f.env.try_invoke_contract::<(), soroban_sdk::Error>(
+        &f.client.address,
+        &Symbol::new(&f.env, "__constructor"),
+        (
+            &attacker,
+            &f.oracle,
+            &f.registry,
+            &f.token_id,
+            Symbol::new(&f.env, "GGAL"),
+            String::from_str(&f.env, "Galicia"),
+            String::from_str(&f.env, "ARP495251018"),
+            String::from_str(&f.env, "30-11111111-1"),
+        )
+            .into_val(&f.env),
     );
+    assert!(again.is_err());
+    assert_eq!(f.client.get_admin(), f.admin);
 }
+
 
 #[test]
 fn unauthorized_caller_cannot_mint() {
@@ -396,4 +397,81 @@ fn unauthorized_caller_cannot_mint() {
             &BytesN::from_array(&f.env, &[7u8; 32])
         )
         .is_err());
+}
+
+/// Info (security review 2026-10): truncation leaves dust no holder can ever
+/// claim. It used to stay counted as owed forever, so it could not be swept;
+/// now only the provable upper bound of claims is committed.
+#[test]
+fn unclaimable_dividend_dust_can_be_swept() {
+    let f = setup();
+    attest(&f, 3_000_000);
+    let holders = [
+        Address::generate(&f.env),
+        Address::generate(&f.env),
+        Address::generate(&f.env),
+    ];
+    for h in holders.iter() {
+        mint(&f, h, 1_000_000);
+    }
+    // 10 over 3M tokens: 3 per million-token holder, 1 unit of dust.
+    f.client.deposit_dividends(&f.admin, &10);
+    assert_eq!(f.client.get_unclaimed_pool(), 9);
+    for h in holders.iter() {
+        assert_eq!(f.client.claim_dividends(h), 3);
+    }
+    assert_eq!(f.client.get_unclaimed_pool(), 0);
+
+    let treasury = Address::generate(&f.env);
+    assert!(f.client.try_sweep_unallocated(&f.admin, &treasury, &2).is_err());
+    f.client.sweep_unallocated(&f.admin, &treasury, &1);
+    assert_eq!(TokenClient::new(&f.env, &f.token_id).balance(&treasury), 1);
+}
+
+/// The committed pool must still cover every claim across several deposits.
+#[test]
+fn committed_dividends_always_cover_the_claims() {
+    let f = setup();
+    attest(&f, 7);
+    let a = Address::generate(&f.env);
+    let b = Address::generate(&f.env);
+    mint(&f, &a, 3);
+    mint(&f, &b, 4);
+    for amount in [5, 11, 13] {
+        f.client.deposit_dividends(&f.admin, &amount);
+    }
+    let owed = f.client.get_claimable(&a) + f.client.get_claimable(&b);
+    assert!(f.client.get_unclaimed_pool() >= owed);
+    let paid = f.client.claim_dividends(&a) + f.client.claim_dividends(&b);
+    assert_eq!(paid, owed);
+}
+
+/// SC-02 / SC-06: integrators can verify the trusted registry and the stored
+/// custodian of an instance.
+#[test]
+fn registry_and_admin_are_readable() {
+    let f = setup();
+    assert_eq!(f.client.get_registry(), f.registry);
+    assert_eq!(f.client.get_admin(), f.admin);
+}
+
+/// SC-12: the registry and the sequence counters were never TTL-extended.
+#[test]
+fn vault_wide_entries_keep_their_ttl() {
+    use soroban_sdk::testutils::storage::Persistent as _;
+    let f = setup();
+    attest(&f, 10);
+    mint(&f, &Address::generate(&f.env), 5);
+    let id = f.client.address.clone();
+    for key in [
+        crate::StockKey::Registry,
+        crate::StockKey::MintSeq,
+        crate::StockKey::PorSeq,
+        crate::StockKey::Admin,
+    ] {
+        let ttl = f
+            .env
+            .as_contract(&id, || f.env.storage().persistent().get_ttl(&key));
+        assert!(ttl > fractachain_core::BUMP_THRESHOLD, "TTL not extended: {ttl}");
+    }
 }

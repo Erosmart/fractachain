@@ -1,0 +1,89 @@
+---
+import { ArrowUpRight, Code2, FlaskConical, Landmark, ShieldAlert } from 'lucide-react';
+import TransparencyContracts from '@/features/legal/components/TransparencyContracts';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { messagesFor } from '@/core/i18n/translate';
+
+const locale = Astro.locals.locale;
+const tr = messagesFor(locale).legal.transparency;
+const icons = [FlaskConical, Landmark, ShieldAlert, Code2];
+const REPO = 'https://github.com/Erosmart/fractachain';
+const REVIEW = `${REPO}/blob/macroupdate/docs/security/security-review-2026-10.md`;
+---
+
+<BaseLayout title={tr.title} description={tr.lead}>
+  <div class="mx-auto max-w-[1180px] space-y-10">
+    <header class="max-w-3xl">
+      <p class="eyebrow">{tr.eyebrow}</p>
+      <h1 class="mt-2 text-[30px] font-normal leading-tight tracking-[-0.025em] text-ink sm:text-[38px]">
+        {tr.title}
+      </h1>
+      <p class="mt-3 text-[15px] leading-relaxed text-ink-2 sm:text-base">{tr.lead}</p>
+    </header>
+
+    <section aria-labelledby="status-title" class="space-y-4">
+      <h2 id="status-title" class="text-[17px] font-medium text-ink">
+        {tr.statusTitle}
+      </h2>
+      <ul class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {tr.status.map(([title, body], i) => {
+          const Icon = icons[i] ?? FlaskConical;
+          return (
+            <li class="card card-pad">
+              <span
+                class="grid h-9 w-9 place-items-center rounded-lg bg-sky-soft text-ink"
+                aria-hidden="true"
+              >
+                <Icon className="h-4 w-4" />
+              </span>
+              <p class="mt-4 text-[15px] font-medium text-ink">{title}</p>
+              <p class="mt-1 text-[13px] leading-relaxed text-ink-2">{body}</p>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <TransparencyContracts client:load locale={locale} />
+
+      <div class="space-y-6">
+        <section aria-labelledby="verify-title" class="card card-pad">
+          <h2 id="verify-title" class="title">
+            {tr.verifyTitle}
+          </h2>
+          <ol class="mt-4 space-y-3">
+            {tr.verifySteps.map((step, i) => (
+              <li class="flex gap-3 text-[14px] leading-relaxed text-ink-2">
+                <span class="chip-navy mt-0.5 shrink-0">{i + 1}</span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section aria-labelledby="security-title" class="gradient-panel p-5 sm:p-6">
+          <h2 id="security-title" class="title">
+            {tr.securityTitle}
+          </h2>
+          <p class="mt-1.5 text-[13px] leading-relaxed text-ink-2">{tr.securityBody}</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <a href={REVIEW} target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-sm">
+              {tr.securityLink}
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </a>
+            <a
+              href={REPO}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn btn-sm bg-surface/70 text-ink hover:bg-surface"
+            >
+              {tr.repoLink}
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </a>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

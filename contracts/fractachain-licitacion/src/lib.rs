@@ -7,16 +7,19 @@ pub mod kyc;
 pub mod opa;
 pub mod orderbook;
 
-use fractachain_core::{require_divisible, require_positive, token_client, bump_instance};
+use fractachain_core::{
+    bump_instance, bump_persistent_if_present, require_divisible, require_positive, token_client,
+};
 use kyc::{
     is_investor_verified, revoke_investor as kyc_revoke, verify_investor as kyc_verify, InvestorType,
 };
 use opa::{
-    check_control_threshold, get_record, require_can_launch_opa, set_record, OpaRecord, OpaState,
-    SQUEEZE_OUT_THRESHOLD_BPS,
+    apply_sanction, check_control_threshold, get_record, ownership_bps, require_can_launch_opa,
+    sanction_due, set_record, OpaKey, OpaRecord, OpaState, SQUEEZE_OUT_THRESHOLD_BPS,
 };
 use orderbook::{
     cancel_order as ob_cancel_order, create_order as ob_create_order, get_order, Order,
+    OrderbookKey,
 };
 
 #[contracttype]
@@ -62,6 +65,11 @@ pub enum DataKey {
     OrderEscrow(Address),
     /// Funds the acquirer locked up when launching a tender offer.
     OpaEscrow,
+    /// Who funded `OpaEscrow`. The escrow is paid back to this address only:
+    /// the record's acquirer can change (a new controller, a squeeze-out), so
+    /// keying the refund on `rec.acquirer` let a later acquirer collect an
+    /// earlier one's money.
+    OpaEscrowOwner,
     /// Highest price per unit seen on-chain, used as the equitable-price floor
     /// for a squeeze-out (Art. 88).
     HighestPrice,
@@ -154,6 +162,105 @@ fn set_contribution(env: &Env, user: &Address, amount: i128) {
     );
 }
 
+/// The tender offer only exists over a successful issuance. During `Open`
+/// an acceptor could be paid by the OPA *and* refunded if the raise failed.
+fn require_successful(env: &Env) {
+    let state: State = env.storage().persistent().get(&DataKey::State).unwrap();
+    if state != State::Successful {
+        panic!("Tender offer only after a successful licitacion");
+    }
+}
+
+fn state(env: &Env) -> State {
+    env.storage().persistent().get(&DataKey::State).unwrap()
+}
+
+fn total_supply(env: &Env) -> i128 {
+    env.storage().persistent().get(&DataKey::TotalRwaMinted).unwrap_or(0)
+}
+
+/// Runs the Art. 87/88 control check for `holder` using total holdings
+/// (free balance + order escrow) for every party involved.
+fn check_control(env: &Env, holder: &Address) {
+    let supply = total_supply(env);
+    let holding_of = |who: &Address| total_holding(env, who);
+    check_control_threshold(env, holder, total_holding(env, holder), supply, &holding_of);
+}
+
+/// Renews the TTL of every entry the issuance depends on.
+///
+/// `bump_instance` does not reach persistent storage, which is where this
+/// contract keeps everything; without this an issuance left idle (e.g. a
+/// long secondary market) archives its admin, caps, state or OPA escrow and
+/// every call fails until someone pays to restore them.
+fn bump_core(env: &Env) {
+    bump_instance(env);
+    for key in [
+        DataKey::Admin,
+        DataKey::Fiduciary,
+        DataKey::PaymentToken,
+        DataKey::SoftCap,
+        DataKey::HardCap,
+        DataKey::Deadline,
+        DataKey::PricePerUnit,
+        DataKey::TotalRaised,
+        DataKey::TotalRwaMinted,
+        DataKey::State,
+        DataKey::LegalInfo,
+        DataKey::SqueezePrice,
+        DataKey::ProceedsWithdrawn,
+        DataKey::OpaEscrow,
+        DataKey::OpaEscrowOwner,
+        DataKey::HighestPrice,
+    ] {
+        bump_persistent_if_present(env, &key);
+    }
+    bump_persistent_if_present(env, &OpaKey::Record);
+    bump_persistent_if_present(env, &OrderbookKey::OrderCount);
+}
+
+fn opa_escrow(env: &Env) -> i128 {
+    env.storage().persistent().get(&DataKey::OpaEscrow).unwrap_or(0)
+}
+
+fn opa_escrow_owner(env: &Env) -> Option<Address> {
+    env.storage().persistent().get(&DataKey::OpaEscrowOwner)
+}
+
+/// Writes a persistent entry and gives it the full TTL right away. Entries
+/// created mid-lifecycle (escrows, squeeze price) would otherwise start with
+/// the network minimum, well below what `bump_core` maintains.
+fn put<V: soroban_sdk::IntoVal<Env, soroban_sdk::Val>>(env: &Env, key: &DataKey, value: &V) {
+    env.storage().persistent().set(key, value);
+    env.storage().persistent().extend_ttl(
+        key,
+        fractachain_core::BUMP_THRESHOLD,
+        fractachain_core::BUMP_TO,
+    );
+}
+
+fn set_opa_escrow(env: &Env, amount: i128, owner: &Address) {
+    put(env, &DataKey::OpaEscrow, &amount);
+    put(env, &DataKey::OpaEscrowOwner, owner);
+}
+
+/// Pays any outstanding tender-offer escrow back to whoever funded it.
+///
+/// Used before a new offer or a squeeze-out replaces the record, so funds
+/// can never be orphaned or redirected to a different acquirer.
+fn return_escrow_to_owner(env: &Env) -> i128 {
+    let escrow = opa_escrow(env);
+    if escrow <= 0 {
+        return 0;
+    }
+    let owner = opa_escrow_owner(env).expect("escrow without owner");
+    env.storage().persistent().set(&DataKey::OpaEscrow, &0i128);
+    token_client(env, &payment_token(env)).transfer(&env.current_contract_address(), &owner, &escrow);
+    env.events()
+        .publish((Symbol::new(env, "opa_escrow_returned"), owner), escrow);
+    escrow
+}
+
 /// Tracks the highest observed unit price, which floors the squeeze-out price.
 fn record_price(env: &Env, price: i128) {
     let highest: i128 = env
@@ -177,7 +284,7 @@ fn equitable_price_floor(env: &Env) -> i128 {
     primary.max(highest).max(opa_price)
 }
 
-/// Pays the raise to the company wallet configured at initialize.
+/// Pays the raise to the company wallet configured at construction.
 ///
 /// Called from `finalize` on success so the issuer does not depend on a
 /// second admin transaction to actually receive the money. `withdraw_proceeds`
@@ -210,8 +317,10 @@ fn payout_proceeds(env: &Env) -> i128 {
 
 #[contractimpl]
 impl FractachainLicitacionContract {
+    /// Runs once, atomically with the deploy (SC-06: a separate `initialize`
+    /// could be front-run between the two transactions).
     #[allow(clippy::too_many_arguments)]
-    pub fn initialize(
+    pub fn __constructor(
         env: Env,
         admin: Address,
         fiduciary: Address,
@@ -222,9 +331,6 @@ impl FractachainLicitacionContract {
         price_per_unit: i128,
         legal_info: LegalInfo,
     ) {
-        if env.storage().persistent().has(&DataKey::Admin) {
-            panic!("Already initialized");
-        }
         require_positive(soft_cap);
         require_positive(hard_cap);
         require_positive(price_per_unit);
@@ -251,6 +357,7 @@ impl FractachainLicitacionContract {
         env.storage().persistent().set(&DataKey::LegalInfo, &legal_info);
         env.storage().persistent().set(&DataKey::ProceedsWithdrawn, &false);
         env.storage().persistent().set(&DataKey::HighestPrice, &price_per_unit);
+        bump_core(&env);
 
         env.events().publish(
             (Symbol::new(&env, "init"), admin.clone()),
@@ -265,6 +372,7 @@ impl FractachainLicitacionContract {
     /// squeeze-out (`Terminated`) still has a path if finalize never ran.
     pub fn withdraw_proceeds(env: Env, admin: Address) -> i128 {
         require_admin(&env, &admin);
+        bump_core(&env);
         let state: State = env.storage().persistent().get(&DataKey::State).unwrap();
         if state != State::Successful && state != State::Terminated {
             panic!("Proceeds are only withdrawable after a successful licitacion");
@@ -274,6 +382,13 @@ impl FractachainLicitacionContract {
             panic!("Proceeds already withdrawn");
         }
         amount
+    }
+
+    /// Stored admin. Instances of the legacy WASM were initialized in a
+    /// separate transaction; deploy scripts read this back to rule out a
+    /// front-run init.
+    pub fn get_admin(env: Env) -> Address {
+        env.storage().persistent().get(&DataKey::Admin).unwrap()
     }
 
     pub fn get_fiduciary(env: Env) -> Address {
@@ -321,6 +436,12 @@ impl FractachainLicitacionContract {
             panic!("Cannot change price after contributions started");
         }
         env.storage().persistent().set(&DataKey::PricePerUnit, &price_per_unit);
+        // `HighestPrice` was seeded with the initial price, which nobody ever
+        // paid. Nothing has traded yet (raised == 0 and the secondary market
+        // opens only after a successful close), so the new price is the
+        // highest real price there is. Leaving the old one inflated the
+        // equitable floor every tender offer and squeeze-out must pay.
+        env.storage().persistent().set(&DataKey::HighestPrice, &price_per_unit);
         env.events()
             .publish((Symbol::new(&env, "price"), admin), price_per_unit);
     }
@@ -352,8 +473,39 @@ impl FractachainLicitacionContract {
     }
 
     /// False once votes are suspended for an unfulfilled tender offer (Art. 88).
+    ///
+    /// The sanction is evaluated here too, not only when it gets written: an
+    /// acquirer who simply sits on control past the deadline (no further
+    /// purchase to trip the write) used to keep voting indefinitely.
     pub fn has_votes(env: Env, investor: Address) -> bool {
-        kyc::has_voting_rights(&env, &investor)
+        if !kyc::has_voting_rights(&env, &investor) {
+            return false;
+        }
+        match get_record(&env) {
+            Some(rec) if rec.acquirer == investor => {
+                !sanction_due(&env, &rec, total_holding(&env, &investor), total_supply(&env))
+            }
+            _ => true,
+        }
+    }
+
+    /// Permissionless keeper call: persists an Art. 88 vote suspension that is
+    /// already due (deadline lapsed, no offer, control still held). Returns
+    /// whether anything was written. `has_votes` already reports the sanction;
+    /// this makes it visible to anything reading the raw KYC record too.
+    pub fn enforce_opa_deadline(env: Env) -> bool {
+        bump_core(&env);
+        let rec = match get_record(&env) {
+            Some(rec) => rec,
+            None => return false,
+        };
+        let supply = total_supply(&env);
+        let holding = total_holding(&env, &rec.acquirer);
+        if !sanction_due(&env, &rec, holding, supply) {
+            return false;
+        }
+        apply_sanction(&env, rec, ownership_bps(holding, supply));
+        true
     }
 
     /// Restores voting rights once the acquirer complies with the tender offer.
@@ -373,7 +525,7 @@ impl FractachainLicitacionContract {
 
     pub fn contribute(env: Env, buyer: Address, payment_amount: i128) {
         buyer.require_auth();
-        bump_instance(&env);
+        bump_core(&env);
 
         if !is_investor_verified(&env, &buyer) {
             panic!("Buyer KYC not verified or expired");
@@ -431,11 +583,11 @@ impl FractachainLicitacionContract {
         // Control can be accumulated in the primary just as easily as in the
         // secondary; checking only on `fill_order` let a subscriber take a
         // majority of the issuance without ever triggering the tender offer.
-        check_control_threshold(&env, &buyer, new_rwa, new_minted);
+        check_control(&env, &buyer);
     }
 
     pub fn finalize(env: Env) {
-        bump_instance(&env);
+        bump_core(&env);
         let state: State = env.storage().persistent().get(&DataKey::State).unwrap();
         if state != State::Open {
             panic!("Not in open state");
@@ -450,7 +602,7 @@ impl FractachainLicitacionContract {
         if total_raised >= hard_cap || now >= deadline {
             if total_raised >= soft_cap {
                 env.storage().persistent().set(&DataKey::State, &State::Successful);
-                // The company wallet configured in `initialize` / `set_fiduciary`
+                // The company wallet configured at construction / `set_fiduciary`
                 // receives the raise here. Waiting for a later admin call is
                 // how the money used to get stuck in the contract forever.
                 let paid = payout_proceeds(&env);
@@ -470,7 +622,7 @@ impl FractachainLicitacionContract {
 
     pub fn refund(env: Env, contributor: Address) {
         contributor.require_auth();
-        bump_instance(&env);
+        bump_core(&env);
 
         let state: State = env.storage().persistent().get(&DataKey::State).unwrap();
         if state != State::Failed {
@@ -506,6 +658,7 @@ impl FractachainLicitacionContract {
     /// Stellar DEX (`AUTH_REQUIRED` classic asset), not this book: these
     /// helpers exist so OPA / squeeze-out can still see a holder's position.
     pub fn place_order(env: Env, seller: Address, amount_rwa: i128, price_per_unit: i128) -> u64 {
+        bump_core(&env);
         let state: State = env.storage().persistent().get(&DataKey::State).unwrap();
         if state != State::Successful {
             panic!("Secondary market only active after successful licitacion");
@@ -523,7 +676,16 @@ impl FractachainLicitacionContract {
         ob_create_order(&env, &seller, amount_rwa, price_per_unit)
     }
 
+    /// Withdraws a sale order and returns its units to the free balance.
+    ///
+    /// Only while the secondary market is open: after a squeeze-out the
+    /// holder was paid for those units (`claim_squeeze_out` counts the order
+    /// escrow), so cancelling then re-credited RWA that no longer existed.
     pub fn cancel_sale_order(env: Env, seller: Address, order_id: u64) {
+        bump_core(&env);
+        if state(&env) != State::Successful {
+            panic!("Orders can only be cancelled while the secondary market is open");
+        }
         let order: Order = get_order(&env, order_id).expect("Order not found");
         ob_cancel_order(&env, &seller, order_id);
 
@@ -534,11 +696,12 @@ impl FractachainLicitacionContract {
             &seller,
             (order_escrow(&env, &seller) - order.amount_rwa).max(0),
         );
+        check_control(&env, &seller);
     }
 
     pub fn fill_order(env: Env, buyer: Address, order_id: u64) {
         buyer.require_auth();
-        bump_instance(&env);
+        bump_core(&env);
 
         let state: State = env.storage().persistent().get(&DataKey::State).unwrap();
         if state != State::Successful {
@@ -556,6 +719,11 @@ impl FractachainLicitacionContract {
         if !is_investor_verified(&env, &order.seller) {
             panic!("Seller KYC expired or revoked");
         }
+        // A self-fill moves nothing but still records a print: it was a free
+        // way to pump `HighestPrice`, the floor every OPA / squeeze-out pays.
+        if buyer == order.seller {
+            panic!("Cannot fill your own order");
+        }
 
         let total = order
             .amount_rwa
@@ -564,7 +732,8 @@ impl FractachainLicitacionContract {
         require_positive(total);
 
         let client = token_client(&env, &payment_token(&env));
-        let fee = (total * 25) / 10000;
+        // 0.25%, rounded up: truncation made every trade under 400 fee-free.
+        let fee = (total * 25 + 9_999) / 10_000;
         let seller_net = total - fee;
         client.transfer(&buyer, &order.seller, &seller_net);
         if fee > 0 {
@@ -592,8 +761,7 @@ impl FractachainLicitacionContract {
             (order_id, order.amount_rwa, order.price_per_unit_usdc),
         );
 
-        let total_rwa: i128 = env.storage().persistent().get(&DataKey::TotalRwaMinted).unwrap();
-        check_control_threshold(&env, &buyer, new_buyer_rwa, total_rwa);
+        check_control(&env, &buyer);
     }
 
     /// Launches the mandatory tender offer, escrowing the full consideration.
@@ -604,6 +772,8 @@ impl FractachainLicitacionContract {
     /// "offer" revocable at will.
     pub fn launch_opa(env: Env, acquirer: Address, price_per_share: i128) {
         acquirer.require_auth();
+        bump_core(&env);
+        require_successful(&env);
         require_kyc_to_receive(&env, &acquirer);
         require_positive(price_per_share);
         let rec = get_record(&env).expect("OPA not triggered");
@@ -629,8 +799,11 @@ impl FractachainLicitacionContract {
             triggered_at: rec.triggered_at,
             deadline: env.ledger().timestamp() + opa::OPA_DEADLINE_SECONDS,
         };
+        // Leftover escrow from an earlier (expired or superseded) offer goes
+        // back to whoever funded it before this one takes the slot.
+        return_escrow_to_owner(&env);
         set_record(&env, &updated);
-        env.storage().persistent().set(&DataKey::OpaEscrow, &escrow);
+        set_opa_escrow(&env, escrow, &acquirer);
         record_price(&env, price_per_share);
 
         token_client(&env, &payment_token(&env)).transfer(
@@ -645,6 +818,8 @@ impl FractachainLicitacionContract {
     /// A minority holder accepts the tender offer and is paid from escrow.
     pub fn accept_opa(env: Env, seller: Address) {
         seller.require_auth();
+        bump_core(&env);
+        require_successful(&env);
         let rec = get_record(&env).expect("No OPA");
         if rec.state != OpaState::ActiveOffer {
             panic!("No active OPA offer");
@@ -666,11 +841,10 @@ impl FractachainLicitacionContract {
             .checked_mul(rec.price_per_share)
             .expect("overflow");
 
-        let escrow: i128 = env
-            .storage()
-            .persistent()
-            .get(&DataKey::OpaEscrow)
-            .unwrap_or(0);
+        if opa_escrow_owner(&env) != Some(rec.acquirer.clone()) {
+            panic!("OPA escrow does not belong to the offer");
+        }
+        let escrow = opa_escrow(&env);
         if payout > escrow {
             panic!("OPA escrow exhausted");
         }
@@ -689,25 +863,29 @@ impl FractachainLicitacionContract {
         env.events()
             .publish((Symbol::new(&env, "opa_accept"), seller), payout);
 
-        let total_rwa: i128 = env.storage().persistent().get(&DataKey::TotalRwaMinted).unwrap();
-        check_control_threshold(&env, &acq, acquirer_new + order_escrow(&env, &acq), total_rwa);
+        check_control(&env, &acq);
     }
 
-    /// Returns unspent tender-offer escrow to the acquirer once the offer lapsed.
+    /// Returns unspent tender-offer escrow to whoever funded it.
+    ///
+    /// Blocked only while that funder's own offer is still live. Once it
+    /// lapses — or the record moved on to a new controller — the money is
+    /// theirs to take back.
     pub fn reclaim_opa_escrow(env: Env, acquirer: Address) -> i128 {
         acquirer.require_auth();
-        let rec = get_record(&env).expect("No OPA");
-        if acquirer != rec.acquirer {
-            panic!("Not the OPA acquirer");
+        bump_core(&env);
+        if opa_escrow_owner(&env) != Some(acquirer.clone()) {
+            panic!("Not the OPA escrow owner");
         }
-        if env.ledger().timestamp() <= rec.deadline {
-            panic!("OPA offer still active");
+        if let Some(rec) = get_record(&env) {
+            let own_live_offer = rec.acquirer == acquirer
+                && rec.state == OpaState::ActiveOffer
+                && env.ledger().timestamp() <= rec.deadline;
+            if own_live_offer {
+                panic!("OPA offer still active");
+            }
         }
-        let escrow: i128 = env
-            .storage()
-            .persistent()
-            .get(&DataKey::OpaEscrow)
-            .unwrap_or(0);
+        let escrow = opa_escrow(&env);
         require_positive(escrow);
         env.storage().persistent().set(&DataKey::OpaEscrow, &0i128);
         token_client(&env, &payment_token(&env)).transfer(
@@ -720,6 +898,7 @@ impl FractachainLicitacionContract {
 
     pub fn execute_squeeze_out(env: Env, acquirer: Address, buyout_price_per_share: i128) {
         acquirer.require_auth();
+        bump_core(&env);
         require_kyc_to_receive(&env, &acquirer);
         require_positive(buyout_price_per_share);
 
@@ -753,6 +932,10 @@ impl FractachainLicitacionContract {
             );
         }
 
+        // The record is about to name a (possibly different) acquirer; any
+        // tender-offer escrow still held belongs to whoever funded it.
+        return_escrow_to_owner(&env);
+
         let now = env.ledger().timestamp();
         set_record(
             &env,
@@ -764,13 +947,14 @@ impl FractachainLicitacionContract {
                 deadline: now,
             },
         );
-        env.storage().persistent().set(&DataKey::SqueezePrice, &buyout_price_per_share);
+        put(&env, &DataKey::SqueezePrice, &buyout_price_per_share);
         env.storage().persistent().set(&DataKey::State, &State::Terminated);
     }
 
     /// Pull-based buyout: minorities claim payment and burn RWA after squeeze-out.
     pub fn claim_squeeze_out(env: Env, holder: Address) {
         holder.require_auth();
+        bump_core(&env);
         let rec = get_record(&env).expect("Squeeze-out not executed");
         if rec.state != OpaState::SqueezedOut {
             panic!("Squeeze-out not executed");
@@ -799,6 +983,13 @@ impl FractachainLicitacionContract {
         env.storage()
             .persistent()
             .set(&DataKey::Allocated(holder.clone()), &true);
+        // The double-claim guard must outlive any idle period, or an archived
+        // flag would read back as "not claimed".
+        env.storage().persistent().extend_ttl(
+            &DataKey::Allocated(holder.clone()),
+            fractachain_core::BUMP_THRESHOLD,
+            fractachain_core::BUMP_TO,
+        );
         set_rwa_balance(&env, &holder, 0);
         set_order_escrow(&env, &holder, 0);
         token_client(&env, &payment_token(&env)).transfer(
@@ -837,6 +1028,18 @@ impl FractachainLicitacionContract {
         env.storage().persistent().get(&DataKey::LegalInfo).unwrap()
     }
 
+    /// (soft cap, hard cap) in payment-token base units — what `finalize` compares against.
+    pub fn get_caps(env: Env) -> (i128, i128) {
+        let soft: i128 = env.storage().persistent().get(&DataKey::SoftCap).unwrap();
+        let hard: i128 = env.storage().persistent().get(&DataKey::HardCap).unwrap();
+        (soft, hard)
+    }
+
+    /// Closing time (unix seconds): `finalize` is allowed from here on.
+    pub fn get_deadline(env: Env) -> u64 {
+        env.storage().persistent().get(&DataKey::Deadline).unwrap()
+    }
+
     /// RWA locked in the holder's open sale orders.
     pub fn get_order_escrow(env: Env, user: Address) -> i128 {
         order_escrow(&env, &user)
@@ -853,12 +1056,16 @@ impl FractachainLicitacionContract {
     }
 
     pub fn get_opa_escrow(env: Env) -> i128 {
-        env.storage()
-            .persistent()
-            .get(&DataKey::OpaEscrow)
-            .unwrap_or(0)
+        opa_escrow(&env)
+    }
+
+    /// Who funded the outstanding tender-offer escrow (and gets it back).
+    pub fn get_opa_escrow_owner(env: Env) -> Option<Address> {
+        opa_escrow_owner(&env)
     }
 }
 
 #[cfg(test)]
 mod test;
+#[cfg(test)]
+mod test_usdc;

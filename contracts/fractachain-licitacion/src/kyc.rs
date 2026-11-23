@@ -80,12 +80,19 @@ pub fn verify_investor(
         panic!("Whitelist authorization only allowed during Argentine business hours (Mon-Fri 08:00-16:00 ART)");
     }
 
+    // Renewing a KYC must not lift an Art. 88 vote suspension.
+    let voting_rights = env
+        .storage()
+        .persistent()
+        .get::<_, InvestorInfo>(&KycKey::Investor(investor.clone()))
+        .map(|existing| existing.voting_rights)
+        .unwrap_or(true);
     let info = InvestorInfo {
         country_code,
         investor_type,
         kyc_expiry: expiry,
         is_active: true,
-        voting_rights: true,
+        voting_rights,
         registered_at: now,
     };
 
@@ -105,6 +112,13 @@ pub fn revoke_investor(env: &Env, investor: &Address) {
         env.storage()
             .persistent()
             .set(&KycKey::Investor(investor.clone()), &info);
+        // Same TTL as every other write of this record, so the revocation
+        // stays readable (and auditable) for as long as the approval was.
+        env.storage().persistent().extend_ttl(
+            &KycKey::Investor(investor.clone()),
+            fractachain_core::BUMP_THRESHOLD,
+            fractachain_core::BUMP_TO,
+        );
     }
 }
 

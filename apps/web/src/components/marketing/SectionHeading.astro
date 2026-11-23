@@ -1,0 +1,21 @@
+---
+/** Section title block for the landing: eyebrow, title, lead and an optional action on the right. */
+interface Props {
+  eyebrow?: string;
+  title: string;
+  lead?: string;
+  id?: string;
+}
+const { eyebrow, title, lead, id } = Astro.props;
+---
+
+<header class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+  <div class="min-w-0 max-w-2xl">
+    {eyebrow && <p class="eyebrow mb-2">{eyebrow}</p>}
+    <h2 id={id} class="text-[28px] font-normal leading-tight tracking-[-0.025em] text-ink sm:text-[36px]">
+      {title}
+    </h2>
+    {lead && <p class="mt-2 text-[15px] text-ink-2">{lead}</p>}
+  </div>
+  <slot />
+</header>

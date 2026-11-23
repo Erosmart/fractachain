@@ -4,7 +4,7 @@ extern crate std;
 use soroban_sdk::{
     testutils::{Address as _, Ledger},
     token::{StellarAssetClient, TokenClient},
-    Address, BytesN, Env, String,
+    Address, BytesN, Env, IntoVal, String,
 };
 
 use crate::kyc::{is_argentina_business_hours, InvestorType};
@@ -35,25 +35,26 @@ fn setup() -> Fixture {
     let sac_admin = Address::generate(&env);
     let token_id = env.register_stellar_asset_contract_v2(sac_admin).address();
 
-    let contract_id = env.register(FractachainLicitacionContract, ());
-    let client = FractachainLicitacionContractClient::new(&env, &contract_id);
-
     let legal = LegalInfo {
         fideicomiso_hash: BytesN::from_array(&env, &[7u8; 32]),
         cnv_record_id: String::from_str(&env, "CNV-1"),
         legal_terms_uri: String::from_str(&env, "https://fractachain.example/legal"),
     };
 
-    client.initialize(
-        &admin,
-        &fiduciary,
-        &token_id,
-        &SOFT_CAP,
-        &500_000,
-        &(BIZ_TS + 30 * DAY),
-        &PRICE,
-        &legal,
+    let contract_id = env.register(
+        FractachainLicitacionContract,
+        (
+            &admin,
+            &fiduciary,
+            &token_id,
+            SOFT_CAP,
+            500_000i128,
+            BIZ_TS + 30 * DAY,
+            PRICE,
+            legal,
+        ),
     );
+    let client = FractachainLicitacionContractClient::new(&env, &contract_id);
 
     Fixture {
         env,
@@ -116,7 +117,7 @@ fn contribute_mints_rwa_and_secondary_market_settles() {
 ///
 /// No function moved the raise anywhere: a licitación that met its soft cap
 /// left every peso locked in the contract permanently, so the issuer was never
-/// paid. Closing now pays the company wallet configured at `initialize`.
+/// paid. Closing now pays the company wallet configured at construction.
 #[test]
 fn a_successful_issuance_pays_the_fiduciary() {
     let f = setup();
@@ -445,25 +446,36 @@ fn price_is_frozen_once_money_is_in() {
     assert!(f.client.try_set_payment_token(&f.admin, &f.token_id).is_err());
 }
 
+/// SC-06: the licitación is constructed with the deploy, so there is no
+/// `initialize` to front-run, and the host refuses to run the constructor
+/// again (admin, fiduciary and caps can't be rewritten).
 #[test]
-#[should_panic(expected = "Already initialized")]
-fn double_initialization_is_rejected() {
+fn the_constructor_cannot_be_run_again() {
     let f = setup();
+    let attacker = Address::generate(&f.env);
     let legal = LegalInfo {
         fideicomiso_hash: BytesN::from_array(&f.env, &[7u8; 32]),
         cnv_record_id: String::from_str(&f.env, "CNV-1"),
         legal_terms_uri: String::from_str(&f.env, "https://fractachain.example/legal"),
     };
-    f.client.initialize(
-        &f.admin,
-        &f.fiduciary,
-        &f.token_id,
-        &SOFT_CAP,
-        &500_000,
-        &(BIZ_TS + 30 * DAY),
-        &PRICE,
-        &legal,
+    let again = f.env.try_invoke_contract::<(), soroban_sdk::Error>(
+        &f.client.address,
+        &soroban_sdk::Symbol::new(&f.env, "__constructor"),
+        (
+            &attacker,
+            &attacker,
+            &f.token_id,
+            SOFT_CAP,
+            500_000i128,
+            BIZ_TS + 30 * DAY,
+            PRICE,
+            legal,
+        )
+            .into_val(&f.env),
     );
+    assert!(again.is_err());
+    assert_eq!(f.client.get_admin(), f.admin);
+    assert_eq!(f.client.get_fiduciary(), f.fiduciary);
 }
 
 #[test]
@@ -554,4 +566,289 @@ fn pubnet_rejects_kyc_outside_argentine_business_hours() {
         &(NEXT_BIZ_TS + 365 * DAY),
     );
     assert!(f.client.is_verified(&who));
+}
+
+/// SC-01 (security review 2026-10): a self-fill moved nothing but recorded a
+/// print, a free way to raise the equitable price floor every OPA pays.
+#[test]
+fn an_order_cannot_be_filled_by_its_own_seller() {
+    let f = setup();
+    let seller = fund_and_finalize(&f);
+    let order_id = f.client.place_order(&seller, &1, &1_000_000);
+    assert!(f.client.try_fill_order(&seller, &order_id).is_err());
+    assert_eq!(f.client.get_equitable_price_floor(), PRICE);
+}
+
+/// SC-01: the 0.25% fee truncated to zero on every fill under 400.
+#[test]
+fn small_fills_still_pay_the_platform_fee() {
+    let f = setup();
+    let seller = fund_and_finalize(&f);
+    let buyer = investor(&f, 50_000);
+    let order_id = f.client.place_order(&seller, &1, &PRICE);
+    let before = balance(&f, &f.admin);
+    f.client.fill_order(&buyer, &order_id);
+    assert_eq!(balance(&f, &f.admin) - before, 1);
+}
+
+/// SC-05: during `Open` an acceptor could be paid by the tender offer and
+/// still refunded in full if the issuance then failed.
+#[test]
+fn a_tender_offer_waits_for_a_successful_issuance() {
+    let f = setup();
+    let small = investor(&f, 1_000_000);
+    let whale = investor(&f, 1_000_000);
+    f.client.contribute(&small, &40_000);
+    f.client.contribute(&whale, &60_000);
+    assert!(f.client.get_opa_record().is_some(), "the primary still arms the OPA");
+    assert!(f.client.try_launch_opa(&whale, &PRICE).is_err());
+    assert!(f.client.try_accept_opa(&small).is_err());
+}
+
+/// SC-09: re-verifying a KYC silently restored votes Art. 88 had suspended.
+#[test]
+fn kyc_renewal_keeps_a_suspended_vote_suspended() {
+    let f = setup();
+    let whale = fund_and_finalize(&f);
+    let minority = investor(&f, 1_000_000);
+    let o1 = f.client.place_order(&whale, &400, &PRICE);
+    f.client.fill_order(&minority, &o1);
+    let o2 = f.client.place_order(&minority, &100, &PRICE);
+    f.client.fill_order(&whale, &o2);
+    f.env
+        .ledger()
+        .set_timestamp(BIZ_TS + 31 * DAY + crate::opa::OPA_DEADLINE_SECONDS + 1);
+    let o3 = f.client.place_order(&minority, &50, &PRICE);
+    f.client.fill_order(&whale, &o3);
+    assert!(!f.client.has_votes(&whale));
+
+    f.client.verify_investor(
+        &f.admin,
+        &whale,
+        &32,
+        &InvestorType::National,
+        &(BIZ_TS + 400 * DAY),
+    );
+    assert!(!f.client.has_votes(&whale));
+}
+
+/// Moves `units` from `from` to `to` through the order book at `PRICE`.
+fn sell(f: &Fixture, from: &Address, to: &Address, units: i128) {
+    let order = f.client.place_order(from, &units, &PRICE);
+    f.client.fill_order(to, &order);
+}
+
+/// Whale at 70%, minority at 30%, OPA armed for the whale.
+fn whale_in_control(f: &Fixture) -> (Address, Address) {
+    let whale = fund_and_finalize(f);
+    let minority = investor(f, 1_000_000);
+    sell(f, &whale, &minority, 400);
+    sell(f, &minority, &whale, 100);
+    let rec = f.client.get_opa_record().unwrap();
+    assert_eq!((rec.acquirer.clone(), rec.state), (whale.clone(), OpaState::Triggered));
+    (whale, minority)
+}
+
+/// SC-03a (security review 2026-10): the first holder to cross 50% owned the
+/// single OPA record forever, so anyone who took control later never had to
+/// make an offer.
+#[test]
+fn a_new_controller_supersedes_a_stale_opa_record() {
+    let f = setup();
+    let (whale, minority) = whale_in_control(&f);
+    let newcomer = investor(&f, 1_000_000);
+
+    sell(&f, &whale, &newcomer, 450); // whale 250 (25%), newcomer 450 (45%)
+    assert_eq!(f.client.get_opa_record().unwrap().acquirer, whale);
+    sell(&f, &minority, &newcomer, 100); // newcomer 550 (55%)
+
+    let rec = f.client.get_opa_record().unwrap();
+    assert_eq!(rec.acquirer, newcomer);
+    assert_eq!(rec.state, OpaState::Triggered);
+}
+
+/// SC-03a: at exactly 50/50 both "hold control"; the first record stands.
+#[test]
+fn a_tie_at_fifty_percent_keeps_the_existing_record() {
+    let f = setup();
+    let (whale, minority) = whale_in_control(&f);
+    let other = investor(&f, 1_000_000);
+    sell(&f, &whale, &other, 200); // whale 500
+    sell(&f, &minority, &other, 300); // other 500
+    assert_eq!(f.client.get_total_holding(&other), 500);
+    assert_eq!(f.client.get_opa_record().unwrap().acquirer, whale);
+}
+
+/// SC-03b: units parked in open sale orders were invisible to the control
+/// check, so a holder could cross 50% while showing only a small free balance.
+#[test]
+fn parking_units_in_orders_does_not_dodge_the_tender_offer() {
+    let f = setup();
+    let whale = fund_and_finalize(&f);
+    let parker = investor(&f, 1_000_000);
+    sell(&f, &whale, &parker, 450);
+    // 400 of the 450 go into an order nobody will fill.
+    f.client.place_order(&parker, &400, &(PRICE * 1_000));
+    assert_eq!(f.client.get_rwa_balance(&parker), 50);
+    assert!(f.client.get_opa_record().is_none());
+
+    sell(&f, &whale, &parker, 100); // free 150, total 550 = 55%
+    let rec = f.client.get_opa_record().expect("total holding must arm the OPA");
+    assert_eq!(rec.acquirer, parker);
+}
+
+/// SC-03c: the vote suspension was only written when the acquirer's stake
+/// grew again, so simply sitting on control kept the votes.
+#[test]
+fn an_acquirer_sitting_on_control_loses_votes_at_the_deadline() {
+    let f = setup();
+    let (whale, _) = whale_in_control(&f);
+    assert!(f.client.has_votes(&whale));
+
+    f.env
+        .ledger()
+        .set_timestamp(BIZ_TS + 31 * DAY + crate::opa::OPA_DEADLINE_SECONDS + 1);
+    // Nothing was bought: the sanction is still reported...
+    assert!(!f.client.has_votes(&whale));
+    // ...and anyone can persist it.
+    assert!(f.client.enforce_opa_deadline());
+    assert_eq!(f.client.get_opa_record().unwrap().state, OpaState::SuspendedVotes);
+    assert!(!f.client.enforce_opa_deadline());
+}
+
+/// SC-03c: an acquirer that sold below 50% before the deadline no longer owes
+/// the offer, so no sanction applies.
+#[test]
+fn selling_below_control_before_the_deadline_avoids_the_sanction() {
+    let f = setup();
+    let (whale, _) = whale_in_control(&f);
+    let other = investor(&f, 1_000_000);
+    sell(&f, &whale, &other, 300); // whale 400, other 300, minority 300: nobody in control
+    assert_eq!(f.client.get_opa_record().unwrap().acquirer, whale);
+    f.env
+        .ledger()
+        .set_timestamp(BIZ_TS + 31 * DAY + crate::opa::OPA_DEADLINE_SECONDS + 1);
+    assert!(f.client.has_votes(&whale));
+    assert!(!f.client.enforce_opa_deadline());
+}
+
+/// SC-04: a squeeze-out by a later acquirer overwrote the record, and the new
+/// acquirer could then reclaim the escrow the previous one had funded.
+#[test]
+fn a_new_acquirer_cannot_collect_someone_elses_opa_escrow() {
+    let f = setup();
+    let (whale, minority) = whale_in_control(&f);
+    f.client.launch_opa(&whale, &PRICE);
+    let escrow = f.client.get_opa_escrow();
+    assert_eq!(escrow, 300 * PRICE);
+    assert_eq!(f.client.get_opa_escrow_owner(), Some(whale.clone()));
+
+    let buyer = investor(&f, 10_000_000);
+    sell(&f, &whale, &buyer, 700);
+    sell(&f, &minority, &buyer, 250); // buyer 950 = 95%
+    assert_eq!(f.client.get_opa_record().unwrap().acquirer, buyer);
+
+    let whale_before = balance(&f, &whale);
+    f.client.execute_squeeze_out(&buyer, &PRICE);
+    // The whale's escrow went back to the whale, not to the new acquirer.
+    assert_eq!(balance(&f, &whale) - whale_before, escrow);
+    assert_eq!(f.client.get_opa_escrow(), 0);
+    assert!(f.client.try_reclaim_opa_escrow(&buyer).is_err());
+}
+
+/// SC-04: once the record moved on to a new controller, the previous
+/// acquirer's offer is dead and its escrow is reclaimable right away.
+#[test]
+fn a_superseded_acquirer_reclaims_its_escrow_immediately() {
+    let f = setup();
+    let (whale, minority) = whale_in_control(&f);
+    f.client.launch_opa(&whale, &PRICE);
+    let escrow = f.client.get_opa_escrow();
+    // While the whale's own offer is live, nothing can be reclaimed.
+    assert!(f.client.try_reclaim_opa_escrow(&whale).is_err());
+
+    let newcomer = investor(&f, 10_000_000);
+    sell(&f, &whale, &newcomer, 450);
+    sell(&f, &minority, &newcomer, 100);
+    assert_eq!(f.client.get_opa_record().unwrap().acquirer, newcomer);
+    assert!(f.client.try_reclaim_opa_escrow(&newcomer).is_err());
+
+    let before = balance(&f, &whale);
+    assert_eq!(f.client.reclaim_opa_escrow(&whale), escrow);
+    assert_eq!(balance(&f, &whale) - before, escrow);
+}
+
+/// SC-08: after a squeeze-out the holder is paid for units in open orders;
+/// cancelling those orders afterwards re-credited units that no longer exist.
+#[test]
+fn cancelling_after_a_squeeze_out_cannot_recreate_units() {
+    let f = setup();
+    let whale = investor(&f, 1_000_000);
+    let minority = investor(&f, 1_000_000);
+    f.client.contribute(&whale, &96_000);
+    f.client.contribute(&minority, &4_000);
+    f.env.ledger().set_timestamp(BIZ_TS + 31 * DAY);
+    f.client.finalize();
+
+    let order = f.client.place_order(&minority, &30, &(PRICE * 2));
+    f.client.execute_squeeze_out(&whale, &PRICE);
+    f.client.claim_squeeze_out(&minority);
+    assert!(f.client.try_cancel_sale_order(&minority, &order).is_err());
+    assert_eq!(f.client.get_total_holding(&minority), 0);
+}
+
+/// Info: `HighestPrice` was seeded with the initial price and never lowered,
+/// so repricing down before any money came in left an inflated floor.
+#[test]
+fn repricing_before_funding_resets_the_equitable_floor() {
+    let f = setup();
+    f.client.set_price_per_unit(&f.admin, &(PRICE / 2));
+    assert_eq!(f.client.get_equitable_price_floor(), PRICE / 2);
+}
+
+/// The stored admin stays readable (deploy scripts verify it on legacy
+/// instances, which were initialized in a separate transaction).
+#[test]
+fn the_stored_admin_is_readable() {
+    let f = setup();
+    assert_eq!(f.client.get_admin(), f.admin);
+}
+
+/// SC-12: core persistent entries had no TTL extension and could archive
+/// under an idle issuance.
+#[test]
+fn entry_points_keep_the_critical_state_alive() {
+    use soroban_sdk::testutils::storage::Persistent as _;
+    let f = setup();
+    let whale = fund_and_finalize(&f);
+    let minority = investor(&f, 1_000_000);
+    sell(&f, &whale, &minority, 400);
+    sell(&f, &minority, &whale, 100);
+    f.client.launch_opa(&whale, &PRICE);
+
+    let id = f.client.address.clone();
+    let ttl = |key: &crate::DataKey| {
+        f.env
+            .as_contract(&id, || f.env.storage().persistent().get_ttl(key))
+    };
+    for (i, key) in [
+        crate::DataKey::Admin,
+        crate::DataKey::State,
+        crate::DataKey::TotalRaised,
+        crate::DataKey::TotalRwaMinted,
+        crate::DataKey::PaymentToken,
+        crate::DataKey::HighestPrice,
+        crate::DataKey::OpaEscrow,
+        crate::DataKey::OpaEscrowOwner,
+    ]
+    .iter()
+    .enumerate()
+    {
+        let live = ttl(key);
+        assert!(live > fractachain_core::BUMP_THRESHOLD, "TTL of key #{i} not extended: {live}");
+    }
+    let record_ttl = f
+        .env
+        .as_contract(&id, || f.env.storage().persistent().get_ttl(&crate::opa::OpaKey::Record));
+    assert!(record_ttl > fractachain_core::BUMP_THRESHOLD);
 }

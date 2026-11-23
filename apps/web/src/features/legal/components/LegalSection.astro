@@ -1,0 +1,25 @@
+---
+/** One numbered section of a legal document: anchored heading + body + "volver arriba". */
+import { translatorFor } from '@/core/i18n/translate';
+
+interface Props {
+  id: string;
+  title: string;
+}
+
+const { id, title } = Astro.props;
+const t = translatorFor(Astro.locals.locale);
+---
+
+<section id={id} aria-labelledby={`${id}-title`} class="legal-section">
+  <h2 id={`${id}-title`}>
+    <a href={`#${id}`} class="legal-anchor" aria-label={`${t('legal.ui.anchor')}: ${title}`}>
+      #
+    </a>
+    {title}
+  </h2>
+  <slot />
+  <p class="legal-back no-print">
+    <a href="#top">{t('legal.ui.backToTop')} ↑</a>
+  </p>
+</section>

@@ -1,0 +1,34 @@
+---
+import { Activity, Anchor, HandCoins } from 'lucide-react';
+import { messagesFor } from '@/core/i18n/translate';
+
+const { landing } = messagesFor(Astro.locals.locale);
+const l = landing.liquidity;
+const icons = [Activity, Anchor, HandCoins];
+---
+
+<section aria-labelledby="liquidity-title" class="gradient-panel space-y-8 p-6 sm:p-10">
+  <div class="max-w-3xl">
+    <p class="mb-2 text-xs font-medium text-ink-2">{l.eyebrow}</p>
+    <h2 id="liquidity-title" class="text-[28px] font-normal leading-tight tracking-[-0.025em] sm:text-[36px]">
+      {l.title}
+    </h2>
+    <p class="mt-3 text-[15px] text-ink-2">{l.lead}</p>
+  </div>
+  <ul class="grid gap-3 md:grid-cols-3">
+    {l.items.map(([title, body], i) => {
+      const Icon = icons[i];
+      const next = i === l.items.length - 1;
+      return (
+        <li class="rounded-2xl bg-surface/75 p-5 backdrop-blur-sm">
+          <div class="flex items-start justify-between gap-3">
+            <Icon className="h-5 w-5 text-ink-2" aria-hidden="true" />
+            {next && <span class="chip chip-neutral">{l.soon}</span>}
+          </div>
+          <h3 class="mt-4 text-[15px] font-medium text-ink">{title}</h3>
+          <p class="mt-1 text-sm text-ink-2">{body}</p>
+        </li>
+      );
+    })}
+  </ul>
+</section>

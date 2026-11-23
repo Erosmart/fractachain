@@ -1,0 +1,31 @@
+---
+import { Compass } from 'lucide-react';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { messagesFor, translatorFor } from '@/core/i18n/translate';
+
+const locale = Astro.locals.locale;
+const t = translatorFor(locale);
+const nf = messagesFor(locale).landing.notFound;
+Astro.response.status = 404;
+---
+
+<BaseLayout title={t('misc.notFoundTitle')} bare>
+  <div class="mx-auto flex max-w-md flex-col items-center py-16 text-center sm:py-24">
+    <span class="grid h-12 w-12 place-items-center rounded-2xl bg-sky-soft text-ink-2" aria-hidden="true">
+      <Compass className="h-5 w-5" />
+    </span>
+    <p class="eyebrow mt-6">{nf.code}</p>
+    <h1 class="mt-2 text-[28px] font-normal leading-tight tracking-[-0.025em] text-ink sm:text-[34px]">
+      {t('misc.notFoundTitle')}
+    </h1>
+    <p class="mt-2 text-[15px] text-ink-2">{t('misc.notFoundBody')}</p>
+    <div class="mt-8 flex flex-col gap-2.5 sm:flex-row">
+      <a href="/" class="btn btn-primary btn-lg">
+        {t('misc.goHome')}
+      </a>
+      <a href="/market" class="btn btn-secondary btn-lg">
+        {nf.secondary}
+      </a>
+    </div>
+  </div>
+</BaseLayout>

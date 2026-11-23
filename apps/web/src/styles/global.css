@@ -1,0 +1,339 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Fractachain design tokens — light, airy, sky → peach → butter.
+ * Every color is an RGB channel triplet so Tailwind opacity modifiers work.
+ * Dark mode is its own selected set (not an inversion), applied by the
+ * `dark` class the theme bootstrap script puts on <html> before first paint.
+ */
+:root {
+  color-scheme: light;
+  --canvas: 243 246 249;
+  --surface: 255 255 255;
+  --surface-2: 247 249 252;
+  --line: 228 233 241;
+  --line-strong: 205 214 228;
+  --ink: 14 31 61;
+  --ink-2: 70 85 112;
+  --muted: 104 117 140;
+  --navy: 14 31 61;
+  --navy-ink: 255 255 255;
+  --sky: 108 196 245;
+  --sky-strong: 42 138 224;
+  --sky-soft: 225 242 253;
+  --peach: 247 196 160;
+  --peach-soft: 253 236 224;
+  --butter: 251 222 128;
+  --butter-soft: 253 244 207;
+  --good: 21 122 64;
+  --good-soft: 222 247 232;
+  --warn: 150 92 0;
+  --warn-soft: 254 241 199;
+  --bad: 185 38 38;
+  --bad-soft: 254 228 228;
+  --viz-1: 42 138 224;
+  --viz-2: 235 122 60;
+  --viz-3: 27 175 122;
+  --viz-4: 122 98 216;
+  /* Text on butter/peach fills: always dark navy (the pastels stay light in dark mode). */
+  --on-pastel: 14 31 61;
+
+  --panel-gradient: linear-gradient(180deg, #63bff6 0%, #a8daf9 26%, #e3e6ee 50%, #f8cfae 76%, #fbe29c 100%);
+  --bar-gradient: linear-gradient(180deg, #4fb4f2 0%, #a6d8f7 52%, #f7c9a4 82%, #fbdc8f 100%);
+  --atmosphere:
+    radial-gradient(60rem 28rem at 12% -6%, rgb(108 196 245 / 0.32), transparent 70%),
+    radial-gradient(48rem 26rem at 96% 108%, rgb(247 196 160 / 0.34), transparent 70%),
+    radial-gradient(30rem 18rem at 70% 0%, rgb(251 222 128 / 0.14), transparent 70%);
+}
+
+html.dark {
+  color-scheme: dark;
+  --canvas: 8 13 24;
+  --surface: 16 24 40;
+  --surface-2: 21 31 50;
+  --line: 36 49 73;
+  --line-strong: 55 71 100;
+  --ink: 233 239 249;
+  --ink-2: 178 191 212;
+  --muted: 139 153 178;
+  --navy: 226 235 250;
+  --navy-ink: 8 13 24;
+  --sky: 86 172 236;
+  --sky-strong: 58 142 230;
+  --sky-soft: 20 44 74;
+  --peach: 214 150 112;
+  --peach-soft: 60 40 32;
+  --butter: 232 200 98;
+  --butter-soft: 58 48 18;
+  --good: 74 214 128;
+  --good-soft: 18 52 36;
+  --warn: 240 196 70;
+  --warn-soft: 58 46 12;
+  --bad: 248 120 120;
+  --bad-soft: 66 26 30;
+  --viz-1: 58 142 230;
+  --viz-2: 217 95 38;
+  --viz-3: 25 158 112;
+  --viz-4: 139 123 230;
+  --on-pastel: 8 13 24;
+
+  --panel-gradient: linear-gradient(180deg, #11426b 0%, #1a3a5c 34%, #2a2f45 58%, #4a3427 82%, #4d3f18 100%);
+  --bar-gradient: linear-gradient(180deg, #57b0f0 0%, #3d7fb8 50%, #b07a58 82%, #c9a24a 100%);
+  --atmosphere:
+    radial-gradient(60rem 28rem at 12% -6%, rgb(58 142 230 / 0.2), transparent 70%),
+    radial-gradient(48rem 26rem at 96% 108%, rgb(214 150 112 / 0.14), transparent 70%);
+}
+
+html {
+  view-transition-name: root;
+  -webkit-text-size-adjust: 100%;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-group(root) {
+  animation-duration: 0.4s;
+}
+
+html,
+body {
+  color: rgb(var(--ink));
+  background: rgb(var(--canvas));
+  min-height: 100%;
+  overflow-x: clip;
+}
+
+body {
+  font-family:
+    'Inter Tight',
+    Inter,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  font-feature-settings: 'ss01', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+p {
+  line-height: 1.6;
+}
+
+::selection {
+  background: rgb(var(--sky) / 0.35);
+  color: rgb(var(--ink));
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--sky-strong));
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  /* ---------- Surfaces ---------- */
+  .card {
+    @apply rounded-card border border-line bg-surface shadow-card;
+  }
+  .card-pad {
+    @apply p-5 sm:p-6;
+  }
+  .card-muted {
+    @apply rounded-card border border-line bg-surface-2;
+  }
+  /* The signature sky → peach → butter panel. Ink text only (never white). */
+  .gradient-panel {
+    background: var(--panel-gradient);
+    @apply rounded-card text-ink;
+  }
+  .atmosphere {
+    background: var(--atmosphere), rgb(var(--canvas));
+    background-attachment: fixed;
+  }
+  .hairline-grid > * {
+    @apply border-line;
+  }
+
+  /* ---------- Type ---------- */
+  .numeral {
+    font-weight: 300;
+    letter-spacing: -0.045em;
+    line-height: 0.95;
+  }
+  .eyebrow {
+    @apply text-xs font-medium text-muted;
+  }
+  .title {
+    @apply text-[15px] font-medium text-ink;
+  }
+  .subtitle {
+    @apply text-xs text-muted;
+  }
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- Controls ---------- */
+  .btn {
+    @apply inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-full px-4 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-sm {
+    @apply h-8 px-3 text-[13px];
+  }
+  .btn-lg {
+    @apply h-12 px-6 text-[15px];
+  }
+  .btn-primary {
+    @apply bg-navy text-navy-ink hover:bg-navy/90;
+  }
+  .btn-secondary {
+    @apply border border-line bg-surface text-ink hover:border-line-strong hover:bg-surface-2;
+  }
+  .btn-soft {
+    @apply bg-sky-soft text-ink hover:bg-sky/30;
+  }
+  .btn-ghost {
+    @apply text-ink-2 hover:bg-ink/5 hover:text-ink;
+  }
+  .btn-danger {
+    @apply bg-bad-soft text-bad hover:bg-bad/15;
+  }
+  .icon-btn {
+    @apply inline-grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line bg-surface text-ink-2 transition-colors hover:text-ink hover:border-line-strong;
+  }
+  /* Small square ↗ link in a card corner. */
+  .arrow-btn {
+    @apply inline-grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-sky-soft/70 text-ink transition-colors hover:bg-sky/30;
+  }
+  .input {
+    @apply h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-sm text-ink placeholder:text-muted/80 transition-colors focus:border-sky-strong focus:outline-none focus:ring-4 focus:ring-sky/20 disabled:opacity-60;
+  }
+  textarea.input {
+    @apply h-auto py-2.5;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-medium text-ink-2;
+  }
+
+  /* ---------- Pills & chips ---------- */
+  .pill-tabs {
+    @apply inline-flex items-center gap-0.5 rounded-xl border border-line bg-surface p-1;
+  }
+  .pill-tab {
+    @apply inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[13px] text-ink-2 transition-colors hover:bg-ink/5 hover:text-ink;
+  }
+  .pill-tab[aria-current='page'],
+  .pill-tab[aria-selected='true'],
+  .pill-tab[data-active='true'] {
+    @apply bg-navy text-navy-ink hover:bg-navy;
+  }
+  .chip {
+    @apply inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-xs font-medium;
+  }
+  .chip-neutral {
+    @apply bg-ink/[0.06] text-ink-2;
+  }
+  .chip-sky {
+    @apply bg-sky-soft text-ink;
+  }
+  .chip-good {
+    @apply bg-good-soft text-good;
+  }
+  .chip-warn {
+    @apply bg-warn-soft text-warn;
+  }
+  .chip-bad {
+    @apply bg-bad-soft text-bad;
+  }
+  .chip-peach {
+    @apply bg-peach-soft text-ink;
+  }
+  .chip-butter {
+    @apply bg-butter text-on-pastel;
+  }
+  /* Dark time/value chip ("19:00"). */
+  .chip-navy {
+    @apply inline-flex h-6 items-center rounded-md bg-navy px-2 text-xs font-medium text-navy-ink;
+    font-variant-numeric: tabular-nums;
+  }
+  .count-badge {
+    @apply inline-grid h-[18px] min-w-[18px] place-items-center rounded-full bg-navy px-1 text-[10px] font-semibold text-navy-ink;
+  }
+  .pill-tab[aria-current='page'] .count-badge {
+    @apply bg-navy-ink text-navy;
+  }
+
+  /* ---------- Tables ---------- */
+  .table-clean {
+    @apply w-full text-sm;
+  }
+  .table-clean th {
+    @apply border-b border-line px-3 py-2.5 text-left text-xs font-medium text-muted;
+  }
+  .table-clean td {
+    @apply border-b border-line/70 px-3 py-3 text-ink;
+    font-variant-numeric: tabular-nums;
+  }
+  .table-clean tr:last-child td {
+    @apply border-b-0;
+  }
+
+  /* ---------- Legacy classes (pages being migrated) ---------- */
+  .crystal-card,
+  .glass-panel {
+    @apply rounded-card border border-line bg-surface shadow-card;
+  }
+  .btn-lcd {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-navy px-4 text-sm font-medium text-navy-ink transition-colors hover:bg-navy/90;
+  }
+  .btn-lcd-solid {
+    @apply bg-navy text-navy-ink;
+  }
+  .btn-lcd-ghost {
+    @apply border border-line bg-surface text-ink;
+  }
+  .hero-lcd {
+    @apply font-light text-ink;
+    letter-spacing: -0.04em;
+  }
+  .font-lcd {
+    font-variant-numeric: tabular-nums;
+  }
+  .liquid-sheen {
+    display: none;
+  }
+}
+
+/* Brand mark: a 3-4-5 dot grid, like a stack of tokens. */
+.brand-dots {
+  display: grid;
+  grid-template-columns: repeat(3, 4px);
+  gap: 2px;
+}
+
+/*
+ * Astro renders islands with `display: contents`, so `space-y-*` and margins
+ * on them are ignored and page sections collapse together. Inside <main>
+ * they are plain blocks (the header island stays outside, so its sticky
+ * header keeps sticking to the page).
+ */
+main astro-island {
+  display: block;
+}

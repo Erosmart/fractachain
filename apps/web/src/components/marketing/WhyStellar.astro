@@ -1,0 +1,25 @@
+---
+import { ArrowLeftRight, BadgeDollarSign, FileCode2, Gauge, ShieldCheck } from 'lucide-react';
+import { messagesFor } from '@/core/i18n/translate';
+import SectionHeading from './SectionHeading.astro';
+
+const { landing } = messagesFor(Astro.locals.locale);
+const w = landing.whyStellar;
+const icons = [BadgeDollarSign, ShieldCheck, Gauge, ArrowLeftRight, FileCode2];
+---
+
+<section aria-labelledby="why-stellar-title" class="space-y-6">
+  <SectionHeading id="why-stellar-title" eyebrow={w.eyebrow} title={w.title} lead={w.lead} />
+  <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+    {w.items.map(([title, body], i) => {
+      const Icon = icons[i];
+      return (
+        <li class="card card-pad">
+          <Icon className="h-5 w-5 text-ink-2" aria-hidden="true" />
+          <h3 class="mt-5 text-[15px] font-medium text-ink">{title}</h3>
+          <p class="mt-1 text-sm text-ink-2">{body}</p>
+        </li>
+      );
+    })}
+  </ul>
+</section>

@@ -3,8 +3,8 @@ use soroban_sdk::{
     contract, contractclient, contractimpl, contracttype, Address, BytesN, Env, Symbol,
 };
 use fractachain_core::{
-    bump_instance, bump_persistent, pct_bps, prorated_interest, require_positive, token_client,
-    MAX_RATE_BPS, SECONDS_PER_DAY,
+    bump_instance, bump_persistent, bump_persistent_if_present, pct_bps, prorated_interest,
+    require_positive, token_client, MAX_RATE_BPS, SECONDS_PER_DAY,
 };
 
 /// Subset of `issuance-factory` this vault depends on to decide who it trusts.
@@ -90,12 +90,42 @@ fn bump_all(env: &Env) {
     bump_persistent(env, &WarrantKey::StartTs);
     bump_persistent(env, &WarrantKey::Status);
     bump_persistent(env, &WarrantKey::CollateralHolder);
+    // Only exist once the loan is funded / liquidated; they were bumped once
+    // at write time and then left to archive over a long term.
+    bump_persistent_if_present(env, &WarrantKey::Lender);
+    bump_persistent_if_present(env, &WarrantKey::DueDate);
+    bump_persistent_if_present(env, &WarrantKey::DebtAtLiquidation);
+    bump_persistent_if_present(env, &WarrantKey::SurplusOwedToProducer);
+}
+
+/// Whether the attesting warrantera is still accredited in the registry.
+///
+/// Accreditation is checked at construction, but the registry can revoke it
+/// later. A revoked attestor's word must not unlock new money (`fund_loan`)
+/// nor let it seize collateral (`execute_liquidation`).
+fn warrantera_accredited(env: &Env) -> bool {
+    let registry: Address = env.storage().persistent().get(&WarrantKey::Registry).unwrap();
+    let oracle: Address = env
+        .storage()
+        .persistent()
+        .get(&WarrantKey::OracleWarrantera)
+        .unwrap();
+    RegistryClient::new(env, &registry).is_warrantera(&oracle)
 }
 
 #[contractimpl]
 impl WarrantVaultContract {
+    /// Runs once, atomically with the deploy (SC-06: no separate `initialize`
+    /// to front-run).
+    ///
+    /// SC-02: the registry has to authorize being named, so the vault is
+    /// deployed *by* its registry (`issuance-factory::deploy_warrant`), which
+    /// first checks that the warrantera is accredited and the payment token
+    /// allowlisted (a call back into the registry here would be re-entry).
+    /// Nobody can create a vault that claims the platform factory, and a vault
+    /// with a look-alike registry is visible in `get_registry`.
     #[allow(clippy::too_many_arguments)]
-    pub fn initialize(
+    pub fn __constructor(
         env: Env,
         registry: Address,
         producer: Address,
@@ -107,22 +137,14 @@ impl WarrantVaultContract {
         interest_rate_bps: u32,
         duration_days: u64,
     ) {
-        if env.storage().persistent().has(&WarrantKey::Producer) {
-            panic!("Already initialized");
-        }
+        registry.require_auth();
         // The whole loan is priced off `inventory_value` and `pogr_cert_hash`,
         // both supplied by the caller. Authenticating a self-chosen oracle
         // proves nothing, so the attestor must be accredited in the registry
-        // and must not be the producer.
+        // (checked by the registry before it authorizes this deploy) and must
+        // not be the producer.
         if producer == oracle_warrantera {
             panic!("Producer cannot attest its own collateral");
-        }
-        let registry_client = RegistryClient::new(&env, &registry);
-        if !registry_client.is_warrantera(&oracle_warrantera) {
-            panic!("Warrantera not accredited");
-        }
-        if !registry_client.is_payment_asset(&payment_token) {
-            panic!("Payment token not allowlisted");
         }
         if ltv_bps < 4000 || ltv_bps > 6000 {
             panic!("LTV must be between 40% and 60%");
@@ -175,9 +197,12 @@ impl WarrantVaultContract {
         if now > offer_expiry {
             panic!("Warrant offer expired: re-attest collateral");
         }
+        if !warrantera_accredited(&env) {
+            panic!("Warrantera accreditation revoked: collateral attestation no longer valid");
+        }
 
         // The term is measured from disbursement. Deriving `DueDate` at
-        // `initialize` let a lender wait out the clock and then fund and
+        // construction let a lender wait out the clock and then fund and
         // liquidate in the same ledger, taking the collateral for free.
         let duration_days: u64 = env.storage().persistent().get(&WarrantKey::DurationDays).unwrap();
         let due = now
@@ -258,13 +283,20 @@ impl WarrantVaultContract {
         if caller != lender && caller != oracle {
             panic!("Only lender or warrantera can liquidate");
         }
+        // The lender's right to the collateral survives a revocation; the
+        // warrantera's power to trigger it does not.
+        if caller == oracle && caller != lender && !warrantera_accredited(&env) {
+            panic!("Warrantera accreditation revoked");
+        }
 
         let now = env.ledger().timestamp();
         let due: u64 = env.storage().persistent().get(&WarrantKey::DueDate).unwrap();
         let grace_end = due
             .checked_add(GRACE_DAYS * SECONDS_PER_DAY)
             .expect("overflow");
-        if now < grace_end {
+        // Repayment is still accepted at `now == grace_end`; liquidation opens
+        // one second later so the lender cannot front-run a timely payment.
+        if now <= grace_end {
             panic!("Grace period has not expired yet");
         }
 
@@ -288,6 +320,17 @@ impl WarrantVaultContract {
         bump_all(&env);
         env.events()
             .publish((Symbol::new(&env, "liquidate"), lender), (debt, surplus));
+    }
+
+    /// Registry this vault trusts for accreditation and payment assets. The
+    /// registry itself deployed the vault (it authorized the constructor), so a
+    /// lender only has to check this is the canonical issuance factory.
+    pub fn get_registry(env: Env) -> Address {
+        env.storage().persistent().get(&WarrantKey::Registry).unwrap()
+    }
+
+    pub fn get_producer(env: Env) -> Address {
+        env.storage().persistent().get(&WarrantKey::Producer).unwrap()
     }
 
     pub fn get_status(env: Env) -> WarrantStatus {

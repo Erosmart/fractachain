@@ -1,6 +1,8 @@
 #![no_std]
 use soroban_sdk::{
-    contract, contractimpl, contracttype, Address, Env, String, Symbol,
+    auth::{ContractContext, InvokerContractAuthEntry, SubContractInvocation},
+    contract, contractimpl, contracttype, vec, Address, BytesN, ContractExecutable, Env, IntoVal,
+    String, Symbol, Val, Vec,
 };
 use fractachain_core::{bump_instance, bump_persistent, require_positive};
 
@@ -35,16 +37,49 @@ pub struct Product {
     pub active: bool,
 }
 
+/// Stock-vault terms for `deploy_stock_vault`.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct StockTerms {
+    pub ticker: Symbol,
+    pub company_name: String,
+    pub isin: String,
+    pub custodian_cuit: String,
+}
+
+/// Forward terms for `deploy_forward`.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ForwardTerms {
+    pub crop_name: String,
+    pub total_kilos: i128,
+    pub price_per_kilo: i128,
+    pub harvest_deadline: u64,
+}
+
+/// Warrant terms for `deploy_warrant`.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct WarrantTerms {
+    pub pogr_cert_hash: BytesN<32>,
+    pub inventory_value: i128,
+    pub ltv_bps: u32,
+    pub interest_rate_bps: u32,
+    pub duration_days: u64,
+}
+
 #[contracttype]
 pub enum FactoryKey {
     Admin,
     PaymentAsset(PaymentKind),
     ProductCount,
     Product(u64),
-    /// Accredited collateral attestors (warranteras). A `warrant-vault` refuses
-    /// to initialize unless its oracle is allowlisted here, so a producer cannot
+    /// Accredited collateral attestors (warranteras). `deploy_warrant` refuses
+    /// a vault whose oracle is not allowlisted here, so a producer cannot
     /// attest their own grain.
     Warrantera(Address),
+    /// Reverse index: product contract → product id.
+    ProductOf(Address),
 }
 
 #[contract]
@@ -58,16 +93,215 @@ fn require_admin(env: &Env, admin: &Address) {
     admin.require_auth();
 }
 
+fn register(
+    env: &Env,
+    kind: ProductKind,
+    contract_address: Address,
+    payment_kind: PaymentKind,
+    price_per_unit: i128,
+    name: String,
+) -> u64 {
+    if price_per_unit < 0 {
+        panic!("Price cannot be negative");
+    }
+    if env
+        .storage()
+        .persistent()
+        .has(&FactoryKey::ProductOf(contract_address.clone()))
+    {
+        panic!("Product already registered");
+    }
+    let token = configured_asset(env, payment_kind);
+
+    let id: u64 = env
+        .storage()
+        .persistent()
+        .get(&FactoryKey::ProductCount)
+        .unwrap_or(0)
+        + 1;
+    let product = Product {
+        id,
+        kind,
+        contract_address: contract_address.clone(),
+        payment_kind,
+        payment_token: token,
+        price_per_unit,
+        name,
+        active: true,
+    };
+    env.storage().persistent().set(&FactoryKey::Product(id), &product);
+    env.storage().persistent().set(&FactoryKey::ProductCount, &id);
+    env.storage()
+        .persistent()
+        .set(&FactoryKey::ProductOf(contract_address.clone()), &id);
+    bump_persistent(env, &FactoryKey::Product(id));
+    bump_persistent(env, &FactoryKey::ProductCount);
+    bump_persistent(env, &FactoryKey::ProductOf(contract_address));
+    env.events()
+        .publish((Symbol::new(env, "register"), id), product.name.clone());
+    id
+}
+
+fn configured_asset(env: &Env, kind: PaymentKind) -> Address {
+    env.storage()
+        .instance()
+        .get(&FactoryKey::PaymentAsset(kind))
+        .unwrap_or_else(|| panic!("Payment asset not configured"))
+}
+
+/// Deploys `wasm_hash` with `args` and registers it, signing off the
+/// constructor call as this contract.
+///
+/// SC-02: registry-bound products call `registry.require_auth()` in their
+/// constructor. A contract authorizes only what it explicitly signs off while
+/// executing, and the factory signs off exactly this constructor call, under
+/// its admin's signature, after vetting the arguments. So an instance whose
+/// `get_registry()` is this factory was deployed by it with vetted terms.
+/// (The constructor cannot call back into the factory to check them: Soroban
+/// forbids re-entry.)
+#[allow(clippy::too_many_arguments)]
+fn deploy_and_register(
+    env: &Env,
+    kind: ProductKind,
+    wasm_hash: BytesN<32>,
+    salt: BytesN<32>,
+    args: Vec<Val>,
+    payment_kind: PaymentKind,
+    price_per_unit: i128,
+    name: String,
+) -> Address {
+    bump_instance(env);
+    let deployer = env.deployer().with_current_contract(salt);
+    let address = deployer.deployed_address();
+    env.authorize_as_current_contract(vec![
+        env,
+        InvokerContractAuthEntry::Contract(SubContractInvocation {
+            context: ContractContext {
+                contract: address.clone(),
+                fn_name: Symbol::new(env, "__constructor"),
+                args: args.clone(),
+            },
+            sub_invocations: vec![env],
+        }),
+    ]);
+    let deployed = deployer.deploy_contract(ContractExecutable::Wasm(wasm_hash), args);
+    if deployed != address {
+        panic!("Unexpected deployed address");
+    }
+    let id = register(env, kind, address.clone(), payment_kind, price_per_unit, name);
+    env.events()
+        .publish((Symbol::new(env, "deploy"), id), address.clone());
+    address
+}
+
 #[contractimpl]
 impl IssuanceFactoryContract {
-    pub fn initialize(env: Env, admin: Address) {
-        if env.storage().instance().has(&FactoryKey::Admin) {
-            panic!("Already initialized");
-        }
+    /// Runs once, atomically with the deploy (SC-06: a separate `initialize`
+    /// could be front-run to seize the registry).
+    pub fn __constructor(env: Env, admin: Address) {
         admin.require_auth();
         env.storage().instance().set(&FactoryKey::Admin, &admin);
         env.storage().persistent().set(&FactoryKey::ProductCount, &0u64);
         bump_instance(&env);
+        bump_persistent(&env, &FactoryKey::ProductCount);
+    }
+
+    /// Deploys a `stock-vault` bound to this registry, paid in the configured
+    /// `payment_kind` asset, and registers it.
+    #[allow(clippy::too_many_arguments)]
+    pub fn deploy_stock_vault(
+        env: Env,
+        admin: Address,
+        wasm_hash: BytesN<32>,
+        salt: BytesN<32>,
+        custodian: Address,
+        por_oracle: Address,
+        payment_kind: PaymentKind,
+        terms: StockTerms,
+        name: String,
+    ) -> Address {
+        require_admin(&env, &admin);
+        let token = configured_asset(&env, payment_kind);
+        let args = (
+            custodian,
+            por_oracle,
+            env.current_contract_address(),
+            token,
+            terms.ticker,
+            terms.company_name,
+            terms.isin,
+            terms.custodian_cuit,
+        )
+            .into_val(&env);
+        deploy_and_register(&env, ProductKind::Stock, wasm_hash, salt, args, payment_kind, 0, name)
+    }
+
+    /// Deploys a `forward-contract` bound to this registry. Producer and buyer
+    /// authorize the constructor (it escrows the buyer's payment).
+    #[allow(clippy::too_many_arguments)]
+    pub fn deploy_forward(
+        env: Env,
+        admin: Address,
+        wasm_hash: BytesN<32>,
+        salt: BytesN<32>,
+        producer: Address,
+        buyer: Address,
+        arbiter: Address,
+        payment_kind: PaymentKind,
+        terms: ForwardTerms,
+        name: String,
+    ) -> Address {
+        require_admin(&env, &admin);
+        let token = configured_asset(&env, payment_kind);
+        let price = terms.price_per_kilo;
+        let args = (
+            env.current_contract_address(),
+            producer,
+            buyer,
+            arbiter,
+            token,
+            terms.crop_name,
+            terms.total_kilos,
+            terms.price_per_kilo,
+            terms.harvest_deadline,
+        )
+            .into_val(&env);
+        deploy_and_register(&env, ProductKind::Forward, wasm_hash, salt, args, payment_kind, price, name)
+    }
+
+    /// Deploys a `warrant-vault` bound to this registry. The attesting
+    /// warrantera must be accredited here; producer and warrantera authorize
+    /// the constructor.
+    #[allow(clippy::too_many_arguments)]
+    pub fn deploy_warrant(
+        env: Env,
+        admin: Address,
+        wasm_hash: BytesN<32>,
+        salt: BytesN<32>,
+        producer: Address,
+        oracle_warrantera: Address,
+        payment_kind: PaymentKind,
+        terms: WarrantTerms,
+        name: String,
+    ) -> Address {
+        require_admin(&env, &admin);
+        if !Self::is_warrantera(env.clone(), oracle_warrantera.clone()) {
+            panic!("Warrantera not accredited");
+        }
+        let token = configured_asset(&env, payment_kind);
+        let args = (
+            env.current_contract_address(),
+            producer,
+            oracle_warrantera,
+            token,
+            terms.pogr_cert_hash,
+            terms.inventory_value,
+            terms.ltv_bps,
+            terms.interest_rate_bps,
+            terms.duration_days,
+        )
+            .into_val(&env);
+        deploy_and_register(&env, ProductKind::Warrant, wasm_hash, salt, args, payment_kind, 0, name)
     }
 
     /// Hand the registry to a new admin. Without this, a lost key is terminal:
@@ -142,7 +376,8 @@ impl IssuanceFactoryContract {
             .unwrap_or(false)
     }
 
-    /// Register a newly deployed product. Price can be 0 and set later via `set_product_price`.
+    /// Register a product deployed elsewhere (e.g. a licitación deployed by its
+    /// own admin). Price can be 0 and set later via `set_product_price`.
     pub fn register_product(
         env: Env,
         admin: Address,
@@ -153,38 +388,15 @@ impl IssuanceFactoryContract {
         name: String,
     ) -> u64 {
         require_admin(&env, &admin);
-        if price_per_unit < 0 {
-            panic!("Price cannot be negative");
-        }
-        let token: Address = env
-            .storage()
-            .instance()
-            .get(&FactoryKey::PaymentAsset(payment_kind))
-            .unwrap_or_else(|| panic!("Payment asset not configured"));
+        register(&env, kind, contract_address, payment_kind, price_per_unit, name)
+    }
 
-        let id: u64 = env
-            .storage()
+    /// Product id of a registered contract, if any. Integrators use it to
+    /// tell platform instances from look-alikes.
+    pub fn product_id_of(env: Env, contract_address: Address) -> Option<u64> {
+        env.storage()
             .persistent()
-            .get(&FactoryKey::ProductCount)
-            .unwrap_or(0)
-            + 1;
-        let product = Product {
-            id,
-            kind,
-            contract_address,
-            payment_kind,
-            payment_token: token,
-            price_per_unit,
-            name,
-            active: true,
-        };
-        env.storage().persistent().set(&FactoryKey::Product(id), &product);
-        env.storage().persistent().set(&FactoryKey::ProductCount, &id);
-        bump_persistent(&env, &FactoryKey::Product(id));
-        bump_persistent(&env, &FactoryKey::ProductCount);
-        env.events()
-            .publish((Symbol::new(&env, "register"), id), product.name.clone());
-        id
+            .get(&FactoryKey::ProductOf(contract_address))
     }
 
     pub fn set_product_price(env: Env, admin: Address, product_id: u64, price_per_unit: i128) {

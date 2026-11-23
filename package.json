@@ -1,0 +1,38 @@
+{
+  "name": "fractachain",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Fractachain — mercado regulado de activos del mundo real (RWA) sobre Stellar / Soroban.",
+  "license": "SEE LICENSE IN LICENSE",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.12.0",
+    "npm": ">=10"
+  },
+  "scripts": {
+    "dev": "npm run dev -w @fractachain/web",
+    "dev:api-only": "npm run dev -w @fractachain/api",
+    "build": "npm run build -w @fractachain/api && npm run build -w @fractachain/web",
+    "start": "npm run start -w @fractachain/web",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run build -w @fractachain/api && npm run typecheck --workspaces --if-present",
+    "format": "prettier --write \"apps/*/{src,test,server,integrations}/**/*.{ts,tsx,mjs,astro,css}\" \"packages/*/{src,test}/**/*.ts\"",
+    "format:check": "prettier --check \"apps/*/{src,test,server,integrations}/**/*.{ts,tsx,mjs,astro,css}\" \"packages/*/{src,test}/**/*.ts\"",
+    "contracts:test": "cargo test --manifest-path contracts/Cargo.toml",
+    "testnet:deploy-licitacion": "npm run deploy:licitacion -w @fractachain/api",
+    "testnet:deploy-forward-warrant": "npm run deploy:forward-warrant -w @fractachain/api",
+    "testnet:clone-factory": "npm run testnet:clone-factory -w @fractachain/api",
+    "stellar:deploy": "npm run stellar:deploy -w @fractachain/api --",
+    "stellar:fund-pool": "npm run stellar:fund-pool -w @fractachain/api --",
+    "stellar:fund": "npm run stellar:fund -w @fractachain/api --",
+    "stellar:e2e": "npm run stellar:e2e -w @fractachain/api --",
+    "contracts:build": "cd contracts && SOROBAN_SDK_BUILD_SYSTEM_SUPPORTS_SPEC_SHAKING_V2=1 cargo build --locked --release --target wasm32v1-none"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10",
+    "prettier-plugin-astro": "^1.1.2"
+  }
+}

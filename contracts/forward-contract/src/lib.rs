@@ -3,7 +3,8 @@ use soroban_sdk::{
     contract, contractclient, contractimpl, contracttype, Address, Env, String, Symbol,
 };
 use fractachain_core::{
-    bump_instance, bump_persistent, pct_bps_ceil, require_positive, token_client, SECONDS_PER_DAY,
+    bump_instance, bump_persistent, bump_persistent_if_present, pct_bps_ceil, require_positive,
+    token_client, SECONDS_PER_DAY,
 };
 
 /// Subset of `issuance-factory` used to validate the payment asset.
@@ -25,7 +26,7 @@ pub enum ForwardKey {
     Registry,
     Producer,
     Buyer,
-    /// Resolves a disputed delivery. Set once, at initialize.
+    /// Resolves a disputed delivery. Set once, at construction.
     Arbiter,
     PaymentToken,
     CropName,
@@ -39,6 +40,8 @@ pub enum ForwardKey {
     DeliveredAt,
     Disputed,
     RolloverCount,
+    /// When the buyer disputed the delivery; starts the arbiter's window.
+    DisputedAt,
 }
 
 #[contract]
@@ -48,6 +51,10 @@ const DELIVERY_GRACE_DAYS: u64 = 15;
 /// How long the buyer has to accept or dispute a marked delivery. Past this,
 /// silence counts as acceptance — otherwise a buyer could stall forever.
 const ACCEPTANCE_WINDOW_DAYS: u64 = 10;
+/// How long the arbiter has to rule on a dispute. Past this, the buyer can
+/// take the escrow back: the producer could not get its delivery confirmed by
+/// anyone, and an absent arbiter must not freeze the money forever.
+const DISPUTE_TIMEOUT_DAYS: u64 = 30;
 const ROLLOVER_DAYS: u64 = 90;
 const MAX_ROLLOVERS: u32 = 2;
 const PENALTY_BPS: u32 = 2_000;
@@ -96,6 +103,17 @@ fn acceptance_deadline(env: &Env) -> u64 {
         .expect("overflow")
 }
 
+/// End of the delivery window: harvest deadline plus grace. From this moment
+/// the buyer may recover a never-delivered escrow, so the producer can no
+/// longer mark delivery — otherwise it could front-run the refund at the last
+/// second and force a dispute.
+fn delivery_window_end(env: &Env) -> u64 {
+    let deadline: u64 = env.storage().persistent().get(&ForwardKey::HarvestDeadline).unwrap();
+    deadline
+        .checked_add(DELIVERY_GRACE_DAYS * SECONDS_PER_DAY)
+        .expect("overflow")
+}
+
 /// Renews the whole escrow footprint. `bump_instance` does not reach
 /// persistent storage, where all of this contract's state lives, so a forward
 /// running past the default TTL would archive with the buyer's money inside.
@@ -114,12 +132,20 @@ fn bump_all(env: &Env) {
     bump_persistent(env, &ForwardKey::BonusKilosPct);
     bump_persistent(env, &ForwardKey::ProducerDelivered);
     bump_persistent(env, &ForwardKey::RolloverCount);
+    bump_persistent_if_present(env, &ForwardKey::Disputed);
+    bump_persistent_if_present(env, &ForwardKey::DeliveredAt);
+    bump_persistent_if_present(env, &ForwardKey::DisputedAt);
 }
 
 #[contractimpl]
 impl ForwardContract {
+    /// Runs once, atomically with the deploy (SC-06). The registry must
+    /// authorize being named (SC-02): only the issuance factory deploying the
+    /// forward (`deploy_forward`) can bind it to itself, after checking that
+    /// `payment_token` is allowlisted (calling back into the registry here
+    /// would be re-entry).
     #[allow(clippy::too_many_arguments)]
-    pub fn initialize(
+    pub fn __constructor(
         env: Env,
         registry: Address,
         producer: Address,
@@ -131,9 +157,7 @@ impl ForwardContract {
         price_per_kilo: i128,
         harvest_deadline: u64,
     ) {
-        if env.storage().persistent().has(&ForwardKey::Producer) {
-            panic!("Already initialized");
-        }
+        registry.require_auth();
         // Without this a single account could sit on both sides, escrowing and
         // recovering its own funds to inflate platform volume.
         if producer == buyer {
@@ -158,9 +182,6 @@ impl ForwardContract {
 
         producer.require_auth();
         buyer.require_auth();
-        if !RegistryClient::new(&env, &registry).is_payment_asset(&payment_token) {
-            panic!("Payment token not allowlisted");
-        }
 
         let total = total_kilos.checked_mul(price_per_kilo).expect("overflow");
 
@@ -242,12 +263,13 @@ impl ForwardContract {
         }
 
         let now = env.ledger().timestamp();
+        if now >= delivery_window_end(&env) {
+            panic!("Delivery window closed: the buyer can now recover the escrow");
+        }
         env.storage().persistent().set(&ForwardKey::ProducerDelivered, &true);
         env.storage().persistent().set(&ForwardKey::DeliveredAt, &now);
         env.storage().persistent().set(&ForwardKey::Disputed, &false);
         bump_all(&env);
-        bump_persistent(&env, &ForwardKey::DeliveredAt);
-        bump_persistent(&env, &ForwardKey::Disputed);
         env.events()
             .publish((Symbol::new(&env, "delivered"), producer), now);
     }
@@ -289,11 +311,16 @@ impl ForwardContract {
         if !delivered(&env) {
             panic!("No delivery to dispute");
         }
-        if env.ledger().timestamp() > acceptance_deadline(&env) {
+        let now = env.ledger().timestamp();
+        if now > acceptance_deadline(&env) {
             panic!("Acceptance window closed");
         }
+        if disputed(&env) {
+            panic!("Already disputed");
+        }
         env.storage().persistent().set(&ForwardKey::Disputed, &true);
-        bump_persistent(&env, &ForwardKey::Disputed);
+        env.storage().persistent().set(&ForwardKey::DisputedAt, &now);
+        bump_all(&env);
         env.events()
             .publish((Symbol::new(&env, "disputed"), buyer), escrow_total(&env));
     }
@@ -355,6 +382,41 @@ impl ForwardContract {
             .publish((Symbol::new(&env, "resolved"), arbiter), (to, total));
     }
 
+    /// Default exit for a dispute the arbiter never ruled on.
+    ///
+    /// After `DISPUTE_TIMEOUT_DAYS` the buyer recovers the escrow. Refunding
+    /// is the conservative default: the producer's delivery claim is exactly
+    /// what was contested and nobody confirmed it. Until someone calls this,
+    /// a late ruling by the arbiter is still accepted — the first final action
+    /// settles the forward.
+    pub fn refund_unresolved_dispute(env: Env, buyer: Address) {
+        let stored = addr(&env, ForwardKey::Buyer);
+        if buyer != stored {
+            panic!("Only buyer can refund");
+        }
+        buyer.require_auth();
+        require_state(&env, ForwardState::Active);
+        if !disputed(&env) {
+            panic!("Nothing disputed");
+        }
+        let disputed_at: u64 = env.storage().persistent().get(&ForwardKey::DisputedAt).unwrap();
+        let timeout = disputed_at
+            .checked_add(DISPUTE_TIMEOUT_DAYS * SECONDS_PER_DAY)
+            .expect("overflow");
+        if env.ledger().timestamp() <= timeout {
+            panic!("Arbiter still within its ruling window");
+        }
+
+        let total = escrow_total(&env);
+        let token = addr(&env, ForwardKey::PaymentToken);
+        env.storage().persistent().set(&ForwardKey::State, &ForwardState::Cancelled);
+        bump_all(&env);
+
+        token_client(&env, &token).transfer(&env.current_contract_address(), &buyer, &total);
+        env.events()
+            .publish((Symbol::new(&env, "dispute_timeout"), buyer), total);
+    }
+
     /// If the producer never marks delivery, buyer recovers 100% after deadline + grace.
     pub fn refund_on_non_delivery(env: Env, buyer: Address) {
         let stored = addr(&env, ForwardKey::Buyer);
@@ -366,11 +428,7 @@ impl ForwardContract {
         if delivered(&env) {
             panic!("Delivery already marked");
         }
-        let deadline: u64 = env.storage().persistent().get(&ForwardKey::HarvestDeadline).unwrap();
-        let grace_end = deadline
-            .checked_add(DELIVERY_GRACE_DAYS * SECONDS_PER_DAY)
-            .expect("overflow");
-        if env.ledger().timestamp() < grace_end {
+        if env.ledger().timestamp() < delivery_window_end(&env) {
             panic!("Delivery grace period has not expired");
         }
 
@@ -457,6 +515,11 @@ impl ForwardContract {
         if new_buyer == addr(&env, ForwardKey::Producer) {
             panic!("Producer cannot buy the position");
         }
+        // The arbiter rules disputes over this position: owning it would let
+        // them decide their own case.
+        if new_buyer == addr(&env, ForwardKey::Arbiter) {
+            panic!("Arbiter cannot buy the position");
+        }
         // A position awaiting acceptance or under dispute is mid-settlement.
         // Allowing its sale let the original buyer hand a frozen escrow to a
         // third party who had no way to see the problem.
@@ -494,6 +557,23 @@ impl ForwardContract {
 
     pub fn get_arbiter(env: Env) -> Address {
         addr(&env, ForwardKey::Arbiter)
+    }
+
+    /// `(producer, buyer, arbiter)` — what a counterparty checks before
+    /// trusting an instance.
+    pub fn get_parties(env: Env) -> (Address, Address, Address) {
+        (
+            addr(&env, ForwardKey::Producer),
+            addr(&env, ForwardKey::Buyer),
+            addr(&env, ForwardKey::Arbiter),
+        )
+    }
+
+    /// Registry this forward trusts for its payment asset. It deployed the
+    /// forward (it authorized the constructor), so counterparties only have to
+    /// check this is the canonical issuance factory.
+    pub fn get_registry(env: Env) -> Address {
+        addr(&env, ForwardKey::Registry)
     }
 
     /// `(state, delivered, delivered_at, disputed, harvest_deadline, rollover_count, escrow)`.

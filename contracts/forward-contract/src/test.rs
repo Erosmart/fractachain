@@ -5,7 +5,7 @@ use soroban_sdk::{
     contract, contractimpl,
     testutils::{Address as _, Ledger},
     token::{StellarAssetClient, TokenClient},
-    Address, Env, String,
+    Address, Env, IntoVal, String,
 };
 
 use crate::{ForwardContract, ForwardContractClient, ForwardState};
@@ -57,7 +57,8 @@ fn setup() -> Fixture {
     let registry = env.register(MockRegistry, ());
     MockRegistryClient::new(&env, &registry).seed(&token_id);
 
-    let id = env.register(ForwardContract, ());
+    // Deployed (constructor) by `init`, at this address.
+    let id = Address::generate(&env);
     let client = ForwardContractClient::new(&env, &id);
 
     Fixture {
@@ -71,19 +72,38 @@ fn setup() -> Fixture {
     }
 }
 
+/// Deploys the forward at the fixture's address (the constructor runs here).
+#[allow(clippy::too_many_arguments)]
+fn init(
+    f: &Fixture,
+    producer: &Address,
+    buyer: &Address,
+    arbiter: &Address,
+    token: &Address,
+    total_kilos: i128,
+    price_per_kilo: i128,
+    harvest_deadline: u64,
+) {
+    f.env.register_at(
+        &f.client.address,
+        ForwardContract,
+        (
+            &f.registry,
+            producer,
+            buyer,
+            arbiter,
+            token,
+            String::from_str(&f.env, "soja"),
+            total_kilos,
+            price_per_kilo,
+            harvest_deadline,
+        ),
+    );
+}
+
 /// 1_000 kilos at 100 per kilo = 100_000 escrowed.
 fn init_default(f: &Fixture) {
-    f.client.initialize(
-        &f.registry,
-        &f.producer,
-        &f.buyer,
-        &f.arbiter,
-        &f.token_id,
-        &String::from_str(&f.env, "soja"),
-        &1_000,
-        &100,
-        &DEADLINE,
-    );
+    init(f, &f.producer, &f.buyer, &f.arbiter, &f.token_id, 1_000, 100, DEADLINE);
 }
 
 fn balance(f: &Fixture, who: &Address) -> i128 {
@@ -276,17 +296,7 @@ fn pre_cancel_splits_the_escrow_twenty_eighty() {
 #[test]
 fn a_tiny_escrow_still_owes_a_penalty() {
     let f = setup();
-    f.client.initialize(
-        &f.registry,
-        &f.producer,
-        &f.buyer,
-        &f.arbiter,
-        &f.token_id,
-        &String::from_str(&f.env, "soja"),
-        &1,
-        &4,
-        &DEADLINE,
-    );
+    init(&f, &f.producer, &f.buyer, &f.arbiter, &f.token_id, 1, 4, DEADLINE);
     f.env.ledger().set_timestamp(T0 + DAY);
     f.client.pre_cancel(&f.buyer);
     // 20% of 4 rounds up to 1 rather than down to 0.
@@ -329,34 +339,14 @@ fn a_position_pending_acceptance_cannot_be_sold() {
 #[should_panic(expected = "Producer and buyer must differ")]
 fn one_account_cannot_be_both_sides() {
     let f = setup();
-    f.client.initialize(
-        &f.registry,
-        &f.producer,
-        &f.producer,
-        &f.arbiter,
-        &f.token_id,
-        &String::from_str(&f.env, "soja"),
-        &1_000,
-        &100,
-        &DEADLINE,
-    );
+    init(&f, &f.producer, &f.producer, &f.arbiter, &f.token_id, 1_000, 100, DEADLINE);
 }
 
 #[test]
 #[should_panic(expected = "Arbiter must be independent")]
 fn the_arbiter_cannot_be_a_counterparty() {
     let f = setup();
-    f.client.initialize(
-        &f.registry,
-        &f.producer,
-        &f.buyer,
-        &f.buyer,
-        &f.token_id,
-        &String::from_str(&f.env, "soja"),
-        &1_000,
-        &100,
-        &DEADLINE,
-    );
+    init(&f, &f.producer, &f.buyer, &f.buyer, &f.token_id, 1_000, 100, DEADLINE);
 }
 
 /// M-02 regression: a deadline in the past enabled an immediate rollover, and
@@ -365,40 +355,129 @@ fn the_arbiter_cannot_be_a_counterparty() {
 #[should_panic(expected = "Harvest deadline must be in the future")]
 fn a_deadline_in_the_past_is_rejected() {
     let f = setup();
-    f.client.initialize(
-        &f.registry,
-        &f.producer,
-        &f.buyer,
-        &f.arbiter,
-        &f.token_id,
-        &String::from_str(&f.env, "soja"),
-        &1_000,
-        &100,
-        &(T0 - 1),
-    );
+    init(&f, &f.producer, &f.buyer, &f.arbiter, &f.token_id, 1_000, 100, T0 - 1);
 }
 
 #[test]
 #[should_panic(expected = "Harvest deadline too far in the future")]
 fn an_overflowing_deadline_is_rejected() {
     let f = setup();
-    f.client.initialize(
-        &f.registry,
-        &f.producer,
-        &f.buyer,
-        &f.arbiter,
-        &f.token_id,
-        &String::from_str(&f.env, "soja"),
-        &1_000,
-        &100,
-        &u64::MAX,
+    init(&f, &f.producer, &f.buyer, &f.arbiter, &f.token_id, 1_000, 100, u64::MAX);
+}
+
+/// SC-06: the forward is constructed with the deploy (escrow included); the
+/// host refuses to run the constructor again.
+#[test]
+fn the_constructor_cannot_be_run_again() {
+    let f = setup();
+    init_default(&f);
+    let again = f.env.try_invoke_contract::<(), soroban_sdk::Error>(
+        &f.client.address,
+        &soroban_sdk::Symbol::new(&f.env, "__constructor"),
+        (
+            &f.registry,
+            &f.producer,
+            &f.buyer,
+            &f.arbiter,
+            &f.token_id,
+            String::from_str(&f.env, "soja"),
+            1_000i128,
+            100i128,
+            DEADLINE,
+        )
+            .into_val(&f.env),
     );
+    assert!(again.is_err());
+    assert_eq!(balance(&f, &f.client.address), 100_000);
+}
+
+/// SC-07 (security review 2026-10): the arbiter could buy the buyer position
+/// and then rule its own dispute.
+#[test]
+fn the_arbiter_cannot_buy_the_position() {
+    let f = setup();
+    init_default(&f);
+    StellarAssetClient::new(&f.env, &f.token_id).mint(&f.arbiter, &1_000_000);
+    assert!(f
+        .client
+        .try_transfer_position(&f.buyer, &f.arbiter, &90_000)
+        .is_err());
+}
+
+/// SC-11 (security review 2026-10): the producer could mark delivery at any
+/// time, including the instant the buyer's refund opened, forcing a dispute.
+#[test]
+fn delivery_cannot_be_marked_once_the_refund_window_opens() {
+    let f = setup();
+    init_default(&f);
+    f.env.ledger().set_timestamp(DEADLINE + 15 * DAY);
+    assert!(f.client.try_mark_delivered(&f.producer).is_err());
+    let before = balance(&f, &f.buyer);
+    f.client.refund_on_non_delivery(&f.buyer);
+    assert_eq!(balance(&f, &f.buyer) - before, 100_000);
 }
 
 #[test]
-#[should_panic(expected = "Already initialized")]
-fn double_initialization_is_rejected() {
+fn delivery_can_be_marked_until_the_last_second_of_grace() {
     let f = setup();
     init_default(&f);
+    f.env.ledger().set_timestamp(DEADLINE + 15 * DAY - 1);
+    f.client.mark_delivered(&f.producer);
+    assert!(f.client.try_refund_on_non_delivery(&f.buyer).is_err());
+}
+
+/// SC-11: a dispute had no timeout, so an absent arbiter froze the escrow.
+#[test]
+fn an_unresolved_dispute_refunds_the_buyer_after_the_timeout() {
+    let f = setup();
     init_default(&f);
+    f.client.mark_delivered(&f.producer);
+    f.client.dispute_delivery(&f.buyer);
+
+    f.env.ledger().set_timestamp(T0 + 30 * DAY);
+    assert!(f.client.try_refund_unresolved_dispute(&f.buyer).is_err());
+
+    f.env.ledger().set_timestamp(T0 + 30 * DAY + 1);
+    let before = balance(&f, &f.buyer);
+    f.client.refund_unresolved_dispute(&f.buyer);
+    assert_eq!(balance(&f, &f.buyer) - before, 100_000);
+    assert_eq!(f.client.get_state(), ForwardState::Cancelled);
+    // The forward is settled: the arbiter can no longer rule on it.
+    assert!(f.client.try_resolve_dispute(&f.arbiter, &true).is_err());
+}
+
+/// SC-11: re-disputing would restart the arbiter's window indefinitely.
+#[test]
+fn a_delivery_can_only_be_disputed_once() {
+    let f = setup();
+    init_default(&f);
+    f.client.mark_delivered(&f.producer);
+    f.client.dispute_delivery(&f.buyer);
+    assert!(f.client.try_dispute_delivery(&f.buyer).is_err());
+}
+
+/// SC-02 / SC-06: registry and parties are readable for verification.
+#[test]
+fn registry_and_parties_are_readable() {
+    let f = setup();
+    init_default(&f);
+    assert_eq!(f.client.get_registry(), f.registry);
+    assert_eq!(f.client.get_parties(), (f.producer.clone(), f.buyer.clone(), f.arbiter.clone()));
+}
+
+/// SC-12: dispute bookkeeping was outside `bump_all`.
+#[test]
+fn dispute_entries_keep_their_ttl() {
+    use soroban_sdk::testutils::storage::Persistent as _;
+    let f = setup();
+    init_default(&f);
+    f.client.mark_delivered(&f.producer);
+    f.client.dispute_delivery(&f.buyer);
+    let id = f.client.address.clone();
+    for key in [crate::ForwardKey::DeliveredAt, crate::ForwardKey::DisputedAt, crate::ForwardKey::Disputed] {
+        let ttl = f
+            .env
+            .as_contract(&id, || f.env.storage().persistent().get_ttl(&key));
+        assert!(ttl > fractachain_core::BUMP_THRESHOLD, "TTL not extended: {ttl}");
+    }
 }

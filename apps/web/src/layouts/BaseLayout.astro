@@ -1,0 +1,58 @@
+---
+import '@/styles/global.css';
+import Footer from '@/components/layout/Footer.astro';
+import Navbar from '@/components/layout/Navbar';
+import { messagesFor } from '@/core/i18n/translate';
+import { THEME_BOOTSTRAP_SCRIPT } from '@/core/security/csp.mjs';
+
+interface Props {
+  /** Page-specific `<title>`; defaults to the site title. */
+  title?: string;
+  description?: string;
+  /** `wide` (default) for app screens; `full` lets a page own its width (landing). */
+  width?: 'wide' | 'full';
+  /** Hide the footer (focused flows: login, onboarding). */
+  bare?: boolean;
+}
+
+const locale = Astro.locals.locale;
+const meta = messagesFor(locale).meta;
+const title = Astro.props.title ? `${Astro.props.title} · Fractachain` : meta.title;
+const description = Astro.props.description ?? meta.description;
+const width = Astro.props.width ?? 'wide';
+const FONTS = 'https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600&display=swap';
+---
+
+<!doctype html>
+<html lang={locale} class="scroll-smooth">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f3f6f9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#080d18" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href={FONTS} />
+    <script is:inline set:html={THEME_BOOTSTRAP_SCRIPT} />
+    <slot name="head" />
+  </head>
+  <body class="atmosphere relative flex min-h-screen flex-col bg-canvas font-sans text-ink">
+    <Navbar client:load locale={locale} pathname={Astro.url.pathname} />
+    <main
+      class:list={[
+        'relative z-10 w-full flex-1 pb-28 lg:pb-12',
+        width === 'wide' ? 'mx-auto max-w-[1440px] px-4 pt-5 sm:px-6 sm:pt-7 lg:px-8' : '',
+      ]}
+    >
+      <slot />
+    </main>
+    {!Astro.props.bare && <Footer />}
+  </body>
+</html>

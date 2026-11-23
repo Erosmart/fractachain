@@ -1,0 +1,15 @@
+{
+  "name": "@fractachain/shared",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Contrato de tipos compartido entre @fractachain/api y @fractachain/web (solo tipos, sin runtime).",
+  "type": "module",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.d.ts"
+    }
+  },
+  "sideEffects": false
+}
