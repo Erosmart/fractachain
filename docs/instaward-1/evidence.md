@@ -117,8 +117,12 @@ through `/api/tx/build` + `/api/tx/submit`. A reviewer signs in with Freighter, 
 USDC from the demo pool and subscribes to a tender; every screen shows the contract ID it
 reads from.
 
-## Still to be produced by the team (needs accounts or permissions)
+## Merged PR
 
-| Evidence                                     | Why it is not here                                                     | How                                                       |
-| -------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------- |
-| Merged PR                                    | the branch is pushed and CI is green; merging is the maintainers' call | open the PR from `macroupdate` to `main`                  |
+[PR #50](https://github.com/Erosmart/fractachain/pull/50) merged `macroupdate` into `main`
+on 2026-11-23 (merge commit
+[`b72b52b`](https://github.com/Erosmart/fractachain/commit/b72b52b)); `main` now matches the
+integrated branch file for file. The first USDC implementation
+([PR #48](https://github.com/Erosmart/fractachain/pull/48)) was merged and then reverted
+([PR #51](https://github.com/Erosmart/fractachain/pull/51)) so its commits stay in the history
+while `macroupdate`, which supersedes it, provides the code.
