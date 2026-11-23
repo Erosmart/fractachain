@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Check } from 'lucide-react';
-import { WireframeAsset } from '@/components/ui/kit';
+import { InfinityAsset } from '@/components/ui/kit';
 import { useI18n } from '@/hooks/useI18n';
 
 interface AuthShellProps {
@@ -67,7 +67,7 @@ export default function AuthShell({
             </li>
           ))}
         </ul>
-        <WireframeAsset className="pointer-events-none mt-auto w-[115%] max-w-none self-end opacity-80" />
+        <InfinityAsset className="mt-auto aspect-[2/1] w-full" />
       </aside>
     </div>
   );

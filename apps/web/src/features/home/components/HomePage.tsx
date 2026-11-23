@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import RequireOnboarding from '@/components/guards/RequireOnboarding';
 import { withIsland } from '@/components/island/withIsland';
-import { Card, EmptyState, Greeting, Notice, WireframeAsset } from '@/components/ui/kit';
+import { Card, EmptyState, Greeting, InfinityAsset, Notice } from '@/components/ui/kit';
 import { formatAmount } from '@/core/format/number';
 import { useI18n } from '@/hooks/useI18n';
 import TxPanel from '@/components/tx/TxPanel';
@@ -86,7 +86,7 @@ function Home() {
         {/* Greeting + illustration */}
         <section className="relative min-h-[150px] lg:col-span-8 lg:col-start-1 lg:min-h-[300px]">
           <Greeting name={user.legalName || user.name}>{statusLine}</Greeting>
-          <WireframeAsset className="pointer-events-none absolute right-0 top-6 hidden h-[250px] w-[58%] max-w-[560px] sm:block lg:top-2 lg:h-[290px]" />
+          <InfinityAsset className="absolute right-0 top-6 hidden h-[250px] w-[58%] max-w-[560px] sm:block lg:top-2 lg:h-[290px]" />
           <div className="mt-4 flex flex-wrap gap-2 lg:absolute lg:bottom-1 lg:left-0">
             {loadedAt && (
               <span className="chip border border-line bg-surface text-ink shadow-card">

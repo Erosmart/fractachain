@@ -17,7 +17,7 @@
   --line-strong: 205 214 228;
   --ink: 14 31 61;
   --ink-2: 70 85 112;
-  --muted: 104 117 140;
+  --muted: 92 104 126;
   --navy: 14 31 61;
   --navy-ink: 255 255 255;
   --sky: 108 196 245;
@@ -39,13 +39,18 @@
   --viz-4: 122 98 216;
   /* Text on butter/peach fills: always dark navy (the pastels stay light in dark mode). */
   --on-pastel: 14 31 61;
+  /* Brand: the Fractachain infinity, blue → teal → green (from the logo). */
+  --fc-blue: 26 111 184;
+  --fc-teal: 47 168 160;
+  --fc-green: 78 167 67;
+  --fc-gold: 240 180 41;
 
-  --panel-gradient: linear-gradient(180deg, #63bff6 0%, #a8daf9 26%, #e3e6ee 50%, #f8cfae 76%, #fbe29c 100%);
-  --bar-gradient: linear-gradient(180deg, #4fb4f2 0%, #a6d8f7 52%, #f7c9a4 82%, #fbdc8f 100%);
+  --panel-gradient: linear-gradient(180deg, #6fb6ea 0%, #9fd6ee 24%, #b9e6de 50%, #d3edc4 76%, #f4e3a4 100%);
+  --bar-gradient: linear-gradient(180deg, #2f8fd6 0%, #3fb4ab 52%, #6cbf5c 82%, #f0c64e 100%);
   --atmosphere:
     radial-gradient(60rem 28rem at 12% -6%, rgb(108 196 245 / 0.32), transparent 70%),
-    radial-gradient(48rem 26rem at 96% 108%, rgb(247 196 160 / 0.34), transparent 70%),
-    radial-gradient(30rem 18rem at 70% 0%, rgb(251 222 128 / 0.14), transparent 70%);
+    radial-gradient(48rem 26rem at 96% 108%, rgb(120 196 110 / 0.22), transparent 70%),
+    radial-gradient(30rem 18rem at 70% 0%, rgb(72 190 178 / 0.12), transparent 70%);
 }
 
 html.dark {
@@ -78,12 +83,16 @@ html.dark {
   --viz-3: 25 158 112;
   --viz-4: 139 123 230;
   --on-pastel: 8 13 24;
+  --fc-blue: 77 152 222;
+  --fc-teal: 72 196 186;
+  --fc-green: 112 196 98;
+  --fc-gold: 236 190 80;
 
-  --panel-gradient: linear-gradient(180deg, #11426b 0%, #1a3a5c 34%, #2a2f45 58%, #4a3427 82%, #4d3f18 100%);
-  --bar-gradient: linear-gradient(180deg, #57b0f0 0%, #3d7fb8 50%, #b07a58 82%, #c9a24a 100%);
+  --panel-gradient: linear-gradient(180deg, #123f69 0%, #12405a 30%, #10423f 56%, #1b3f25 80%, #3a3517 100%);
+  --bar-gradient: linear-gradient(180deg, #4d98de 0%, #48c4ba 50%, #70c462 82%, #ecbe50 100%);
   --atmosphere:
     radial-gradient(60rem 28rem at 12% -6%, rgb(58 142 230 / 0.2), transparent 70%),
-    radial-gradient(48rem 26rem at 96% 108%, rgb(214 150 112 / 0.14), transparent 70%);
+    radial-gradient(48rem 26rem at 96% 108%, rgb(112 196 98 / 0.1), transparent 70%);
 }
 
 html {
@@ -150,15 +159,15 @@ p {
 @layer components {
   /* ---------- Surfaces ---------- */
   .card {
-    @apply rounded-card border border-line bg-surface shadow-card;
+    @apply rounded-card border border-line/60 bg-surface shadow-card dark:border-line;
   }
   .card-pad {
     @apply p-5 sm:p-6;
   }
   .card-muted {
-    @apply rounded-card border border-line bg-surface-2;
+    @apply rounded-card border border-line/60 bg-surface-2 dark:border-line;
   }
-  /* The signature sky → peach → butter panel. Ink text only (never white). */
+  /* The signature panel in the logo's blue → teal → green → gold. Ink text only (never white). */
   .gradient-panel {
     background: var(--panel-gradient);
     @apply rounded-card text-ink;
@@ -204,7 +213,7 @@ p {
     @apply bg-navy text-navy-ink hover:bg-navy/90;
   }
   .btn-secondary {
-    @apply border border-line bg-surface text-ink hover:border-line-strong hover:bg-surface-2;
+    @apply border border-line/80 bg-surface text-ink hover:border-line-strong hover:bg-surface-2 dark:border-line;
   }
   .btn-soft {
     @apply bg-sky-soft text-ink hover:bg-sky/30;
@@ -216,14 +225,14 @@ p {
     @apply bg-bad-soft text-bad hover:bg-bad/15;
   }
   .icon-btn {
-    @apply inline-grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line bg-surface text-ink-2 transition-colors hover:text-ink hover:border-line-strong;
+    @apply inline-grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-line/80 bg-surface text-ink-2 transition-colors dark:border-line hover:text-ink hover:border-line-strong;
   }
   /* Small square ↗ link in a card corner. */
   .arrow-btn {
     @apply inline-grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-sky-soft/70 text-ink transition-colors hover:bg-sky/30;
   }
   .input {
-    @apply h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-sm text-ink placeholder:text-muted/80 transition-colors focus:border-sky-strong focus:outline-none focus:ring-4 focus:ring-sky/20 disabled:opacity-60;
+    @apply h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-sm text-ink placeholder:text-muted transition-colors focus:border-sky-strong focus:outline-none focus:ring-4 focus:ring-sky/20 disabled:opacity-60;
   }
   textarea.input {
     @apply h-auto py-2.5;
@@ -234,7 +243,7 @@ p {
 
   /* ---------- Pills & chips ---------- */
   .pill-tabs {
-    @apply inline-flex items-center gap-0.5 rounded-xl border border-line bg-surface p-1;
+    @apply inline-flex items-center gap-0.5 rounded-xl border border-line/80 bg-surface p-1 dark:border-line;
   }
   .pill-tab {
     @apply inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-[13px] text-ink-2 transition-colors hover:bg-ink/5 hover:text-ink;
@@ -336,4 +345,53 @@ p {
  */
 main astro-island {
   display: block;
+}
+
+/* ---- Brand: the infinity backdrop and the hero's rotating word ---- */
+.fc-brand-text {
+  background: linear-gradient(90deg, rgb(var(--fc-blue)), rgb(var(--fc-teal)) 50%, rgb(var(--fc-green)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@keyframes fc-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes fc-drift {
+  to {
+    stroke-dashoffset: -256;
+  }
+}
+
+.fc-float {
+  animation: fc-float 8s ease-in-out infinite;
+}
+
+.fc-drift {
+  animation: fc-drift 18s linear infinite;
+}
+
+.fc-drift-rev {
+  animation: fc-drift 22s linear infinite reverse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fc-float,
+  .fc-drift,
+  .fc-drift-rev {
+    animation: none;
+  }
+
+  /* SMIL motion ignores the media query: hide the travelling particles instead. */
+  .fc-particles {
+    display: none;
+  }
 }

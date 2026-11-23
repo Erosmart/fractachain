@@ -20,6 +20,8 @@ module.exports = {
         body: ['"Inter Tight"', 'Inter', 'system-ui', 'sans-serif'],
         lcd: ['"Inter Tight"', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['ui-monospace', '"SF Mono"', 'Menlo', 'monospace'],
+        /** Accent face: the hero's rotating word and editorial highlights. */
+        serif: ['"Source Serif 4"', 'Georgia', 'serif'],
       },
       colors: {
         canvas: token('canvas'),
@@ -37,6 +39,8 @@ module.exports = {
         bad: { DEFAULT: token('bad'), soft: token('bad-soft') },
         /** Categorical data slots, fixed order (validated for CVD in both themes). */
         viz: { 1: token('viz-1'), 2: token('viz-2'), 3: token('viz-3'), 4: token('viz-4') },
+        /** Brand infinity: blue → teal → green, plus the gold node. */
+        fc: { blue: token('fc-blue'), teal: token('fc-teal'), green: token('fc-green'), gold: token('fc-gold') },
         // Legacy names still used by pages not yet migrated: mapped onto the new palette.
         leaf: { 50: token('sky-soft'), 100: token('sky-soft'), 200: token('sky'), 400: token('sky-strong') },
         brand: {

@@ -10,4 +10,4 @@ export { Avatar, Greeting, PageHeader, initials } from './Identity';
 export { PillTabs, type PillTabItem } from './PillTabs';
 export { Stat, StatGrid } from './Stat';
 export { StatusChip, type Tone } from './StatusChip';
-export { WireframeAsset } from './WireframeAsset';
+export { InfinityAsset } from './InfinityAsset';

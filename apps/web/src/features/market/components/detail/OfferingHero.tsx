@@ -1,5 +1,5 @@
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
-import { WireframeAsset } from '@/components/ui/kit';
+import { InfinityAsset } from '@/components/ui/kit';
 import type { ListingDetail } from '@/core/api/types';
 import { useI18n } from '@/hooks/useI18n';
 import type { OfferingPhase } from '../../model';
@@ -39,7 +39,7 @@ export default function OfferingHero({
         {d.isin ? ` · ISIN ${d.isin}` : ''}
         {d.jurisdiction ? ` · ${d.jurisdiction}` : ''}
       </p>
-      <WireframeAsset className="pointer-events-none absolute -top-6 right-0 hidden w-[300px] opacity-70 xl:block" />
+      <InfinityAsset className="absolute -top-6 right-0 hidden aspect-[2/1] w-[300px] xl:block" />
     </header>
   );
 }
