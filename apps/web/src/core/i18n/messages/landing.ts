@@ -10,6 +10,23 @@ export const es = {
   hero: {
     chips: ['Diseñado para el sandbox CNV', 'USDC y XLM sobre Stellar', 'Testnet'],
     title: 'Invertí en la economía real argentina',
+    tagline: 'El primer mercado crypto RWA de Argentina.',
+    rotatorLead: 'Invertí',
+    soon: 'Próximamente',
+    sectors: [
+      { text: 'en vinos', tag: 'Valles Calchaquíes y Cuyo' },
+      { text: 'en soja', tag: 'Zona núcleo pampeana' },
+      { text: 'en maíz', tag: 'Región Centro' },
+      { text: 'en aceite de oliva', tag: 'San Juan y La Rioja' },
+      { text: 'en lácteos', tag: 'Cuenca de Santa Fe y Córdoba' },
+      { text: 'en tabaco', tag: 'Valles de Salta y Jujuy' },
+      { text: 'en acopios de trigo', tag: 'Warrants · Ley 9643' },
+      { text: 'en producción industrial', tag: 'Manufactura y alimentos' },
+      { text: 'en YPF', tag: 'tYPF · Merval tokenizado', soon: true },
+      { text: 'en Galicia', tag: 'tGGAL · Merval tokenizado', soon: true },
+      { text: 'en bonos', tag: 'Bopreal y AL30', soon: true },
+      { text: 'en todo', tag: 'Producción · Acciones · Deuda' },
+    ] as { text: string; tag: string; soon?: boolean }[],
     lead: 'Financiá la campaña de productores y pymes argentinas desde montos chicos. Suscribís en USDC, seguís cada aporte on-chain y negociás tu posición en el mercado secundario.',
     ctaInvest: 'Invertir',
     ctaIssuer: 'Tokenizar mi empresa',
@@ -146,6 +163,31 @@ export const es = {
       ['Compliance on-chain', 'Solo cuentas con KYC aprobado pueden recibir y negociar los tokens.'],
     ],
     note: 'Fractachain opera hoy en Stellar testnet: no hay dinero real en juego.',
+    pathTitle: 'De la idea a la licitación: el camino legal en 4 pasos',
+    pathLead:
+      'Así se estructura una emisión dentro del sandbox de la CNV. Es el camino previsto: ningún paso equivale a una habilitación ya otorgada.',
+    path: [
+      {
+        title: 'Constitución de la sociedad',
+        norm: 'IGJ o registro provincial',
+        body: 'Una SAS o S.A. opera la plataforma y es titular de todas las inscripciones regulatorias.',
+      },
+      {
+        title: 'Registro PSAV ante la CNV',
+        norm: 'Ley 27.739 · RG 1058',
+        body: 'Habilita a custodiar, emitir y facilitar la compraventa de tokens. Exige un programa AML/CFT ante la UIF y un Oficial de Cumplimiento.',
+      },
+      {
+        title: 'Fideicomiso financiero',
+        norm: 'Ley 26.831 · RG 1150',
+        body: 'Oferta pública dentro del sandbox, vigente hasta el 31/12/2027. Un programa global con una serie por emisión: cada emisión siguiente sale más barata.',
+      },
+      {
+        title: 'Tokenización y emisión',
+        norm: 'Stellar · Soroban',
+        body: 'Las cuotapartes de cada serie se emiten como tokens respaldados 1:1 por el activo custodiado y se licitan en USDC.',
+      },
+    ] as { title: string; norm: string; body: string }[],
   },
   issuers: {
     eyebrow: 'Para emisores',
@@ -387,6 +429,23 @@ export const en: typeof es = {
   hero: {
     chips: ['Designed for the CNV sandbox', 'USDC and XLM on Stellar', 'Testnet'],
     title: "Invest in Argentina's real economy",
+    tagline: "Argentina's first crypto RWA market.",
+    rotatorLead: 'Invest',
+    soon: 'Coming soon',
+    sectors: [
+      { text: 'in wine', tag: 'Calchaquí Valleys and Cuyo' },
+      { text: 'in soy', tag: 'Pampean core region' },
+      { text: 'in corn', tag: 'Central region' },
+      { text: 'in olive oil', tag: 'San Juan and La Rioja' },
+      { text: 'in dairy', tag: 'Santa Fe and Córdoba basin' },
+      { text: 'in tobacco', tag: 'Salta and Jujuy valleys' },
+      { text: 'in wheat warehouses', tag: 'Warrants · Law 9643' },
+      { text: 'in industrial production', tag: 'Manufacturing and food' },
+      { text: 'in YPF', tag: 'tYPF · Tokenized Merval', soon: true },
+      { text: 'in Galicia', tag: 'tGGAL · Tokenized Merval', soon: true },
+      { text: 'in bonds', tag: 'Bopreal and AL30', soon: true },
+      { text: 'in everything', tag: 'Production · Stocks · Debt' },
+    ],
     lead: 'Fund the season of Argentine producers and SMEs from small amounts. Subscribe in USDC, follow every contribution on-chain and trade your position on the secondary market.',
     ctaInvest: 'Invest',
     ctaIssuer: 'Tokenize my company',
@@ -517,6 +576,31 @@ export const en: typeof es = {
       ['On-chain compliance', 'Only accounts with approved KYC can receive and trade the tokens.'],
     ],
     note: 'Fractachain runs on Stellar testnet today: no real money is at stake.',
+    pathTitle: 'From idea to offering: the legal path in 4 steps',
+    pathLead:
+      'This is how an issue is structured inside the CNV sandbox. It is the planned path: no step amounts to a license already granted.',
+    path: [
+      {
+        title: 'Incorporate the company',
+        norm: 'IGJ or provincial registry',
+        body: 'An SAS or S.A. runs the platform and holds every regulatory registration.',
+      },
+      {
+        title: 'VASP registration with the CNV',
+        norm: 'Law 27,739 · RG 1058',
+        body: 'Allows custody, issuance and trading of tokens. Requires an AML/CFT program filed with the UIF and a Compliance Officer.',
+      },
+      {
+        title: 'Financial trust',
+        norm: 'Law 26,831 · RG 1150',
+        body: 'A public offering inside the sandbox, in force until 31/12/2027. One global program with a series per issue: each new issue costs less.',
+      },
+      {
+        title: 'Tokenization and issuance',
+        norm: 'Stellar · Soroban',
+        body: 'The units of each series are issued as tokens backed 1:1 by the asset in custody and offered in USDC.',
+      },
+    ],
   },
   issuers: {
     eyebrow: 'For issuers',

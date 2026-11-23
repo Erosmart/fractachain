@@ -34,4 +34,34 @@ const icons = [Landmark, Vault, FileCheck2, ShieldCheck];
       );
     })}
   </ul>
+
+  <!-- The legal path, step by step: the planned route, not a license already granted -->
+  <div class="min-w-0 lg:col-span-2">
+    <h3 class="text-[20px] font-normal leading-tight tracking-[-0.02em] sm:text-[24px]">{r.pathTitle}</h3>
+    <p class="mt-2 max-w-3xl text-[15px] text-ink-2">{r.pathLead}</p>
+    <ol class="relative mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <span
+        aria-hidden="true"
+        class="pointer-events-none absolute left-[12.5%] right-[12.5%] top-[38px] hidden h-[2px] rounded-full bg-gradient-to-r from-fc-blue via-fc-teal to-fc-green opacity-60 lg:block"
+      ></span>
+      {r.path.map((step, i) => (
+        <li class="relative rounded-2xl bg-surface/80 p-5 backdrop-blur-sm">
+          <span
+            class="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-fc-blue via-fc-teal to-fc-green text-[15px] font-medium text-white shadow-sm"
+            aria-hidden="true"
+          >
+            {i + 1}
+          </span>
+          <h4 class="mt-4 text-[15px] font-medium text-ink">
+            <span class="sr-only">{i + 1}. </span>
+            {step.title}
+          </h4>
+          <p class="mt-1.5 inline-flex rounded-md bg-ink/[0.06] px-2 py-0.5 text-[11px] font-medium text-ink-2">
+            {step.norm}
+          </p>
+          <p class="mt-2 text-sm text-ink-2">{step.body}</p>
+        </li>
+      ))}
+    </ol>
+  </div>
 </section>

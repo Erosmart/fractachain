@@ -29,7 +29,7 @@ export function BrandGlyph({ className = 'h-6 w-9' }: { className?: string }) {
   );
 }
 
-/** Logo + wordmark linking home. Stateless: renders the same on server and client. */
+/** The original raster logo (docs/brand/fractachain-logo.png, resized) + wordmark, linking home. */
 export default function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
     <a
@@ -37,10 +37,13 @@ export default function BrandMark({ compact = false }: { compact?: boolean }) {
       className="inline-flex min-w-0 items-center gap-2 rounded-lg text-ink"
       aria-label="Fractachain"
     >
-      <BrandGlyph />
+      <picture className="shrink-0">
+        <source srcSet="/brand/logo.webp" type="image/webp" />
+        <img src="/brand/logo.png" alt="" width={167} height={96} className="h-8 w-auto sm:h-9" />
+      </picture>
       {!compact && (
-        <span className="text-[19px] font-normal leading-none tracking-[-0.03em] max-[359px]:hidden">
-          fractachain
+        <span className="text-[20px] font-semibold leading-none tracking-[-0.04em] max-[359px]:hidden">
+          Fractachain
         </span>
       )}
     </a>
