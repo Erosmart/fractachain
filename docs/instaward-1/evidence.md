@@ -117,8 +117,9 @@ through `/api/tx/build` + `/api/tx/submit`. A reviewer signs in with Freighter, 
 USDC from the demo pool and subscribes to a tender; every screen shows the contract ID it
 reads from.
 
-## Still to be produced by the team (needs accounts or permissions)
+## Merged PR
 
-| Evidence                                     | Why it is not here                                                     | How                                                       |
-| -------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------- |
-| Merged PR                                    | the branch is pushed and CI is green; merging is the maintainers' call | open the PR from `macroupdate` to `main`                  |
+[PR #50](https://github.com/Erosmart/fractachain/pull/50) merged `macroupdate` into `main`
+on 2026-11-23 (merge commit
+[`b72b52b`](https://github.com/Erosmart/fractachain/commit/b72b52b)). Full commit history:
+[github.com/Erosmart/fractachain/commits/main](https://github.com/Erosmart/fractachain/commits/main).
